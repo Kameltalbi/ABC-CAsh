@@ -43,6 +43,7 @@ android {
 dependencies {
     val roomVersion = "2.6.1"
     val lifecycleVersion = "2.8.7"
+    val koinVersion = "3.5.3"
 
     implementation("androidx.core:core-ktx:1.15.0")
     implementation("androidx.activity:activity-compose:1.10.0")
@@ -65,6 +66,10 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
     implementation("com.github.PhilJay:MPAndroidChart:v3.1.0")
+    
+    // Koin for Dependency Injection
+    implementation("io.insert-koin:koin-android:$koinVersion")
+    implementation("io.insert-koin:koin-androidx-compose:$koinVersion")
 }
 
 kapt {

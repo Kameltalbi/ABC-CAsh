@@ -2,20 +2,12 @@ package com.abccash.app.ui
 
 import android.content.Context
 import com.abccash.app.data.local.entity.CurrencyCode
+import com.abccash.app.ui.theme.AppPalette
 
 enum class DateFormatOption(val label: String, val pattern: String) {
     ISO("YYYY-MM-DD", "yyyy-MM-dd"),
     FR("DD/MM/YYYY", "dd/MM/yyyy"),
     US("MM/DD/YYYY", "MM/dd/yyyy")
-}
-
-enum class AppPalette(val label: String) {
-    SUNSET("Sunset"),
-    OCEAN("Ocean"),
-    FOREST("Forest"),
-    VIOLET("Violet"),
-    ROSE("Rose"),
-    MIDNIGHT("Midnight")
 }
 
 class AppSettingsStore(context: Context) {
