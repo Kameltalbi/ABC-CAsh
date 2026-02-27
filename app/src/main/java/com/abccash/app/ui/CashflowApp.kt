@@ -113,23 +113,6 @@ fun CashflowApp(viewModel: CashflowViewModel) {
         }
     }
     
-    val pickDriveFolderLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocumentTree()
-    ) { uri ->
-        if (uri != null) {
-            runCatching {
-                context.contentResolver.takePersistableUriPermission(
-                    uri,
-                    Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
-                )
-            }
-            settingsStore.setDriveSyncFolderUri(uri.toString())
-            driveSyncFolderUri = uri.toString()
-            lastDriveSyncStatus = "Drive connecte - pret"
-            Toast.makeText(context, "Dossier Drive connecte", Toast.LENGTH_LONG).show()
-        }
-    }
-
     fun triggerDriveSync(showToast: Boolean) {
         val uri = driveSyncFolderUri
         if (uri.isNullOrBlank()) {
@@ -154,6 +137,44 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                 if (showToast) Toast.makeText(context, "Erreur export backup", Toast.LENGTH_LONG).show()
             }
         )
+    }
+    
+    val pickDriveFolderLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri ->
+        uri?.let {
+            context.contentResolver.takePersistableUriPermission(
+                it,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            driveSyncFolderUri = it.toString()
+            settingsStore.setDriveSyncFolderUri(it.toString())
+            triggerDriveSync(showToast = true)
+        }
+    }
+
+    var showCsvImportScreen by remember { mutableStateOf(false) }
+    var csvTransactions by remember { mutableStateOf<List<com.abccash.app.csv.CsvTransaction>>(emptyList()) }
+    
+    val pickCsvFileLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri ->
+        uri?.let {
+            try {
+                val inputStream = context.contentResolver.openInputStream(it)
+                inputStream?.use { stream ->
+                    val result = com.abccash.app.csv.CsvParser.parseCsv(stream)
+                    result.onSuccess { transactions ->
+                        csvTransactions = transactions
+                        showCsvImportScreen = true
+                    }.onFailure { error ->
+                        Toast.makeText(context, "Erreur: ${error.message}", Toast.LENGTH_LONG).show()
+                    }
+                }
+            } catch (e: Exception) {
+                Toast.makeText(context, "Erreur lecture fichier: ${e.message}", Toast.LENGTH_LONG).show()
+            }
+        }
     }
 
     LaunchedEffect(driveSyncFolderUri) {
@@ -370,7 +391,7 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                             restoreBackupLauncher.launch(arrayOf("application/json", "text/plain"))
                         },
                         onImportCsv = {
-                            Toast.makeText(context, "Import CSV - Fonctionnalité en cours d'implémentation", Toast.LENGTH_SHORT).show()
+                            pickCsvFileLauncher.launch("text/*")
                         },
                         driveSyncConfigured = !driveSyncFolderUri.isNullOrBlank(),
                         lastDriveSyncStatus = lastDriveSyncStatus,
@@ -379,6 +400,30 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                     )
                 }
             }
+        }
+        
+        if (showCsvImportScreen) {
+            com.abccash.app.ui.screens.CsvImportPreviewScreen(
+                transactions = csvTransactions,
+                categories = state.categories,
+                onConfirmImport = { transactionsToImport ->
+                    transactionsToImport.forEach { csvTx ->
+                        viewModel.addQuickTransaction(
+                            csvTx.type,
+                            (csvTx.amount * 100).toLong(),
+                            csvTx.suggestedCategory,
+                            TransactionStatus.VALIDEE,
+                            csvTx.date,
+                            RecurrenceRule.NONE
+                        )
+                    }
+                    showCsvImportScreen = false
+                    Toast.makeText(context, "${transactionsToImport.size} transactions importées", Toast.LENGTH_LONG).show()
+                },
+                onCancel = {
+                    showCsvImportScreen = false
+                }
+            )
         }
     }
 }

@@ -73,13 +73,13 @@ fun SettingsScreen(
                     onDarkModeChange = onDarkModeChange
                 )
                 
+                ImportCsvSection(
+                    onImportCsv = onImportCsv
+                )
+                
                 BackupSection(
                     onBackup = onBackup,
                     onRestore = onRestore
-                )
-                
-                ImportCsvSection(
-                    onImportCsv = onImportCsv
                 )
                 
                 DriveSyncSection(
