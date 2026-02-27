@@ -29,8 +29,13 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abccash.app.presentation.CashflowViewModel
 import com.abccash.app.sync.readBackupFromTree
 import com.abccash.app.sync.writeBackupToTree
+import com.abccash.app.data.local.entity.RecurrenceRule
+import com.abccash.app.data.local.entity.TransactionStatus
+import com.abccash.app.data.local.entity.TransactionType
+import com.abccash.app.ui.components.AddTransactionDialog
 import com.abccash.app.ui.components.HeaderMenu
 import com.abccash.app.ui.screens.CalendarScreen
+import java.time.LocalDate
 import com.abccash.app.ui.screens.CategoriesScreen
 import com.abccash.app.ui.screens.DashboardScreen
 import com.abccash.app.ui.screens.PlanningScreen
@@ -245,18 +250,63 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                         currency = state.selectedCurrency
                     )
 
-                    1 -> CalendarScreen(
-                        openingBalance = state.openingBalanceMinor / 100.0,
-                        transactions = state.transactions,
-                        categories = state.categories,
-                        currency = state.selectedCurrency,
-                        onAddTransaction = {
-                            // TODO: Ouvrir le dialog d'ajout de transaction
-                        },
-                        onTransactionClick = { transaction ->
-                            // TODO: Ouvrir le dialog d'édition
+                    1 -> {
+                        var showAddDialog by remember { mutableStateOf(false) }
+                        var addAmountText by remember { mutableStateOf("") }
+                        var addCategoryText by remember { mutableStateOf("Divers") }
+                        var addType by remember { mutableStateOf(TransactionType.EXPENSE) }
+                        var addStatus by remember { mutableStateOf(TransactionStatus.PLANIFIEE) }
+                        var addRecurrence by remember { mutableStateOf(RecurrenceRule.NONE) }
+                        var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+                        
+                        CalendarScreen(
+                            openingBalance = state.openingBalanceMinor / 100.0,
+                            transactions = state.transactions,
+                            categories = state.categories,
+                            currency = state.selectedCurrency,
+                            onAddTransaction = {
+                                showAddDialog = true
+                            },
+                            onTransactionClick = { transaction ->
+                                // TODO: Ouvrir le dialog d'édition
+                            }
+                        )
+                        
+                        if (showAddDialog) {
+                            val filteredCategories = state.categories.filter { it.type == addType }
+                            AddTransactionDialog(
+                                selectedDate = selectedDate,
+                                amountText = addAmountText,
+                                categoryText = addCategoryText,
+                                type = addType,
+                                status = addStatus,
+                                recurrence = addRecurrence,
+                                filteredCategories = filteredCategories,
+                                onAmountChange = { addAmountText = it },
+                                onCategoryChange = { addCategoryText = it },
+                                onTypeChange = { addType = it },
+                                onStatusChange = { addStatus = it },
+                                onRecurrenceChange = { addRecurrence = it },
+                                onConfirm = {
+                                    val amountMinor = (addAmountText.toDoubleOrNull() ?: 0.0) * 100
+                                    viewModel.addQuickTransaction(
+                                        addType,
+                                        amountMinor.toLong(),
+                                        addCategoryText,
+                                        addStatus,
+                                        selectedDate,
+                                        addRecurrence
+                                    )
+                                    addAmountText = ""
+                                    addCategoryText = "Divers"
+                                    showAddDialog = false
+                                },
+                                onDismiss = {
+                                    showAddDialog = false
+                                }
+                            )
                         }
-                    )
+                    }
                     
                     99 -> TransactionsScreen(
                         openingMinor = state.openingBalanceMinor,

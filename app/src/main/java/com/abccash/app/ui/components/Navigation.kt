@@ -182,49 +182,29 @@ private fun HeaderMenuItem(
     )
     
     val scale by animateFloatAsState(
-        targetValue = if (selected) 1.05f else 1f,
+        targetValue = if (selected) 1.1f else 1f,
         animationSpec = tween(300),
         label = "scale"
     )
     
-    Surface(
+    IconButton(
         onClick = onClick,
-        modifier = Modifier.scale(scale),
-        shape = RoundedCornerShape(8.dp),
-        color = backgroundColor
+        modifier = Modifier.scale(scale)
     ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .background(
+                    color = backgroundColor,
+                    shape = RoundedCornerShape(12.dp)
+                ),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .background(
-                        color = if (selected) 
-                            MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
-                        else 
-                            Color.Transparent,
-                        shape = RoundedCornerShape(6.dp)
-                    ),
-                contentAlignment = Alignment.Center
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.material3.LocalContentColor provides contentColor
             ) {
-                androidx.compose.runtime.CompositionLocalProvider(
-                    androidx.compose.material3.LocalContentColor provides contentColor
-                ) {
-                    icon()
-                }
+                icon()
             }
-            
-            Spacer(modifier = Modifier.height(2.dp))
-            
-            Text(
-                text = label,
-                color = contentColor,
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 10.sp,
-                maxLines = 1
-            )
         }
     }
 }
