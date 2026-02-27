@@ -305,6 +305,9 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                         onRestore = {
                             restoreBackupLauncher.launch(arrayOf("application/json", "text/plain"))
                         },
+                        onImportCsv = {
+                            Toast.makeText(context, "Import CSV - Fonctionnalité en cours d'implémentation", Toast.LENGTH_SHORT).show()
+                        },
                         driveSyncConfigured = !driveSyncFolderUri.isNullOrBlank(),
                         lastDriveSyncStatus = lastDriveSyncStatus,
                         onConnectDriveFolder = { pickDriveFolderLauncher.launch(null) },

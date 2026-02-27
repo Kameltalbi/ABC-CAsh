@@ -42,6 +42,7 @@ fun SettingsScreen(
     onDefaultCurrencyChange: (CurrencyCode) -> Unit,
     onBackup: () -> Unit,
     onRestore: () -> Unit,
+    onImportCsv: () -> Unit,
     driveSyncConfigured: Boolean,
     lastDriveSyncStatus: String,
     onConnectDriveFolder: () -> Unit,
@@ -75,6 +76,10 @@ fun SettingsScreen(
                 BackupSection(
                     onBackup = onBackup,
                     onRestore = onRestore
+                )
+                
+                ImportCsvSection(
+                    onImportCsv = onImportCsv
                 )
                 
                 DriveSyncSection(
@@ -169,6 +174,19 @@ private fun BackupSection(
             Text("Restaurer")
         }
     }
+}
+
+@Composable
+private fun ImportCsvSection(
+    onImportCsv: () -> Unit
+) {
+    Button(
+        onClick = onImportCsv,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Text("📊 Importer CSV Bancaire")
+    }
+    Text("Importez vos transactions depuis un fichier CSV", style = MaterialTheme.typography.bodySmall)
 }
 
 @Composable

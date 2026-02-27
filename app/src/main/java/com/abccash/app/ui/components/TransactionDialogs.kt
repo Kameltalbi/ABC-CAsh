@@ -10,6 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -172,33 +176,81 @@ fun AddTransactionDialog(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedTextField(
-                        value = categoryText,
-                        onValueChange = onCategoryChange,
-                        placeholder = { Text("Sélectionner une catégorie") },
-                        leadingIcon = {
-                            Icon(Icons.Filled.Category, contentDescription = null)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp),
-                        singleLine = true
-                    )
                     
-                    // Catégories rapides
-                    if (filteredCategories.isNotEmpty()) {
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    var categoryExpanded by remember { mutableStateOf(false) }
+                    
+                    Box {
+                        OutlinedCard(
+                            onClick = { categoryExpanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
-                            items(filteredCategories.take(8)) { category ->
-                                AssistChip(
-                                    onClick = { onCategoryChange(category.name) },
-                                    label = { Text(category.name, fontSize = 12.sp) },
-                                    colors = AssistChipDefaults.assistChipColors(
-                                        containerColor = if (categoryText == category.name)
-                                            MaterialTheme.colorScheme.primaryContainer
-                                        else
-                                            MaterialTheme.colorScheme.surfaceVariant
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Category,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
                                     )
+                                    Text(
+                                        text = categoryText.ifEmpty { "Sélectionner" },
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = if (categoryText.isEmpty()) 
+                                            MaterialTheme.colorScheme.onSurfaceVariant 
+                                        else 
+                                            MaterialTheme.colorScheme.onSurface
+                                    )
+                                }
+                                Icon(
+                                    imageVector = Icons.Filled.ArrowDropDown,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        
+                        DropdownMenu(
+                            expanded = categoryExpanded,
+                            onDismissRequest = { categoryExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        ) {
+                            filteredCategories.forEach { category ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (categoryText == category.name) {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.size(20.dp))
+                                            }
+                                            Text(
+                                                text = category.name,
+                                                fontWeight = if (categoryText == category.name) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onCategoryChange(category.name)
+                                        categoryExpanded = false
+                                    }
                                 )
                             }
                         }
@@ -246,38 +298,79 @@ fun AddTransactionDialog(
                         fontWeight = FontWeight.SemiBold,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    OutlinedCard(
-                        onClick = { onRecurrenceChange(nextRecurrenceRule(recurrence)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                    
+                    var recurrenceExpanded by remember { mutableStateOf(false) }
+                    
+                    Box {
+                        OutlinedCard(
+                            onClick = { recurrenceExpanded = true },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp)
                         ) {
                             Row(
-                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
+                                Row(
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Repeat,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        text = recurrenceLabel(recurrence),
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
                                 Icon(
-                                    imageVector = Icons.Filled.Repeat,
+                                    imageVector = Icons.Filled.ArrowDropDown,
                                     contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Text(
-                                    text = recurrenceLabel(recurrence),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = FontWeight.Medium
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Icon(
-                                imageVector = Icons.Filled.ChevronRight,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
+                        }
+                        
+                        DropdownMenu(
+                            expanded = recurrenceExpanded,
+                            onDismissRequest = { recurrenceExpanded = false },
+                            modifier = Modifier.fillMaxWidth(0.9f)
+                        ) {
+                            RecurrenceRule.entries.forEach { rule ->
+                                DropdownMenuItem(
+                                    text = {
+                                        Row(
+                                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (recurrence == rule) {
+                                                Icon(
+                                                    Icons.Filled.Check,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(20.dp)
+                                                )
+                                            } else {
+                                                Spacer(modifier = Modifier.size(20.dp))
+                                            }
+                                            Text(
+                                                text = recurrenceLabel(rule),
+                                                fontWeight = if (recurrence == rule) FontWeight.Bold else FontWeight.Normal
+                                            )
+                                        }
+                                    },
+                                    onClick = {
+                                        onRecurrenceChange(rule)
+                                        recurrenceExpanded = false
+                                    }
+                                )
+                            }
                         }
                     }
                 }
