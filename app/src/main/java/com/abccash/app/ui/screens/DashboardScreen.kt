@@ -4,17 +4,30 @@ import android.content.Context
 import android.widget.Toast
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -36,20 +49,67 @@ import com.github.mikephil.charting.formatter.ValueFormatter
 fun DashboardScreen(
     openingMinor: Long,
     forecastRows: List<CumulativeForecastPoint>,
-    currency: CurrencyCode
+    currency: CurrencyCode,
+    onUpdateOpeningBalance: (Long) -> Unit = {}
 ) {
     val context = LocalContext.current
     val stressMonths = forecastRows.filter { it.cumulativeMinor < 0L }
     val worstStress = stressMonths.minByOrNull { it.cumulativeMinor }
     val maxExcedent = forecastRows.maxByOrNull { it.cumulativeMinor }
     
+    var showBalanceDialog by remember { mutableStateOf(false) }
+    var balanceText by remember { mutableStateOf(String.format("%.2f", openingMinor / 100.0)) }
+    
     Column {
-        Text(
-            text = "Solde actuel: ${formatAmount(openingMinor, currency)}",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "Solde d'ouverture: ${formatAmount(openingMinor, currency)}",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold
+            )
+            IconButton(onClick = { showBalanceDialog = true }) {
+                Icon(Icons.Default.Edit, contentDescription = "Modifier solde")
+            }
+        }
         Spacer(Modifier.height(8.dp))
+        
+        if (showBalanceDialog) {
+            AlertDialog(
+                onDismissRequest = { showBalanceDialog = false },
+                title = { Text("Modifier le solde d'ouverture") },
+                text = {
+                    Column {
+                        Text("Entrez le solde initial de votre compte :")
+                        Spacer(modifier = Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = balanceText,
+                            onValueChange = { balanceText = it },
+                            label = { Text("Montant") },
+                            suffix = { Text(currency.name) },
+                            singleLine = true
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val newBalance = balanceText.toDoubleOrNull() ?: (openingMinor / 100.0)
+                        onUpdateOpeningBalance((newBalance * 100).toLong())
+                        showBalanceDialog = false
+                    }) {
+                        Text("Confirmer")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showBalanceDialog = false }) {
+                        Text("Annuler")
+                    }
+                }
+            )
+        }
         
         TreasuryAlertCard(
             stressMonthsCount = stressMonths.size,

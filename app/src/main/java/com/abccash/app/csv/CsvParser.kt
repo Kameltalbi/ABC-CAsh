@@ -104,10 +104,16 @@ object CsvParser {
         }
         
         val columns = header.split(separator).map { it.trim().lowercase() }
+        android.util.Log.d("CsvParser", "Header columns: $columns")
+        
         keywords.forEach { keyword ->
             val index = columns.indexOfFirst { it.contains(keyword.lowercase()) }
-            if (index != -1) return index
+            if (index != -1) {
+                android.util.Log.d("CsvParser", "Found column '$keyword' at index $index")
+                return index
+            }
         }
+        android.util.Log.d("CsvParser", "Column not found for keywords: $keywords")
         return -1
     }
 

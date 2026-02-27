@@ -268,7 +268,10 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                     0 -> DashboardScreen(
                         openingMinor = state.openingBalanceMinor,
                         forecastRows = state.forecast,
-                        currency = state.selectedCurrency
+                        currency = state.selectedCurrency,
+                        onUpdateOpeningBalance = { newBalance ->
+                            viewModel.saveOpeningBalance(newBalance)
+                        }
                     )
 
                     1 -> {
