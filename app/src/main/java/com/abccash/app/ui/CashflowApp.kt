@@ -30,6 +30,7 @@ import com.abccash.app.presentation.CashflowViewModel
 import com.abccash.app.sync.readBackupFromTree
 import com.abccash.app.sync.writeBackupToTree
 import com.abccash.app.ui.components.HeaderMenu
+import com.abccash.app.ui.screens.CalendarScreen
 import com.abccash.app.ui.screens.CategoriesScreen
 import com.abccash.app.ui.screens.DashboardScreen
 import com.abccash.app.ui.screens.PlanningScreen
@@ -244,7 +245,20 @@ fun CashflowApp(viewModel: CashflowViewModel) {
                         currency = state.selectedCurrency
                     )
 
-                    1 -> TransactionsScreen(
+                    1 -> CalendarScreen(
+                        openingBalance = state.openingBalanceMinor / 100.0,
+                        transactions = state.transactions,
+                        categories = state.categories,
+                        currency = state.selectedCurrency,
+                        onAddTransaction = {
+                            // TODO: Ouvrir le dialog d'ajout de transaction
+                        },
+                        onTransactionClick = { transaction ->
+                            // TODO: Ouvrir le dialog d'édition
+                        }
+                    )
+                    
+                    99 -> TransactionsScreen(
                         openingMinor = state.openingBalanceMinor,
                         onAddTransaction = viewModel::addQuickTransaction,
                         onValidate = viewModel::validateTransaction,
