@@ -14,13 +14,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DirectionsCar
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.MedicalServices
-import androidx.compose.material.icons.filled.Restaurant
-import androidx.compose.material.icons.filled.ShoppingCart
-import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.Work
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
@@ -131,8 +125,8 @@ private fun CategoryGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(3),
         contentPadding = PaddingValues(0.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.height(220.dp)
     ) {
         items(categories) { category ->
@@ -142,28 +136,40 @@ private fun CategoryGrid(
                     .clickable { onLongPress(category) },
                 colors = CardDefaults.cardColors(
                     containerColor = categoryCardColor(category, type)
-                )
+                ),
+                elevation = CardDefaults.cardElevation(defaultElevation = 3.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
             ) {
                 Column(
-                    modifier = Modifier.padding(10.dp),
-                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                    modifier = Modifier.padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
                 ) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(32.dp),
+                            .height(40.dp),
                         contentAlignment = androidx.compose.ui.Alignment.Center
                     ) {
                         Icon(
                             imageVector = categoryIcon(category.name, type),
                             contentDescription = category.name,
-                            tint = Color(0xFF1F2937)
+                            tint = if (type == TransactionType.INCOME) 
+                                Color(0xFF047857) 
+                            else 
+                                Color(0xFF1F2937),
+                            modifier = Modifier.padding(4.dp)
                         )
                     }
                     Text(
                         text = category.name,
                         maxLines = 2,
-                        style = MaterialTheme.typography.bodySmall
+                        style = MaterialTheme.typography.bodySmall,
+                        fontWeight = FontWeight.Medium,
+                        color = if (type == TransactionType.INCOME) 
+                            Color(0xFF047857) 
+                        else 
+                            Color(0xFF1F2937)
                     )
                 }
             }
@@ -234,13 +240,32 @@ private fun DeleteCategoryDialog(
 }
 
 private fun categoryIcon(name: String, type: TransactionType): ImageVector = when {
-    name.contains("logement", true) || name.contains("loyer", true) -> Icons.Filled.Home
+    // Revenus B2B
+    name.contains("salaire", true) -> Icons.Filled.AccountBalance
+    name.contains("freelance", true) || name.contains("consultant", true) -> Icons.Filled.Business
+    name.contains("revenu", true) || name.contains("autre", true) -> Icons.Filled.TrendingUp
+    
+    // Dépenses B2B
+    name.contains("loyer", true) || name.contains("logement", true) -> Icons.Filled.Home
     name.contains("transport", true) -> Icons.Filled.DirectionsCar
-    name.contains("sante", true) -> Icons.Filled.MedicalServices
-    name.contains("aliment", true) -> Icons.Filled.Restaurant
-    name.contains("shopping", true) -> Icons.Filled.ShoppingCart
-    type == TransactionType.INCOME -> Icons.Filled.Work
-    else -> Icons.Filled.Star
+    name.contains("alimentation", true) || name.contains("aliment", true) -> Icons.Filled.Restaurant
+    name.contains("sante", true) || name.contains("santé", true) -> Icons.Filled.MedicalServices
+    name.contains("loisir", true) -> Icons.Filled.SportsEsports
+    name.contains("shopping", true) -> Icons.Filled.ShoppingBag
+    name.contains("divers", true) -> Icons.Filled.MoreHoriz
+    name.contains("bureau", true) || name.contains("fourniture", true) -> Icons.Filled.BusinessCenter
+    name.contains("formation", true) || name.contains("education", true) -> Icons.Filled.School
+    name.contains("marketing", true) || name.contains("publicité", true) -> Icons.Filled.Campaign
+    name.contains("abonnement", true) || name.contains("subscription", true) -> Icons.Filled.Subscriptions
+    name.contains("assurance", true) -> Icons.Filled.Security
+    name.contains("impot", true) || name.contains("taxe", true) -> Icons.Filled.Receipt
+    name.contains("energie", true) || name.contains("electricite", true) -> Icons.Filled.Bolt
+    name.contains("internet", true) || name.contains("telecom", true) -> Icons.Filled.Wifi
+    name.contains("restaurant", true) -> Icons.Filled.Restaurant
+    
+    // Par défaut selon le type
+    type == TransactionType.INCOME -> Icons.Filled.Payments
+    else -> Icons.Filled.Category
 }
 
 private fun categoryCardColor(category: CategoryEntity, type: TransactionType): Color {
