@@ -54,14 +54,27 @@ object CsvParser {
             val dateIndex = findColumnIndex(header, listOf("date", "datum", "fecha"))
             val descIndex = findColumnIndex(header, listOf("libelle", "libellé", "description", "label", "desc"))
             val amountIndex = findColumnIndex(header, listOf("montant", "amount", "betrag", "importe"))
+            val typeIndex = findColumnIndex(header, listOf("debit", "credit", "type", "sens"))
 
             val date = parseDate(parts.getOrNull(dateIndex) ?: parts[0])
             val description = parts.getOrNull(descIndex) ?: parts.getOrNull(1) ?: "Transaction"
             val amountStr = parts.getOrNull(amountIndex) ?: parts.getOrNull(2) ?: "0"
+            val typeStr = parts.getOrNull(typeIndex)?.lowercase() ?: ""
             
             val amount = parseAmount(amountStr)
-            val type = if (amount < 0) TransactionType.EXPENSE else TransactionType.INCOME
+            
+            // Déterminer le type basé sur la colonne Debit/Credit si elle existe
+            val type = when {
+                typeStr.contains("credit") || typeStr.contains("crédit") -> TransactionType.INCOME
+                typeStr.contains("debit") || typeStr.contains("débit") -> TransactionType.EXPENSE
+                amount < 0 -> TransactionType.EXPENSE
+                else -> TransactionType.INCOME
+            }
+            
             val category = categorizeTransaction(description, type)
+            
+            // Debug logging
+            android.util.Log.d("CsvParser", "Parsing: desc='$description', typeStr='$typeStr', amountStr='$amountStr', amount=$amount, type=$type")
 
             CsvTransaction(
                 date = date,
