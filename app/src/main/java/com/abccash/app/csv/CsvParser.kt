@@ -47,7 +47,14 @@ object CsvParser {
     private fun parseLine(line: String, header: String): CsvTransaction? {
         if (line.isBlank()) return null
 
-        val parts = line.split(",", ";").map { it.trim().replace("\"", "") }
+        // Détecter le séparateur (virgule, point-virgule ou tabulation)
+        val separator = when {
+            line.contains("\t") -> "\t"
+            line.contains(";") -> ";"
+            else -> ","
+        }
+        
+        val parts = line.split(separator).map { it.trim().replace("\"", "") }
         if (parts.size < 3) return null
 
         return try {
@@ -89,9 +96,16 @@ object CsvParser {
     }
 
     private fun findColumnIndex(header: String, keywords: List<String>): Int {
-        val columns = header.split(",", ";")
+        // Détecter le séparateur
+        val separator = when {
+            header.contains("\t") -> "\t"
+            header.contains(";") -> ";"
+            else -> ","
+        }
+        
+        val columns = header.split(separator).map { it.trim().lowercase() }
         keywords.forEach { keyword ->
-            val index = columns.indexOfFirst { it.contains(keyword) }
+            val index = columns.indexOfFirst { it.contains(keyword.lowercase()) }
             if (index != -1) return index
         }
         return -1
