@@ -60,7 +60,7 @@ object CsvParser {
             val amountStr = parts.getOrNull(amountIndex) ?: parts.getOrNull(2) ?: "0"
             
             val amount = parseAmount(amountStr)
-            val type = if (amount >= 0) TransactionType.INCOME else TransactionType.EXPENSE
+            val type = if (amount < 0) TransactionType.EXPENSE else TransactionType.INCOME
             val category = categorizeTransaction(description, type)
 
             CsvTransaction(
