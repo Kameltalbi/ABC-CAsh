@@ -56,9 +56,9 @@ fun HeaderMenu(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(bottom = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp),
+            .padding(bottom = 4.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         )
@@ -66,7 +66,7 @@ fun HeaderMenu(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 12.dp, horizontal = 8.dp),
+                .padding(vertical = 4.dp, horizontal = 4.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -78,11 +78,9 @@ fun HeaderMenu(
                 Icon(
                     Icons.Filled.Dashboard,
                     contentDescription = "Dashboard",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.width(4.dp))
             
             HeaderMenuItem(
                 label = "Calendrier",
@@ -92,11 +90,9 @@ fun HeaderMenu(
                 Icon(
                     Icons.Filled.CalendarMonth,
                     contentDescription = "Calendrier",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.width(4.dp))
             
             HeaderMenuItem(
                 label = "Planning",
@@ -106,11 +102,9 @@ fun HeaderMenu(
                 Icon(
                     Icons.Filled.EventNote,
                     contentDescription = "Planning",
-                    modifier = Modifier.size(24.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
-            
-            Spacer(modifier = Modifier.width(4.dp))
             
             Box {
                 HeaderMenuItem(
@@ -121,7 +115,7 @@ fun HeaderMenu(
                     Icon(
                         Icons.Filled.Menu,
                         contentDescription = "Menu",
-                        modifier = Modifier.size(24.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 DropdownMenu(
@@ -196,22 +190,22 @@ private fun HeaderMenuItem(
     Surface(
         onClick = onClick,
         modifier = Modifier.scale(scale),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(8.dp),
         color = backgroundColor
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
         ) {
             Box(
                 modifier = Modifier
-                    .size(40.dp)
+                    .size(28.dp)
                     .background(
                         color = if (selected) 
                             MaterialTheme.colorScheme.primary.copy(alpha = 0.1f) 
                         else 
                             Color.Transparent,
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(6.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -222,13 +216,13 @@ private fun HeaderMenuItem(
                 }
             }
             
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
             
             Text(
                 text = label,
                 color = contentColor,
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-                fontSize = 11.sp,
+                fontSize = 10.sp,
                 maxLines = 1
             )
         }
