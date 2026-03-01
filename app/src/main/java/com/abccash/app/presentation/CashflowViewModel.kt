@@ -88,15 +88,19 @@ class CashflowViewModel(
     }
 
     fun saveOpeningBalance(amountMinor: Long) {
+        android.util.Log.d("CashflowViewModel", "saveOpeningBalance called with: $amountMinor")
         viewModelScope.launch {
             val balance = BalanceEntity(
                 currency = _uiState.value.selectedCurrency,
                 amountMinor = amountMinor,
                 updatedAt = LocalDateTime.now()
             )
+            android.util.Log.d("CashflowViewModel", "Saving balance: $balance")
             balanceDao.upsert(balance)
+            android.util.Log.d("CashflowViewModel", "Balance saved, refreshing...")
             refreshAll()
             markDataChanged()
+            android.util.Log.d("CashflowViewModel", "Refresh complete, new balance: ${_uiState.value.openingBalanceMinor}")
         }
     }
 

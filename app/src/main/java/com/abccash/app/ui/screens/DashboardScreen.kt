@@ -23,6 +23,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,7 +59,7 @@ fun DashboardScreen(
     val maxExcedent = forecastRows.maxByOrNull { it.cumulativeMinor }
     
     var showBalanceDialog by remember { mutableStateOf(false) }
-    var balanceText by remember { mutableStateOf(String.format("%.2f", openingMinor / 100.0)) }
+    var balanceText by remember { mutableStateOf("") }
     
     Column {
         Row(
@@ -71,13 +72,21 @@ fun DashboardScreen(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            IconButton(onClick = { showBalanceDialog = true }) {
+            IconButton(onClick = { 
+                balanceText = String.format("%.0f", openingMinor / 100.0)
+                showBalanceDialog = true 
+            }) {
                 Icon(Icons.Default.Edit, contentDescription = "Modifier solde")
             }
         }
         Spacer(Modifier.height(8.dp))
         
         if (showBalanceDialog) {
+            LaunchedEffect(showBalanceDialog) {
+                balanceText = String.format("%.0f", openingMinor / 100.0)
+                android.util.Log.d("DashboardScreen", "Dialog opened, initialized balanceText to: $balanceText")
+            }
+            
             AlertDialog(
                 onDismissRequest = { showBalanceDialog = false },
                 title = { Text("Modifier le solde d'ouverture") },
@@ -87,7 +96,10 @@ fun DashboardScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                         OutlinedTextField(
                             value = balanceText,
-                            onValueChange = { balanceText = it },
+                            onValueChange = { 
+                                balanceText = it
+                                android.util.Log.d("DashboardScreen", "TextField changed to: $it")
+                            },
                             label = { Text("Montant") },
                             suffix = { Text(currency.name) },
                             singleLine = true
@@ -96,8 +108,12 @@ fun DashboardScreen(
                 },
                 confirmButton = {
                     TextButton(onClick = {
-                        val newBalance = balanceText.toDoubleOrNull() ?: (openingMinor / 100.0)
-                        onUpdateOpeningBalance((newBalance * 100).toLong())
+                        // Remplacer la virgule par un point pour le parsing
+                        val cleanedText = balanceText.replace(",", ".").replace(" ", "")
+                        val newBalance = cleanedText.toDoubleOrNull() ?: (openingMinor / 100.0)
+                        val newBalanceMinor = (newBalance * 100).toLong()
+                        android.util.Log.d("DashboardScreen", "Confirming balance: cleanedText='$cleanedText', newBalance=$newBalance -> $newBalanceMinor")
+                        onUpdateOpeningBalance(newBalanceMinor)
                         showBalanceDialog = false
                     }) {
                         Text("Confirmer")
