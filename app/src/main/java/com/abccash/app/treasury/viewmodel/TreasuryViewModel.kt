@@ -14,12 +14,14 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
 
 data class TreasuryUiState(
     val currentUserId: String? = null,
     val currentUserRole: UserRole = UserRole.STAFF,
     val permissions: Set<UserPermission> = emptySet(),
     val entrepriseId: String? = null,
+    val entreprise: Entreprise? = null,
     val users: List<User> = emptyList(),
     val invoices: List<Invoice> = emptyList(),
     val expenses: List<Expense> = emptyList(),
@@ -67,6 +69,17 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                 _uiState.update { it.copy(users = users) }
             }
         }
+        viewModelScope.launch {
+            _entrepriseId.flatMapLatest { id ->
+                if (id == null) {
+                    kotlinx.coroutines.flow.flowOf(null)
+                } else {
+                    repository.observeEntreprise(id)
+                }
+            }.collect { entreprise ->
+                _uiState.update { it.copy(entreprise = entreprise) }
+            }
+        }
     }
 
     fun setSession(
@@ -102,6 +115,8 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         clientName: String,
         totalAmount: Double,
         dueDate: LocalDate,
+        category: RevenueCategory = RevenueCategory.OTHER,
+        markAsCollected: Boolean = false,
         onResult: (String?) -> Unit = {}
     ) {
         val entrepriseId = requireEntrepriseId()
@@ -110,16 +125,157 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
             return
         }
         viewModelScope.launch {
-            val error = repository.addInvoice(
-                Invoice(
-                    invoiceNumber = invoiceNumber,
-                    clientName = clientName,
-                    totalAmount = totalAmount,
-                    dueDate = dueDate,
-                    entrepriseId = entrepriseId
+            val number = invoiceNumber.ifBlank {
+                "ENC-${dueDate.format(DateTimeFormatter.BASIC_ISO_DATE)}-" +
+                    (System.currentTimeMillis() % 10_000).toString().padStart(4, '0')
+            }
+            val invoice = Invoice(
+                invoiceNumber = number,
+                clientName = clientName,
+                totalAmount = totalAmount,
+                dueDate = dueDate,
+                entrepriseId = entrepriseId,
+                category = category
+            )
+            val error = repository.addInvoice(invoice)
+            if (error == null && markAsCollected) {
+                repository.addPayment(
+                    Payment(
+                        invoiceId = invoice.id,
+                        amount = totalAmount,
+                        date = dueDate,
+                        method = PaymentMethod.CASH
+                    )
+                )
+            }
+            onResult(error)
+        }
+    }
+
+    fun addIncomeTransaction(
+        clientName: String,
+        amount: Double,
+        date: LocalDate,
+        category: RevenueCategory,
+        categoryLabel: String = "",
+        markAsCollected: Boolean,
+        onResult: (String?) -> Unit
+    ) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
+        viewModelScope.launch {
+            val number = "ENC-${date.format(DateTimeFormatter.BASIC_ISO_DATE)}-" +
+                (System.currentTimeMillis() % 10_000).toString().padStart(4, '0')
+            val invoice = Invoice(
+                invoiceNumber = number,
+                clientName = clientName,
+                totalAmount = amount,
+                dueDate = date,
+                entrepriseId = entrepriseId,
+                category = category,
+                categoryLabel = categoryLabel
+            )
+            val error = repository.addInvoice(invoice)
+            if (error == null && markAsCollected) {
+                repository.addPayment(
+                    Payment(
+                        invoiceId = invoice.id,
+                        amount = amount,
+                        date = date,
+                        method = PaymentMethod.CASH
+                    )
+                )
+            }
+            onResult(error)
+        }
+    }
+
+    fun addExpenseTransaction(
+        label: String,
+        amount: Double,
+        date: LocalDate,
+        category: ExpenseCategory,
+        categoryLabel: String = "",
+        onResult: (String?) -> Unit
+    ) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
+        viewModelScope.launch {
+            repository.addExpense(
+                Expense(
+                    label = label,
+                    amount = amount,
+                    date = date,
+                    isPaid = true,
+                    entrepriseId = entrepriseId,
+                    category = category,
+                    categoryLabel = categoryLabel
                 )
             )
-            onResult(error)
+            onResult(null)
+        }
+    }
+
+    fun updateUserProfile(
+        userId: String,
+        nom: String,
+        email: String,
+        telephone: String,
+        onResult: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            onResult(repository.updateUserProfile(userId, nom, email, telephone))
+        }
+    }
+
+    fun updateEntrepriseProfile(
+        nom: String,
+        email: String,
+        telephone: String,
+        adresse: String,
+        onResult: (String?) -> Unit
+    ) {
+        val entrepriseId = requireEntrepriseId() ?: run {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
+        viewModelScope.launch {
+            onResult(repository.updateEntrepriseProfile(entrepriseId, nom, email, telephone, adresse))
+        }
+    }
+
+    fun recordPayment(
+        invoiceId: String,
+        amount: Double,
+        date: LocalDate,
+        method: PaymentMethod,
+        onResult: (String?) -> Unit = {}
+    ) {
+        val invoice = getInvoice(invoiceId)
+        if (invoice == null) {
+            onResult("Encaissement introuvable")
+            return
+        }
+        if (amount <= 0 || amount > invoice.remainingAmount) {
+            onResult("Montant invalide (max ${invoice.remainingAmount})")
+            return
+        }
+        viewModelScope.launch {
+            repository.addPayment(
+                Payment(
+                    invoiceId = invoiceId,
+                    amount = amount,
+                    date = date,
+                    method = method
+                )
+            )
+            onResult(null)
         }
     }
 
@@ -329,13 +485,13 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         }
     }
 
-    fun buildCsvExport(): String? {
+    fun buildCsvExport(year: Int = YearMonth.now().year): String? {
         val state = _uiState.value
         if (state.entrepriseId == null) return null
-        return TreasuryCsvExporter.export(
+        return TreasuryCsvExporter.exportYear(
             invoices = state.invoices,
             expenses = state.expenses,
-            selectedMonth = state.selectedMonth
+            year = year
         )
     }
 
@@ -398,6 +554,74 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
             expenses = _uiState.value.expenses,
             month = yearMonth
         )
+    }
+
+    fun getYearlyBalance(year: Int): Double =
+        TreasuryCalculations.yearlyBalance(_uiState.value.invoices, _uiState.value.expenses, year)
+
+    /**
+     * Aligne la trésorerie calculée sur le solde bancaire réel.
+     * - Banque > appli → encaissement d'ajustement
+     * - Banque < appli → dépense d'ajustement
+     */
+    fun reconcileTreasuryWithBank(
+        bankBalance: Double,
+        calculatedBalance: Double,
+        createAdjustments: Boolean,
+        userRole: UserRole,
+        onResult: (String?) -> Unit
+    ) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
+        val gap = bankBalance - calculatedBalance
+        if (!createAdjustments || kotlin.math.abs(gap) <= 0.001) {
+            onResult(null)
+            return
+        }
+        if (gap > 0 && userRole != UserRole.ADMIN) {
+            onResult("Seul l'administrateur peut créer un ajustement d'encaissement")
+            return
+        }
+        viewModelScope.launch {
+            val today = LocalDate.now()
+            val error = if (gap > 0) {
+                val invoice = Invoice(
+                    invoiceNumber = TreasuryAdjustmentLabels.invoiceNumber(today),
+                    clientName = TreasuryAdjustmentLabels.INVOICE_CLIENT,
+                    totalAmount = gap,
+                    dueDate = today,
+                    entrepriseId = entrepriseId
+                )
+                repository.addInvoice(invoice).also { invoiceError ->
+                    if (invoiceError == null) {
+                        repository.addPayment(
+                            Payment(
+                                invoiceId = invoice.id,
+                                amount = gap,
+                                date = today,
+                                method = PaymentMethod.CASH,
+                                note = "Ajustement automatique solde bancaire"
+                            )
+                        )
+                    }
+                }
+            } else {
+                repository.addExpense(
+                    Expense(
+                        label = TreasuryAdjustmentLabels.EXPENSE,
+                        amount = kotlin.math.abs(gap),
+                        date = today,
+                        isPaid = true,
+                        entrepriseId = entrepriseId
+                    )
+                )
+                null
+            }
+            onResult(error)
+        }
     }
 }
 

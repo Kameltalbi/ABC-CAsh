@@ -1,5 +1,8 @@
 package com.abccash.app.treasury.ui
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -7,8 +10,9 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -16,22 +20,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
+import com.abccash.app.treasury.data.TreasuryCalculations
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
-import com.abccash.app.treasury.data.appliesToMonth
 import com.abccash.app.treasury.data.hasPermission
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.filled.FileDownload
-import androidx.compose.ui.platform.LocalContext
-import java.text.NumberFormat
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -40,14 +40,10 @@ import java.util.Locale
 fun TreasuryBalanceScreen(
     userRole: UserRole,
     permissions: Set<UserPermission>,
-    selectedMonth: YearMonth,
-    totalCollected: Double,
-    totalExpenses: Double,
-    forecastedBalance: Double,
     invoices: List<Invoice>,
     expenses: List<Expense>,
-    onMonthChange: (YearMonth) -> Unit,
-    onExportCsv: () -> String?
+    onExportCsv: (Int) -> String?,
+    onNavigateToBankReconciliation: () -> Unit
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)) {
         Box(
@@ -65,10 +61,7 @@ fun TreasuryBalanceScreen(
                     modifier = Modifier.padding(32.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Text(
-                        text = "🔐",
-                        fontSize = 64.sp
-                    )
+                    Text(text = "🔐", fontSize = 64.sp)
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
                         text = "Accès refusé",
@@ -87,16 +80,27 @@ fun TreasuryBalanceScreen(
         }
         return
     }
-    
-    val currencyFormatter = remember {
-        NumberFormat.getCurrencyInstance(Locale("fr", "TN")).apply {
-            maximumFractionDigits = 3
-        }
-    }
-    
-    val monthBalance = totalCollected - totalExpenses
+
     val context = LocalContext.current
+    val displayYear = remember { YearMonth.now().year }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
+    val canManageBank = userRole == UserRole.ADMIN ||
+        hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
+
+    val formatAmount = rememberFormatMoney()
+
+    val totals = remember(invoices, expenses, displayYear) {
+        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, displayYear)
+        TreasuryYearTotals(
+            collected = TreasuryCalculations.yearlyCollections(invoices, displayYear),
+            pendingIncome = TreasuryCalculations.yearlyPendingIncome(invoices, displayYear),
+            expenses = TreasuryCalculations.yearlyPaidExpenses(expenses, displayYear),
+            pendingExpenses = TreasuryCalculations.yearlyPendingExpenses(expenses, displayYear),
+            balance = TreasuryCalculations.yearlyForecastBalance(invoices, expenses, displayYear),
+            rows = rows
+        )
+    }
+
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri: Uri? ->
@@ -118,198 +122,184 @@ fun TreasuryBalanceScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 8.dp),
-            horizontalArrangement = Arrangement.End
+                .padding(bottom = 12.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedButton(
-                onClick = {
-                    val csv = onExportCsv() ?: return@OutlinedButton
-                    pendingCsv = csv
-                    exportLauncher.launch("abc-cash-${selectedMonth}.csv")
-                }
-            ) {
-                Icon(Icons.Default.FileDownload, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Exporter CSV")
+            Column {
+                Text(
+                    text = "Trésorerie $displayYear",
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF1A1A1A)
+                )
+                Text(
+                    text = "Janvier → Décembre",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
             }
-        }
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = Color.White),
-            elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
-        ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(onClick = { onMonthChange(selectedMonth.minusMonths(1)) }) {
-                    Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Mois précédent")
+                if (canManageBank) {
+                    BankAdjustIconButton(onClick = onNavigateToBankReconciliation)
                 }
-                
-                Text(
-                    text = selectedMonth.format(
-                        DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH)
-                    ).replaceFirstChar { it.uppercase() },
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold
-                )
-                
-                IconButton(onClick = { onMonthChange(selectedMonth.plusMonths(1)) }) {
-                    Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Mois suivant")
+                IconButton(
+                    onClick = {
+                        val csv = onExportCsv(displayYear) ?: return@IconButton
+                        pendingCsv = csv
+                        exportLauncher.launch("abc-cash-$displayYear.csv")
+                    }
+                ) {
+                    Icon(
+                        Icons.Default.FileDownload,
+                        contentDescription = "Exporter CSV",
+                        tint = Color(0xFF64748B)
+                    )
                 }
             }
         }
-        
-        Spacer(modifier = Modifier.height(16.dp))
 
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             CompactTreasuryCard(
-                title = "Encaissé",
-                amount = currencyFormatter.format(totalCollected),
+                title = "Encaissements",
+                amount = formatAmount(totals.collected + totals.pendingIncome),
+                subtitle = if (totals.pendingIncome > 0) {
+                    "dont ${formatAmount(totals.pendingIncome)} à venir"
+                } else null,
                 color = Color(0xFF4CAF50),
                 modifier = Modifier.weight(1f)
             )
             CompactTreasuryCard(
-                title = "Dép. payées",
-                amount = currencyFormatter.format(totalExpenses),
+                title = "Dépenses",
+                amount = formatAmount(totals.expenses + totals.pendingExpenses),
+                subtitle = if (totals.pendingExpenses > 0) {
+                    "dont ${formatAmount(totals.pendingExpenses)} à venir"
+                } else null,
                 color = Color(0xFFF44336),
                 modifier = Modifier.weight(1f)
             )
             CompactTreasuryCard(
-                title = "Solde",
-                amount = currencyFormatter.format(monthBalance),
-                color = if (monthBalance >= 0) Color(0xFF4CAF50) else Color(0xFFF44336),
+                title = "Solde prévisionnel",
+                amount = formatAmount(totals.balance),
+                color = if (totals.balance >= 0) Color(0xFF2563EB) else Color(0xFFF44336),
                 modifier = Modifier.weight(1f)
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        TreasuryMonthlyChart(
-            selectedMonth = selectedMonth,
-            invoices = invoices,
-            expenses = expenses
-        )
-        
-        Spacer(modifier = Modifier.height(10.dp))
-
-        ForecastSummaryRow(
-            forecastedBalance = currencyFormatter.format(forecastedBalance),
-            isPositive = forecastedBalance >= 0
-        )
+        TreasuryYearlyChart(rows = totals.rows)
     }
 }
+
+@Composable
+private fun BankAdjustIconButton(onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Box(modifier = Modifier.size(24.dp)) {
+            Icon(
+                imageVector = Icons.Default.AccountBalance,
+                contentDescription = "Ajuster le solde bancaire",
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(22.dp)
+                    .align(Alignment.Center)
+            )
+            Icon(
+                imageVector = Icons.Default.Add,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier
+                    .size(11.dp)
+                    .align(Alignment.BottomEnd)
+                    .offset(x = 2.dp, y = 2.dp)
+            )
+        }
+    }
+}
+
+private data class TreasuryYearTotals(
+    val collected: Double,
+    val pendingIncome: Double,
+    val expenses: Double,
+    val pendingExpenses: Double,
+    val balance: Double,
+    val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
+)
 
 @Composable
 private fun CompactTreasuryCard(
     title: String,
     amount: String,
+    subtitle: String? = null,
     color: Color,
     modifier: Modifier = Modifier
 ) {
     Card(
-        modifier = modifier,
+        modifier = modifier.heightIn(min = 88.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = color)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 6.dp, vertical = 8.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 8.dp, vertical = 10.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
             Text(
                 text = title,
-                fontSize = 10.sp,
-                color = Color.White.copy(alpha = 0.9f),
+                fontSize = 11.sp,
+                color = Color.White.copy(alpha = 0.92f),
                 fontWeight = FontWeight.Medium,
-                maxLines = 1
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
-            Spacer(modifier = Modifier.height(3.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 text = amount,
-                fontSize = 11.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White,
                 textAlign = TextAlign.Center,
-                maxLines = 1
+                maxLines = 2,
+                lineHeight = 16.sp,
+                overflow = TextOverflow.Ellipsis
             )
+            subtitle?.let {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = it,
+                    fontSize = 9.sp,
+                    color = Color.White.copy(alpha = 0.85f),
+                    textAlign = TextAlign.Center,
+                    maxLines = 2,
+                    lineHeight = 11.sp
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun ForecastSummaryRow(
-    forecastedBalance: String,
-    isPositive: Boolean
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF8F9FA)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = "Prévision fin de mois",
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color(0xFF1A1A1A)
-            )
-            Text(
-                text = forecastedBalance,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = if (isPositive) Color(0xFF4CAF50) else Color(0xFFF44336)
-            )
-        }
-    }
-}
-
-@Composable
-private fun TreasuryMonthlyChart(
-    selectedMonth: YearMonth,
-    invoices: List<Invoice>,
-    expenses: List<Expense>
+private fun TreasuryYearlyChart(
+    rows: List<TreasuryCalculations.MonthlyTreasuryRow>
 ) {
     val green = Color(0xFF4CAF50)
     val red = Color(0xFFF44336)
     val blue = Color(0xFF2563EB)
-    val months = remember(selectedMonth) {
-        (5 downTo 0).map { selectedMonth.minusMonths(it.toLong()) }
-    }
-    val rows = remember(selectedMonth, invoices, expenses) {
-        months.map { month ->
-            val collected = invoices
-                .flatMap { it.payments }
-                .filter { YearMonth.from(it.date) == month }
-                .sumOf { it.amount }
-            val spent = expenses
-                .filter { it.appliesToMonth(month) }
-                .sumOf { it.amount }
-            MonthlyTreasuryPoint(month, collected, spent, collected - spent)
-        }
-    }
+
     val minValue = rows
-        .flatMap { listOf(0.0, it.collected, it.expenses, it.balance) }
+        .flatMap { listOf(0.0, it.totalIncome, it.totalExpenses, it.forecastBalance) }
         .minOrNull()
         ?: 0.0
     val maxValue = rows
-        .flatMap { listOf(0.0, it.collected, it.expenses, it.balance) }
+        .flatMap { listOf(0.0, it.totalIncome, it.totalExpenses, it.forecastBalance) }
         .maxOrNull()
         ?.takeIf { it > minValue }
         ?: 1.0
@@ -322,7 +312,7 @@ private fun TreasuryMonthlyChart(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
-                text = "Évolution mois par mois",
+                text = "Évolution sur 12 mois (prévisions incluses)",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
@@ -331,13 +321,13 @@ private fun TreasuryMonthlyChart(
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ChartLegend("Encaissements", green)
                 ChartLegend("Dépenses", red)
-                ChartLegend("Solde", blue)
+                ChartLegend("Solde prév.", blue)
             }
             Spacer(modifier = Modifier.height(12.dp))
             Canvas(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(250.dp)
+                    .height(260.dp)
             ) {
                 val leftPadding = 10.dp.toPx()
                 val rightPadding = 10.dp.toPx()
@@ -371,18 +361,18 @@ private fun TreasuryMonthlyChart(
                             color = color,
                             start = start,
                             end = end,
-                            strokeWidth = 3.dp.toPx(),
+                            strokeWidth = 2.5.dp.toPx(),
                             cap = StrokeCap.Round
                         )
                     }
                     points.forEach { point ->
-                        drawCircle(color = color, radius = 4.dp.toPx(), center = point)
+                        drawCircle(color = color, radius = 3.dp.toPx(), center = point)
                     }
                 }
 
-                drawSeries(rows.map { it.collected }, green)
-                drawSeries(rows.map { it.expenses }, red)
-                drawSeries(rows.map { it.balance }, blue)
+                drawSeries(rows.map { it.totalIncome }, green)
+                drawSeries(rows.map { it.totalExpenses }, red)
+                drawSeries(rows.map { it.forecastBalance }, blue)
             }
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -391,8 +381,10 @@ private fun TreasuryMonthlyChart(
                 rows.forEach { row ->
                     Text(
                         text = row.month.format(DateTimeFormatter.ofPattern("MMM", Locale.FRENCH)),
-                        fontSize = 10.sp,
-                        color = Color.Gray
+                        fontSize = 9.sp,
+                        color = Color.Gray,
+                        maxLines = 1,
+                        overflow = TextOverflow.Clip
                     )
                 }
             }
@@ -412,10 +404,3 @@ private fun ChartLegend(label: String, color: Color) {
         Text(text = label, fontSize = 10.sp, color = Color.Gray)
     }
 }
-
-private data class MonthlyTreasuryPoint(
-    val month: YearMonth,
-    val collected: Double,
-    val expenses: Double,
-    val balance: Double
-)

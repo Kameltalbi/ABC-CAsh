@@ -1,8 +1,10 @@
 package com.abccash.app.treasury.local
 
 import androidx.room.TypeConverter
+import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
+import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import java.time.LocalDate
@@ -38,6 +40,20 @@ class TreasuryConverters {
 
     @TypeConverter
     fun toExpenseRecurrence(value: String?): ExpenseRecurrence? = value?.let(ExpenseRecurrence::valueOf)
+
+    @TypeConverter
+    fun fromRevenueCategory(value: RevenueCategory?): String? = value?.name
+
+    @TypeConverter
+    fun toRevenueCategory(value: String?): RevenueCategory? =
+        value?.let { runCatching { RevenueCategory.valueOf(it) }.getOrNull() } ?: RevenueCategory.OTHER
+
+    @TypeConverter
+    fun fromExpenseCategory(value: ExpenseCategory?): String? = value?.name
+
+    @TypeConverter
+    fun toExpenseCategory(value: String?): ExpenseCategory? =
+        value?.let { runCatching { ExpenseCategory.valueOf(it) }.getOrNull() } ?: ExpenseCategory.OTHER
 
     @TypeConverter
     fun fromUserPermissions(value: Set<UserPermission>?): String? = value?.joinToString(",") { it.name }

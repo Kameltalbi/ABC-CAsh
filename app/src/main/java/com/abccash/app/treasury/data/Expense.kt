@@ -23,5 +23,7 @@ data class Expense(
     val recurrenceEndDate: LocalDate? = null,
     val isPaid: Boolean = true,
     val createdDate: LocalDate = LocalDate.now(),
-    val entrepriseId: String = ""
+    val entrepriseId: String = "",
+    val category: ExpenseCategory = ExpenseCategory.OTHER,
+    val categoryLabel: String = ""
 )

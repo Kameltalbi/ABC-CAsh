@@ -27,9 +27,11 @@ import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.defaultDateForMonth
 import com.abccash.app.treasury.data.hasPermission
-import com.abccash.app.treasury.data.parseFlexibleLocalDate
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
+import com.abccash.app.treasury.data.PaymentMethod
 import kotlinx.coroutines.delay
-import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -52,23 +54,24 @@ fun InvoicesListScreen(
     onMonthChange: (YearMonth) -> Unit,
     importFeedback: String? = null,
     onClearImportFeedback: () -> Unit = {},
-    onInvoiceClick: (String) -> Unit,
     onNavigateToImport: () -> Unit,
-    onAddInvoice: (String, String, Double, LocalDate, (String?) -> Unit) -> Unit,
+    onNavigateToAddInvoice: () -> Unit,
     onUpdateInvoice: (String, String, String, Double, LocalDate, (String?) -> Unit) -> Unit,
+    onRecordPayment: (String, Double, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit,
     onDeleteInvoice: (String) -> Unit,
     onDeleteInvoices: (Collection<String>) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
     var selectedFilter by remember { mutableStateOf(InvoiceFilter.ALL) }
-    var showAddDialog by remember { mutableStateOf(false) }
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var invoiceToDelete by remember { mutableStateOf<Invoice?>(null) }
+    var invoiceForPartialPayment by remember { mutableStateOf<Invoice?>(null) }
+    var invoiceToMarkPaid by remember { mutableStateOf<Invoice?>(null) }
+    var paymentError by remember { mutableStateOf<String?>(null) }
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var selectedInvoiceIds by remember { mutableStateOf(setOf<String>()) }
     var editError by remember { mutableStateOf<String?>(null) }
-    var addError by remember { mutableStateOf<String?>(null) }
     val isAdmin = userRole == UserRole.ADMIN
     val canView = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canAddPayment = hasPermission(userRole, permissions, UserPermission.ADD_PAYMENTS)
@@ -113,28 +116,6 @@ fun InvoicesListScreen(
         selectedInvoiceIds = emptySet()
     }
     
-    if (showAddDialog) {
-        InvoiceFormDialog(
-            title = "Ajouter encaissement",
-            selectedMonth = selectedMonth,
-            errorMessage = addError,
-            onDismiss = {
-                showAddDialog = false
-                addError = null
-            },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate ->
-                onAddInvoice(invoiceNumber, clientName, totalAmount, dueDate) { error ->
-                    if (error == null) {
-                        showAddDialog = false
-                        addError = null
-                    } else {
-                        addError = error
-                    }
-                }
-            }
-        )
-    }
-
     invoiceToEdit?.let { invoice ->
         InvoiceFormDialog(
             title = "Modifier encaissement",
@@ -143,7 +124,7 @@ fun InvoicesListScreen(
                 invoiceToEdit = null
                 editError = null
             },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate ->
+            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _ ->
                 onUpdateInvoice(
                     invoice.id,
                     invoiceNumber,
@@ -160,6 +141,60 @@ fun InvoicesListScreen(
                 }
             },
             errorMessage = editError
+        )
+    }
+
+    invoiceToMarkPaid?.let { invoice ->
+        AlertDialog(
+            onDismissRequest = { invoiceToMarkPaid = null },
+            title = { Text("Marquer comme soldé") },
+            text = {
+                Text(
+                    "Encaisser ${formatMoney(invoice.remainingAmount)} pour ${invoice.clientName} ?"
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onRecordPayment(
+                            invoice.id,
+                            invoice.remainingAmount,
+                            LocalDate.now(),
+                            PaymentMethod.CASH
+                        ) { error ->
+                            if (error == null) invoiceToMarkPaid = null
+                        }
+                    }
+                ) {
+                    Text("Soldé", color = Color(0xFF4CAF50))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { invoiceToMarkPaid = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    invoiceForPartialPayment?.let { invoice ->
+        PartialPaymentDialog(
+            invoice = invoice,
+            errorMessage = paymentError,
+            onDismiss = {
+                invoiceForPartialPayment = null
+                paymentError = null
+            },
+            onConfirm = { amount, date, method ->
+                onRecordPayment(invoice.id, amount, date, method) { error ->
+                    if (error == null) {
+                        invoiceForPartialPayment = null
+                        paymentError = null
+                    } else {
+                        paymentError = error
+                    }
+                }
+            }
         )
     }
 
@@ -234,13 +269,10 @@ fun InvoicesListScreen(
         floatingActionButton = {
             if (isAdmin) {
                 FloatingActionButton(
-                    onClick = {
-                        addError = null
-                        showAddDialog = true
-                    },
+                    onClick = onNavigateToAddInvoice,
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Ajouter facture")
+                    Icon(Icons.Default.Add, contentDescription = "Nouvel encaissement")
                 }
             }
         }
@@ -393,10 +425,10 @@ fun InvoicesListScreen(
                                     selectedInvoiceIds - invoice.id
                                 }
                             },
-                            onClick = {
-                                if (canAddPayment && invoice.status != InvoiceStatus.PAID) {
-                                    onInvoiceClick(invoice.id)
-                                }
+                            onMarkPaid = { invoiceToMarkPaid = invoice },
+                            onPartialPayment = {
+                                paymentError = null
+                                invoiceForPartialPayment = invoice
                             },
                             onEdit = { invoiceToEdit = invoice },
                             onDelete = { invoiceToDelete = invoice }
@@ -409,14 +441,16 @@ fun InvoicesListScreen(
 }
 
 @Composable
-private fun InvoiceFormDialog(
+internal fun InvoiceFormDialog(
     title: String,
     initialInvoice: Invoice? = null,
     selectedMonth: YearMonth? = null,
     errorMessage: String? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Double, LocalDate) -> Unit
+    onConfirm: (String, String, Double, LocalDate, Boolean) -> Unit
 ) {
+    val isNew = initialInvoice == null
+    var markAsCollected by remember { mutableStateOf(false) }
     val defaultDueDate = remember(initialInvoice, selectedMonth) {
         initialInvoice?.dueDate
             ?: selectedMonth?.let { defaultDateForMonth(it) }
@@ -432,14 +466,11 @@ private fun InvoiceFormDialog(
         mutableStateOf(initialInvoice?.totalAmount?.toString().orEmpty())
     }
     var dueDate by remember(initialInvoice, selectedMonth) {
-        mutableStateOf(
-            defaultDueDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-        )
+        mutableStateOf(defaultDueDate)
     }
     var localError by remember(initialInvoice, selectedMonth) { mutableStateOf<String?>(null) }
     val displayError = errorMessage ?: localError
     val parsedAmount = totalAmount.replace(",", ".").toDoubleOrNull()
-    val parsedDate = parseFlexibleLocalDate(dueDate)
     val minAmount = initialInvoice?.paidAmount ?: 0.0
     val amountTooLow = parsedAmount != null && parsedAmount < minAmount
 
@@ -468,6 +499,8 @@ private fun InvoiceFormDialog(
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text("Montant total") },
                     singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    suffix = { CurrencySuffix() },
                     isError = amountTooLow,
                     supportingText = if (amountTooLow) {
                         { Text("Minimum : $minAmount") }
@@ -477,21 +510,10 @@ private fun InvoiceFormDialog(
                         null
                     }
                 )
-                OutlinedTextField(
-                    value = dueDate,
-                    onValueChange = {
-                        dueDate = it
-                        localError = null
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Date d'échéance (jj/mm/aaaa)") },
-                    singleLine = true,
-                    isError = dueDate.isNotBlank() && parsedDate == null,
-                    supportingText = if (selectedMonth != null && initialInvoice == null) {
-                        { Text("Prérempli pour le mois affiché : ${selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))}") }
-                    } else {
-                        null
-                    }
+                TreasuryDateField(
+                    label = "Date d'échéance",
+                    date = dueDate,
+                    onDateChange = { dueDate = it }
                 )
                 displayError?.let { message ->
                     Text(
@@ -500,19 +522,32 @@ private fun InvoiceFormDialog(
                         color = Color(0xFFF44336)
                     )
                 }
+                if (isNew) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Checkbox(
+                            checked = markAsCollected,
+                            onCheckedChange = { markAsCollected = it }
+                        )
+                        Text(
+                            text = "Encaissé intégralement (soldé)",
+                            fontSize = 13.sp
+                        )
+                    }
+                }
             }
         },
         confirmButton = {
             Button(
                 onClick = {
-                    val date = parsedDate ?: return@Button
                     val amount = parsedAmount ?: return@Button
-                    onConfirm(invoiceNumber, clientName, amount, date)
+                    onConfirm(invoiceNumber, clientName, amount, dueDate, markAsCollected)
                 },
                 enabled = invoiceNumber.isNotBlank() &&
                     clientName.isNotBlank() &&
                     parsedAmount != null &&
-                    parsedDate != null &&
                     !amountTooLow
             ) {
                 Text(if (initialInvoice == null) "Ajouter" else "Enregistrer")
@@ -534,16 +569,14 @@ fun InvoiceCard(
     showSelection: Boolean = false,
     isSelected: Boolean = false,
     onSelectionChange: (Boolean) -> Unit = {},
-    onClick: () -> Unit,
+    onMarkPaid: () -> Unit = {},
+    onPartialPayment: () -> Unit = {},
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
-    val currencyFormatter = remember {
-        NumberFormat.getCurrencyInstance(Locale("fr", "TN")).apply {
-            maximumFractionDigits = 3
-        }
-    }
+    val formatAmount = rememberFormatMoney()
 
+    val isPaid = invoice.status == InvoiceStatus.PAID
     val statusColor = when (invoice.status) {
         InvoiceStatus.PAID -> Color(0xFF4CAF50)
         InvoiceStatus.PARTIAL -> Color(0xFFFF9800)
@@ -556,34 +589,26 @@ fun InvoiceCard(
         InvoiceStatus.DUE -> "Dû"
     }
 
-    val displayAmount = when (invoice.status) {
-        InvoiceStatus.PAID -> invoice.totalAmount
-        else -> invoice.remainingAmount
-    }
+    var showMenu by remember { mutableStateOf(false) }
+    val canUseMenu = canAddPayment && !isPaid || isAdmin
 
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .then(
-                if (canAddPayment && invoice.status != InvoiceStatus.PAID) {
-                    Modifier.clickable(onClick = onClick)
-                } else {
-                    Modifier
-                }
-            ),
-        shape = RoundedCornerShape(8.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(10.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (isPaid) 0.dp else 1.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isPaid) Color(0xFFE8F5E9) else Color.White
+        )
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp)
+                .padding(horizontal = 10.dp, vertical = 10.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Top
             ) {
                 if (showSelection) {
                     Checkbox(
@@ -594,85 +619,209 @@ fun InvoiceCard(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = invoice.clientName,
-                        fontSize = 14.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A1A1A),
+                        color = if (isPaid) Color(0xFF2E7D32) else Color(0xFF1A1A1A),
                         maxLines = 1
                     )
                     Text(
-                        text = "${invoice.invoiceNumber} · ${invoice.dueDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))}",
+                        text = "${invoice.invoiceNumber} · éch. ${invoice.dueDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))}",
                         fontSize = 11.sp,
                         color = Color.Gray,
                         maxLines = 1
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Total ${formatAmount(invoice.totalAmount)}",
+                        fontSize = 12.sp,
+                        color = Color(0xFF424242)
+                    )
+                    if (!isPaid) {
+                        Text(
+                            text = "Encaissé ${formatAmount(invoice.paidAmount)} · Reste ${formatAmount(invoice.remainingAmount)}",
+                            fontSize = 11.sp,
+                            color = statusColor,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(2.dp)
-                ) {
-                    Column(horizontalAlignment = Alignment.End) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = statusColor.copy(alpha = 0.15f)
+                    ) {
                         Text(
-                            text = currencyFormatter.format(displayAmount),
-                            fontSize = 13.sp,
+                            text = statusLabel,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                            fontSize = 11.sp,
                             fontWeight = FontWeight.Bold,
-                            color = when (invoice.status) {
-                                InvoiceStatus.PAID -> Color(0xFF4CAF50)
-                                InvoiceStatus.PARTIAL -> Color(0xFFFF9800)
-                                InvoiceStatus.DUE -> Color(0xFFF44336)
-                            }
+                            color = statusColor
                         )
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = statusColor.copy(alpha = 0.12f)
-                        ) {
-                            Text(
-                                text = statusLabel,
-                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                                fontSize = 10.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = statusColor
-                            )
-                        }
                     }
-
-                    if (isAdmin) {
-                        IconButton(
-                            onClick = onEdit,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Edit,
-                                contentDescription = "Modifier",
-                                modifier = Modifier.size(16.dp),
-                                tint = Color.Gray
-                            )
-                        }
-                        IconButton(
-                            onClick = onDelete,
-                            modifier = Modifier.size(32.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Delete,
-                                contentDescription = "Supprimer",
-                                modifier = Modifier.size(16.dp),
-                                tint = Color(0xFFBDBDBD)
-                            )
+                    if (canUseMenu) {
+                        Box {
+                            IconButton(
+                                onClick = { showMenu = true },
+                                modifier = Modifier.size(36.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.MoreVert,
+                                    contentDescription = "Actions",
+                                    tint = Color(0xFF64748B)
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = showMenu,
+                                onDismissRequest = { showMenu = false }
+                            ) {
+                                if (canAddPayment && !isPaid) {
+                                    DropdownMenuItem(
+                                        text = { Text("Soldé") },
+                                        onClick = {
+                                            showMenu = false
+                                            onMarkPaid()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Paiement partiel") },
+                                        onClick = {
+                                            showMenu = false
+                                            onPartialPayment()
+                                        }
+                                    )
+                                }
+                                if (isAdmin) {
+                                    DropdownMenuItem(
+                                        text = { Text("Modifier") },
+                                        onClick = {
+                                            showMenu = false
+                                            onEdit()
+                                        }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Supprimer", color = Color(0xFFF44336)) },
+                                        onClick = {
+                                            showMenu = false
+                                            onDelete()
+                                        }
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            LinearProgressIndicator(
-                progress = { invoice.progressPercentage / 100f },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(3.dp),
-                color = statusColor,
-                trackColor = Color(0xFFE8E8E8)
-            )
+            if (!isPaid) {
+                Spacer(modifier = Modifier.height(6.dp))
+                LinearProgressIndicator(
+                    progress = { invoice.progressPercentage / 100f },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(4.dp),
+                    color = statusColor,
+                    trackColor = Color(0xFFE8E8E8)
+                )
+            }
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun PartialPaymentDialog(
+    invoice: Invoice,
+    errorMessage: String? = null,
+    onDismiss: () -> Unit,
+    onConfirm: (Double, LocalDate, PaymentMethod) -> Unit
+) {
+    var amountText by remember(invoice.id) {
+        mutableStateOf(invoice.remainingAmount.toString().replace('.', ','))
+    }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    var showMethodMenu by remember { mutableStateOf(false) }
+
+    val parsedAmount = amountText.replace(" ", "").replace(",", ".").toDoubleOrNull()
+    val formatAmount = rememberFormatMoney()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Paiement partiel") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = "${invoice.clientName} · Reste ${formatAmount(invoice.remainingAmount)}",
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                OutlinedTextField(
+                    value = amountText,
+                    onValueChange = { amountText = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Montant encaissé") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    suffix = { CurrencySuffix() },
+                    isError = parsedAmount != null && parsedAmount > invoice.remainingAmount
+                )
+                TreasuryDateField(
+                    label = "Date d'encaissement",
+                    date = selectedDate,
+                    onDateChange = { selectedDate = it }
+                )
+                ExposedDropdownMenuBox(
+                    expanded = showMethodMenu,
+                    onExpandedChange = { showMethodMenu = it }
+                ) {
+                    OutlinedTextField(
+                        value = selectedMethod.label,
+                        onValueChange = {},
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .menuAnchor(),
+                        label = { Text("Mode de règlement") },
+                        readOnly = true,
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showMethodMenu) }
+                    )
+                    ExposedDropdownMenu(
+                        expanded = showMethodMenu,
+                        onDismissRequest = { showMethodMenu = false }
+                    ) {
+                        PaymentMethod.entries.forEach { method ->
+                            DropdownMenuItem(
+                                text = { Text(method.label) },
+                                onClick = {
+                                    selectedMethod = method
+                                    showMethodMenu = false
+                                }
+                            )
+                        }
+                    }
+                }
+                errorMessage?.let {
+                    Text(text = it, color = Color(0xFFF44336), fontSize = 12.sp)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val amount = parsedAmount ?: return@TextButton
+                    onConfirm(amount, selectedDate, selectedMethod)
+                },
+                enabled = parsedAmount != null &&
+                    parsedAmount > 0 &&
+                    parsedAmount <= invoice.remainingAmount
+            ) {
+                Text("Enregistrer")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Annuler")
+            }
+        }
+    )
 }

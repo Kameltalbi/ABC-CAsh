@@ -1,7 +1,7 @@
 package com.abccash.app
 
 import android.os.Bundle
-import androidx.activity.ComponentActivity
+import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.material3.MaterialTheme
@@ -15,7 +15,7 @@ import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import com.abccash.app.treasury.viewmodel.TreasuryViewModelFactory
 import com.abccash.app.ui.theme.AppColors
 
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

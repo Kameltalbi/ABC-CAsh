@@ -96,6 +96,9 @@ interface TreasuryDao {
     suspend fun findInvoiceByNumber(entrepriseId: String, invoiceNumber: String): InvoiceEntity?
 
     @Query("SELECT * FROM entreprises WHERE id = :id LIMIT 1")
+    fun observeEntreprise(id: String): Flow<EntrepriseEntity?>
+
+    @Query("SELECT * FROM entreprises WHERE id = :id LIMIT 1")
     suspend fun findEntrepriseById(id: String): EntrepriseEntity?
 
     @Query(

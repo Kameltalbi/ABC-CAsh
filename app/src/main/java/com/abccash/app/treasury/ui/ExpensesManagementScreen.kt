@@ -8,7 +8,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
@@ -27,7 +26,6 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.forMonth
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.data.occurrenceDateIn
-import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
@@ -216,7 +214,7 @@ fun ExpensesManagementScreen(
         AlertDialog(
             onDismissRequest = { expenseToDelete = null },
             title = { Text("Supprimer la dépense ?") },
-            text = { Text("Supprimer « ${expense.label} » (${expense.amount} DT) ?") },
+            text = { Text("Supprimer « ${expense.label} » (${formatMoney(expense.amount)}) ?") },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -262,7 +260,7 @@ fun ExpensesManagementScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ExpenseFormDialog(
+internal fun ExpenseFormDialog(
     initialExpense: Expense,
     selectedMonth: YearMonth,
     onDismiss: () -> Unit,
@@ -280,46 +278,13 @@ private fun ExpenseFormDialog(
     var hasRecurrenceEnd by remember(initialExpense) {
         mutableStateOf(initialExpense.recurrenceEndDate != null)
     }
-    var recurrenceEndDate by remember(initialExpense) {
-        mutableStateOf(initialExpense.recurrenceEndDate?.format(DateTimeFormatter.ISO_LOCAL_DATE).orEmpty())
+    var recurrenceEndDate by remember(initialExpense, selectedMonth) {
+        mutableStateOf(
+            initialExpense.recurrenceEndDate ?: selectedMonth.atEndOfMonth()
+        )
     }
     var isPaid by remember(initialExpense) { mutableStateOf(initialExpense.isPaid) }
-    var showDatePicker by remember { mutableStateOf(false) }
     val parsedAmount = expenseAmount.replace(",", ".").toDoubleOrNull()
-    val datePickerState = rememberDatePickerState(
-        initialSelectedDateMillis = java.time.ZoneId.systemDefault()
-            .rules
-            .getOffset(expenseDate.atStartOfDay())
-            .let { expenseDate.atStartOfDay().toInstant(it).toEpochMilli() }
-    )
-
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        datePickerState.selectedDateMillis?.let { millis ->
-                            expenseDate = java.time.Instant.ofEpochMilli(millis)
-                                .atZone(java.time.ZoneId.systemDefault())
-                                .toLocalDate()
-                        }
-                        showDatePicker = false
-                    }
-                ) {
-                    Text("OK")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text("Annuler")
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState, showModeToggle = false)
-        }
-    }
-
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Modifier la dépense") },
@@ -339,19 +304,12 @@ private fun ExpenseFormDialog(
                     label = { Text("Montant") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    suffix = { Text("DT") }
+                    suffix = { CurrencySuffix() }
                 )
-                OutlinedTextField(
-                    value = expenseDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                    onValueChange = {},
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Date") },
-                    readOnly = true,
-                    trailingIcon = {
-                        IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "Choisir date")
-                        }
-                    }
+                TreasuryDateField(
+                    label = "Date",
+                    date = expenseDate,
+                    onDateChange = { expenseDate = it }
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
@@ -418,12 +376,10 @@ private fun ExpenseFormDialog(
                     }
 
                     if (hasRecurrenceEnd) {
-                        OutlinedTextField(
-                            value = recurrenceEndDate,
-                            onValueChange = { recurrenceEndDate = it },
-                            modifier = Modifier.fillMaxWidth(),
-                            label = { Text("Fin récurrence yyyy-MM-dd") },
-                            singleLine = true
+                        TreasuryDateField(
+                            label = "Fin de récurrence",
+                            date = recurrenceEndDate,
+                            onDateChange = { recurrenceEndDate = it }
                         )
                     }
                 }
@@ -444,19 +400,20 @@ private fun ExpenseFormDialog(
             Button(
                 onClick = {
                     val amount = parsedAmount ?: return@Button
-                    val parsedEndDate = recurrenceEndDate.takeIf { hasRecurrenceEnd && it.isNotBlank() }
-                        ?.let { runCatching { LocalDate.parse(it) }.getOrNull() }
+                    if (isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate)) return@Button
                     onConfirm(
                         expenseLabel,
                         amount,
                         expenseDate,
                         isRecurring,
                         selectedRecurrence,
-                        if (isRecurring && hasRecurrenceEnd) parsedEndDate else null,
+                        if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
                         isPaid
                     )
                 },
-                enabled = expenseLabel.isNotBlank() && (parsedAmount?.let { it > 0 } == true)
+                enabled = expenseLabel.isNotBlank() &&
+                    (parsedAmount?.let { it > 0 } == true) &&
+                    !(isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate))
             ) {
                 Text("Enregistrer")
             }
@@ -480,18 +437,14 @@ fun ExpenseItem(
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
-    val currencyFormatter = remember {
-        NumberFormat.getCurrencyInstance(Locale("fr", "TN")).apply {
-            maximumFractionDigits = 3
-        }
-    }
+    val formatAmount = rememberFormatMoney()
     val displayDate = displayMonth?.let { expense.occurrenceDateIn(it) } ?: expense.date
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (expense.isPaid) Color.White else Color(0xFFFFF9E6)
+            containerColor = Color(0xFFFFEBEE)
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -575,7 +528,7 @@ fun ExpenseItem(
                 horizontalArrangement = Arrangement.spacedBy(2.dp)
             ) {
                 Text(
-                    text = currencyFormatter.format(expense.amount),
+                    text = formatAmount(expense.amount),
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFF44336)

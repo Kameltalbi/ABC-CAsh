@@ -1,0 +1,175 @@
+package com.abccash.app.treasury.ui
+
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import androidx.core.content.FileProvider
+import com.abccash.app.treasury.importer.ReceiptOcrProcessor
+import com.abccash.app.treasury.importer.ReceiptParseResult
+import kotlinx.coroutines.launch
+import java.io.File
+import com.abccash.app.treasury.data.AppCurrency
+import com.abccash.app.treasury.data.AppCurrencyFormatter
+import com.abccash.app.treasury.data.LocalAppCurrency
+import java.time.format.DateTimeFormatter
+import java.util.Locale
+
+data class ReceiptScanUiState(
+    val isScanning: Boolean = false,
+    val successMessage: String? = null
+)
+
+@Composable
+fun rememberReceiptScan(
+    snackbarHostState: SnackbarHostState,
+    onParsed: (ReceiptParseResult) -> Unit
+): Pair<ReceiptScanUiState, ReceiptScanActions> {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val scope = rememberCoroutineScope()
+    var uiState by remember { mutableStateOf(ReceiptScanUiState()) }
+    var showSourcePicker by remember { mutableStateOf(false) }
+    var pendingCameraUri by remember { mutableStateOf<Uri?>(null) }
+
+    val currency = LocalAppCurrency.current
+
+    fun processImage(uri: Uri) {
+        scope.launch {
+            uiState = uiState.copy(isScanning = true, successMessage = null)
+            runCatching { ReceiptOcrProcessor.scanReceipt(context, uri) }
+                .onSuccess { result ->
+                    if (result.amount == null && result.date == null && result.merchantHint == null) {
+                        snackbarHostState.showSnackbar("Aucun montant ni date détectés sur le reçu")
+                    } else {
+                        onParsed(result)
+                        uiState = uiState.copy(successMessage = buildReceiptSuccessMessage(result, currency))
+                    }
+                }
+                .onFailure {
+                    snackbarHostState.showSnackbar("Échec de lecture du reçu")
+                }
+            uiState = uiState.copy(isScanning = false)
+        }
+    }
+
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) processImage(uri)
+    }
+
+    val takePictureLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
+        val uri = pendingCameraUri
+        if (success && uri != null) processImage(uri)
+    }
+
+    val cameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            val uri = createReceiptPhotoUri(context)
+            pendingCameraUri = uri
+            takePictureLauncher.launch(uri)
+        } else {
+            scope.launch { snackbarHostState.showSnackbar("Permission caméra refusée") }
+        }
+    }
+
+    val actions = ReceiptScanActions(
+        onOpenSourcePicker = { showSourcePicker = true },
+        onDismissSourcePicker = { showSourcePicker = false },
+        isSourcePickerVisible = { showSourcePicker },
+        onTakePhoto = {
+            showSourcePicker = false
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA)
+                == PackageManager.PERMISSION_GRANTED
+            ) {
+                val uri = createReceiptPhotoUri(context)
+                pendingCameraUri = uri
+                takePictureLauncher.launch(uri)
+            } else {
+                cameraPermissionLauncher.launch(Manifest.permission.CAMERA)
+            }
+        },
+        onPickGallery = {
+            showSourcePicker = false
+            galleryLauncher.launch("image/*")
+        }
+    )
+
+    return uiState to actions
+}
+
+class ReceiptScanActions(
+    val onOpenSourcePicker: () -> Unit,
+    val onDismissSourcePicker: () -> Unit,
+    val isSourcePickerVisible: () -> Boolean,
+    val onTakePhoto: () -> Unit,
+    val onPickGallery: () -> Unit
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun ReceiptSourcePickerSheet(
+    visible: Boolean,
+    onDismiss: () -> Unit,
+    onTakePhoto: () -> Unit,
+    onPickGallery: () -> Unit
+) {
+    if (!visible) return
+    ModalBottomSheet(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text("Scanner un reçu", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            OutlinedButton(onClick = onTakePhoto, modifier = Modifier.fillMaxWidth()) {
+                Text("Prendre une photo")
+            }
+            OutlinedButton(onClick = onPickGallery, modifier = Modifier.fillMaxWidth()) {
+                Text("Choisir depuis la galerie")
+            }
+        }
+    }
+}
+
+@Composable
+fun ReceiptScanSuccessBanner(message: String) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = androidx.compose.foundation.shape.RoundedCornerShape(10.dp),
+        color = androidx.compose.ui.graphics.Color(0xFFE8F5E9)
+    ) {
+        Text(
+            text = "✓ $message",
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            fontSize = 13.sp,
+            color = androidx.compose.ui.graphics.Color(0xFF2E7D32)
+        )
+    }
+}
+
+private fun createReceiptPhotoUri(context: Context): Uri {
+    val file = File(context.cacheDir, "receipt_${System.currentTimeMillis()}.jpg")
+    return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
+}
+
+private fun buildReceiptSuccessMessage(result: ReceiptParseResult, currency: AppCurrency): String {
+    val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale.FRENCH)
+    val parts = buildList {
+        result.amount?.let { add("montant ${AppCurrencyFormatter.format(it, currency)}") }
+        result.date?.let { add("date ${it.format(dateFormatter)}") }
+    }
+    return if (parts.isEmpty()) "Reçu lu" else "Reçu lu — ${parts.joinToString(", ")} détectés"
+}

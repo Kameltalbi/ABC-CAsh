@@ -12,16 +12,27 @@ object TreasuryCsvExporter {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         selectedMonth: YearMonth
+    ): String = exportYear(invoices, expenses, selectedMonth.year)
+
+    fun exportYear(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int
     ): String {
-        val monthInvoices = invoices.filter { YearMonth.from(it.dueDate) == selectedMonth }
-        val monthExpenses = expenses.filter { it.appliesToMonth(selectedMonth) }
+        val yearInvoices = invoices.filter { YearMonth.from(it.dueDate).year == year }
+        val yearExpenses = (1..12)
+            .flatMap { monthNumber ->
+                val month = YearMonth.of(year, monthNumber)
+                expenses.filter { it.appliesToMonth(month) }
+            }
+            .distinctBy { it.id }
 
         return buildString {
-            appendLine("# ABC Cash export - ${selectedMonth.format(DateTimeFormatter.ofPattern("MM/yyyy"))}")
+            appendLine("# ABC Cash export - année $year")
             appendLine()
             appendLine("## FACTURES")
             appendLine("numero;client;montant_total;encaisse;reste;echeance;statut")
-            monthInvoices.forEach { invoice ->
+            yearInvoices.forEach { invoice ->
                 appendLine(
                     listOf(
                         csvCell(invoice.invoiceNumber),
@@ -37,8 +48,10 @@ object TreasuryCsvExporter {
             appendLine()
             appendLine("## PAIEMENTS")
             appendLine("facture;client;montant;date;methode")
-            monthInvoices.flatMap { invoice ->
-                invoice.payments.map { payment -> invoice to payment }
+            invoices.flatMap { invoice ->
+                invoice.payments
+                    .filter { YearMonth.from(it.date).year == year }
+                    .map { payment -> invoice to payment }
             }.forEach { (invoice, payment) ->
                 appendLine(
                     listOf(
@@ -53,7 +66,7 @@ object TreasuryCsvExporter {
             appendLine()
             appendLine("## DEPENSES")
             appendLine("libelle;montant;date;recurrente;recurrence;payee")
-            monthExpenses.forEach { expense ->
+            yearExpenses.forEach { expense ->
                 appendLine(
                     listOf(
                         csvCell(expense.label),
@@ -67,10 +80,8 @@ object TreasuryCsvExporter {
             }
             appendLine()
             appendLine("## SYNTHESE")
-            val collected = monthInvoices.flatMap { it.payments }
-                .filter { YearMonth.from(it.date) == selectedMonth }
-                .sumOf { it.amount }
-            val totalExpenses = monthExpenses.sumOf { it.amount }
+            val collected = com.abccash.app.treasury.data.TreasuryCalculations.yearlyCollections(invoices, year)
+            val totalExpenses = com.abccash.app.treasury.data.TreasuryCalculations.yearlyPaidExpenses(expenses, year)
             appendLine("encaissements;$collected")
             appendLine("depenses;$totalExpenses")
             appendLine("solde;${collected - totalExpenses}")

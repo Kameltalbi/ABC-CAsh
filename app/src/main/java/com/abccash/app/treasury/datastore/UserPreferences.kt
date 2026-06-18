@@ -91,6 +91,13 @@ class UserPreferences(private val context: Context) {
         }
     }
     
+    suspend fun updateProfileSession(nom: String, email: String) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.USER_NOM] = nom
+            preferences[UserPreferencesKeys.USER_EMAIL] = email
+        }
+    }
+
     suspend fun clearUserSession() {
         context.userDataStore.edit { preferences ->
             val onboardingVu = preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] ?: false
@@ -104,4 +111,23 @@ class UserPreferences(private val context: Context) {
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = onboardingVu
         }
     }
+
+    fun observeBankBalance(entrepriseId: String, year: Int): Flow<Double?> =
+        context.userDataStore.data.map { preferences ->
+            preferences[bankBalanceKey(entrepriseId, year)]?.toDoubleOrNull()
+        }
+
+    suspend fun saveBankBalance(entrepriseId: String, year: Int, amount: Double?) {
+        context.userDataStore.edit { preferences ->
+            val key = bankBalanceKey(entrepriseId, year)
+            if (amount == null) {
+                preferences.remove(key)
+            } else {
+                preferences[key] = amount.toString()
+            }
+        }
+    }
 }
+
+private fun bankBalanceKey(entrepriseId: String, year: Int) =
+    stringPreferencesKey("bank_balance_${entrepriseId}_$year")

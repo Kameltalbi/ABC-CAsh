@@ -6,6 +6,9 @@ import java.util.UUID
 data class Entreprise(
     val id: String = UUID.randomUUID().toString(),
     val nom: String,
+    val email: String = "",
+    val telephone: String = "",
+    val adresse: String = "",
     val dateCreation: LocalDateTime = LocalDateTime.now(),
     val adminId: String? = null
 )

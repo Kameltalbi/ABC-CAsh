@@ -5,8 +5,10 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
+import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import java.time.LocalDate
@@ -16,6 +18,12 @@ import java.time.LocalDateTime
 data class EntrepriseEntity(
     @PrimaryKey val id: String,
     val nom: String,
+    @ColumnInfo(defaultValue = "''")
+    val email: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val telephone: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val adresse: String = "",
     val dateCreation: LocalDateTime,
     val adminId: String?
 )
@@ -53,7 +61,11 @@ data class InvoiceEntity(
     val dueDate: LocalDate,
     val createdDate: LocalDate,
     @ColumnInfo(defaultValue = "''")
-    val entrepriseId: String
+    val entrepriseId: String,
+    @ColumnInfo(defaultValue = "'OTHER'")
+    val category: RevenueCategory = RevenueCategory.OTHER,
+    @ColumnInfo(defaultValue = "''")
+    val categoryLabel: String = ""
 )
 
 @Entity(
@@ -92,5 +104,9 @@ data class ExpenseEntity(
     val isPaid: Boolean,
     val createdDate: LocalDate,
     @ColumnInfo(defaultValue = "''")
-    val entrepriseId: String
+    val entrepriseId: String,
+    @ColumnInfo(defaultValue = "'OTHER'")
+    val category: ExpenseCategory = ExpenseCategory.OTHER,
+    @ColumnInfo(defaultValue = "''")
+    val categoryLabel: String = ""
 )

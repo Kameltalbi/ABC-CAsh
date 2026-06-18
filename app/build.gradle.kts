@@ -13,8 +13,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.7.2"
+        versionCode = 18
+        versionName = "1.9.3"
     }
 
     signingConfigs {
@@ -83,6 +83,10 @@ dependencies {
     // Koin for Dependency Injection
     implementation("io.insert-koin:koin-android:$koinVersion")
     implementation("io.insert-koin:koin-androidx-compose:$koinVersion")
+
+    implementation("com.google.mlkit:text-recognition:16.0.1")
+    implementation("androidx.biometric:biometric:1.1.0")
+    implementation("androidx.fragment:fragment-ktx:1.8.5")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

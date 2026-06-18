@@ -88,6 +88,54 @@ class TreasuryRepository(
     fun observeUsers(entrepriseId: String): Flow<List<User>> =
         dao.observeUsers(entrepriseId).map { entities -> entities.map { it.toDomain() } }
 
+    fun observeEntreprise(entrepriseId: String): Flow<Entreprise?> =
+        dao.observeEntreprise(entrepriseId).map { it?.toDomain() }
+
+    suspend fun updateUserProfile(
+        userId: String,
+        nom: String,
+        email: String,
+        telephone: String
+    ): String? {
+        val user = dao.findUserById(userId) ?: return "Utilisateur introuvable"
+        val normalizedEmail = normalizeEmail(email)
+        val normalizedPhone = normalizePhone(telephone)
+        if (nom.isBlank()) return "Le nom est obligatoire"
+        if (normalizedEmail.isBlank()) return "L'email est obligatoire"
+        val emailTaken = dao.findUserByEmail(normalizedEmail)
+        if (emailTaken != null && emailTaken.id != userId) return "Cet email est déjà utilisé"
+        val phoneTaken = dao.findUserByTelephone(normalizedPhone)
+        if (phoneTaken != null && phoneTaken.id != userId) return "Ce téléphone est déjà utilisé"
+        dao.upsertUser(
+            user.copy(
+                nom = nom.trim(),
+                email = normalizedEmail,
+                telephone = normalizedPhone
+            )
+        )
+        return null
+    }
+
+    suspend fun updateEntrepriseProfile(
+        entrepriseId: String,
+        nom: String,
+        email: String,
+        telephone: String,
+        adresse: String
+    ): String? {
+        val entity = dao.findEntrepriseById(entrepriseId) ?: return "Entreprise introuvable"
+        if (nom.isBlank()) return "Le nom de l'entreprise est obligatoire"
+        dao.upsertEntreprise(
+            entity.copy(
+                nom = nom.trim(),
+                email = email.trim(),
+                telephone = normalizePhone(telephone),
+                adresse = adresse.trim()
+            )
+        )
+        return null
+    }
+
     suspend fun addInvoice(invoice: Invoice): String? {
         if (invoice.invoiceNumber.isBlank()) return "Le numéro de facture est obligatoire"
         if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) {
@@ -272,6 +320,19 @@ private fun normalizePhone(telephone: String): String =
 private fun Entreprise.toEntity(): EntrepriseEntity = EntrepriseEntity(
     id = id,
     nom = nom,
+    email = email,
+    telephone = telephone,
+    adresse = adresse,
+    dateCreation = dateCreation,
+    adminId = adminId
+)
+
+private fun EntrepriseEntity.toDomain(): Entreprise = Entreprise(
+    id = id,
+    nom = nom,
+    email = email,
+    telephone = telephone,
+    adresse = adresse,
     dateCreation = dateCreation,
     adminId = adminId
 )
@@ -285,7 +346,9 @@ private fun InvoiceEntity.toDomain(payments: List<Payment>): Invoice = Invoice(
     dueDate = dueDate,
     createdDate = createdDate,
     entrepriseId = entrepriseId,
-    payments = payments
+    payments = payments,
+    category = category,
+    categoryLabel = categoryLabel
 )
 
 private fun Invoice.toEntity(): InvoiceEntity = InvoiceEntity(
@@ -295,7 +358,9 @@ private fun Invoice.toEntity(): InvoiceEntity = InvoiceEntity(
     totalAmount = totalAmount,
     dueDate = dueDate,
     createdDate = createdDate,
-    entrepriseId = entrepriseId
+    entrepriseId = entrepriseId,
+    category = category,
+    categoryLabel = categoryLabel
 )
 
 private fun PaymentEntity.toDomain(): Payment = Payment(
@@ -326,7 +391,9 @@ private fun ExpenseEntity.toDomain(): Expense = Expense(
     recurrenceEndDate = recurrenceEndDate,
     isPaid = isPaid,
     createdDate = createdDate,
-    entrepriseId = entrepriseId
+    entrepriseId = entrepriseId,
+    category = category,
+    categoryLabel = categoryLabel
 )
 
 private fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
@@ -339,7 +406,9 @@ private fun Expense.toEntity(): ExpenseEntity = ExpenseEntity(
     recurrenceEndDate = recurrenceEndDate,
     isPaid = isPaid,
     createdDate = createdDate,
-    entrepriseId = entrepriseId
+    entrepriseId = entrepriseId,
+    category = category,
+    categoryLabel = categoryLabel
 )
 
 private fun UserEntity.toDomain(): User = User(

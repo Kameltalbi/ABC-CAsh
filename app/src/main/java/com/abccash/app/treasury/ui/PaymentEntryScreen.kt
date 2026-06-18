@@ -22,7 +22,6 @@ import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.Payment
 import com.abccash.app.treasury.data.PaymentMethod
-import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -47,11 +46,7 @@ fun PaymentEntryScreen(
             .let { selectedDate.atStartOfDay().toInstant(it).toEpochMilli() }
     )
     
-    val currencyFormatter = remember {
-        NumberFormat.getCurrencyInstance(Locale("fr", "TN")).apply {
-            maximumFractionDigits = 3
-        }
-    }
+    val formatAmount = rememberFormatMoney()
     
     Scaffold(
         topBar = {
@@ -114,7 +109,7 @@ fun PaymentEntryScreen(
                                     color = Color.Gray
                                 )
                                 Text(
-                                    text = currencyFormatter.format(invoice.totalAmount),
+                                    text = formatAmount(invoice.totalAmount),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium
                                 )
@@ -127,7 +122,7 @@ fun PaymentEntryScreen(
                                     color = Color.Gray
                                 )
                                 Text(
-                                    text = currencyFormatter.format(invoice.paidAmount),
+                                    text = formatAmount(invoice.paidAmount),
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
                                     color = Color(0xFF4CAF50)
@@ -152,7 +147,7 @@ fun PaymentEntryScreen(
                                     color = Color.Gray
                                 )
                                 Text(
-                                    text = currencyFormatter.format(invoice.remainingAmount),
+                                    text = formatAmount(invoice.remainingAmount),
                                     fontSize = 24.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFFF44336)
@@ -180,7 +175,7 @@ fun PaymentEntryScreen(
                     placeholder = { Text("0.000") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
-                    suffix = { Text("DT") }
+                    suffix = { CurrencySuffix() }
                 )
             }
             
@@ -250,7 +245,7 @@ fun PaymentEntryScreen(
                                 paymentError = "Montant invalide"
                             }
                             amount > invoice.remainingAmount -> {
-                                paymentError = "Maximum : ${currencyFormatter.format(invoice.remainingAmount)}"
+                                paymentError = "Maximum : ${formatAmount(invoice.remainingAmount)}"
                             }
                             else -> {
                                 val saved = onSavePayment(amount, selectedDate, selectedMethod)
@@ -322,11 +317,7 @@ fun PaymentEntryScreen(
 
 @Composable
 fun PaymentHistoryItem(payment: Payment) {
-    val currencyFormatter = remember {
-        NumberFormat.getCurrencyInstance(Locale("fr", "TN")).apply {
-            maximumFractionDigits = 3
-        }
-    }
+    val formatAmount = rememberFormatMoney()
     
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -343,7 +334,7 @@ fun PaymentHistoryItem(payment: Payment) {
         ) {
             Column {
                 Text(
-                    text = currencyFormatter.format(payment.amount),
+                    text = formatAmount(payment.amount),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFF4CAF50)

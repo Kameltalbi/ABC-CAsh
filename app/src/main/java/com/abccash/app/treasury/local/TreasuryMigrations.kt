@@ -50,6 +50,23 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
     }
 }
 
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `invoices` ADD COLUMN `category` TEXT NOT NULL DEFAULT 'OTHER'")
+        db.execSQL("ALTER TABLE `expenses` ADD COLUMN `category` TEXT NOT NULL DEFAULT 'OTHER'")
+    }
+}
+
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `entreprises` ADD COLUMN `email` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `entreprises` ADD COLUMN `telephone` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `entreprises` ADD COLUMN `adresse` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `invoices` ADD COLUMN `categoryLabel` TEXT NOT NULL DEFAULT ''")
+        db.execSQL("ALTER TABLE `expenses` ADD COLUMN `categoryLabel` TEXT NOT NULL DEFAULT ''")
+    }
+}
+
 private fun resolveDefaultEntrepriseId(db: SupportSQLiteDatabase): String? {
     db.query("SELECT id FROM entreprises LIMIT 1").use { cursor ->
         if (cursor.moveToFirst()) {

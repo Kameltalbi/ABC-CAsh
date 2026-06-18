@@ -73,26 +73,71 @@ class TreasuryCalculationsTest {
     }
 
     @Test
-    fun `monthly balance uses only paid expenses`() {
+    fun `yearly balance aggregates all months`() {
+        val year = 2026
+        val invoices = listOf(
+            Invoice(
+                invoiceNumber = "F1",
+                clientName = "Client",
+                totalAmount = 1000.0,
+                paidAmount = 1000.0,
+                dueDate = java.time.LocalDate.of(2026, 3, 1),
+                payments = listOf(
+                    Payment(
+                        invoiceId = "i1",
+                        amount = 400.0,
+                        date = java.time.LocalDate.of(2026, 2, 10),
+                        method = PaymentMethod.CASH
+                    ),
+                    Payment(
+                        invoiceId = "i1",
+                        amount = 600.0,
+                        date = java.time.LocalDate.of(2026, 8, 5),
+                        method = PaymentMethod.CASH
+                    )
+                )
+            )
+        )
         val expenses = listOf(
             Expense(
-                label = "Payée",
-                amount = 100.0,
-                date = LocalDate.of(2026, 3, 1),
+                label = "Loyer",
+                amount = 150.0,
+                date = java.time.LocalDate.of(2026, 1, 1),
                 isPaid = true
-            ),
-            Expense(
-                label = "À venir",
-                amount = 300.0,
-                date = LocalDate.of(2026, 3, 1),
-                isPaid = false
             )
         )
 
-        val paid = TreasuryCalculations.monthlyPaidExpenses(expenses, march)
-        val balance = TreasuryCalculations.monthlyBalance(1000.0, paid)
+        assertEquals(1000.0, TreasuryCalculations.yearlyCollections(invoices, year), 0.001)
+        assertEquals(150.0, TreasuryCalculations.yearlyPaidExpenses(expenses, year), 0.001)
+        assertEquals(850.0, TreasuryCalculations.yearlyBalance(invoices, expenses, year), 0.001)
+        assertEquals(12, TreasuryCalculations.yearlyRows(invoices, expenses, year).size)
+    }
 
-        assertEquals(100.0, paid, 0.001)
-        assertEquals(900.0, balance, 0.001)
+    @Test
+    fun `yearly rows include pending amounts`() {
+        val year = 2026
+        val invoices = listOf(
+            Invoice(
+                invoiceNumber = "F1",
+                clientName = "Client",
+                totalAmount = 400.0,
+                dueDate = LocalDate.of(2026, 4, 10)
+            )
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Charge",
+                amount = 100.0,
+                date = LocalDate.of(2026, 4, 5),
+                isPaid = false
+            )
+        )
+        val april = TreasuryCalculations.yearlyRows(invoices, expenses, year)[3]
+
+        assertEquals(400.0, april.pendingIncome, 0.001)
+        assertEquals(100.0, april.pendingExpenses, 0.001)
+        assertEquals(300.0, april.forecastBalance, 0.001)
+        assertEquals(400.0, april.totalIncome, 0.001)
+        assertEquals(100.0, april.totalExpenses, 0.001)
     }
 }

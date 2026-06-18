@@ -12,7 +12,9 @@ data class Invoice(
     val dueDate: LocalDate,
     val createdDate: LocalDate = LocalDate.now(),
     val entrepriseId: String = "",
-    val payments: List<Payment> = emptyList()
+    val payments: List<Payment> = emptyList(),
+    val category: RevenueCategory = RevenueCategory.OTHER,
+    val categoryLabel: String = ""
 ) {
     val remainingAmount: Double
         get() = totalAmount - paidAmount

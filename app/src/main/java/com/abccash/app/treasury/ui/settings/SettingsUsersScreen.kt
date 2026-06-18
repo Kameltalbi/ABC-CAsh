@@ -1,42 +1,42 @@
-package com.abccash.app.treasury.ui
+package com.abccash.app.treasury.ui.settings
 
-import androidx.compose.foundation.background
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Lock
+import androidx.compose.material.icons.filled.Restore
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.net.Uri
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.hasPermission
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material.icons.filled.Backup
-import androidx.compose.material.icons.filled.Restore
-import androidx.compose.ui.platform.LocalContext
-import android.net.Uri
 import kotlinx.coroutines.delay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun AdminUsersScreen(
+fun SettingsUsersScreen(
     userRole: UserRole,
     permissions: Set<UserPermission>,
     currentUserId: String?,
     users: List<User>,
+    onBack: () -> Unit,
     onNavigateToAddUser: () -> Unit,
     onDeleteUser: (String) -> Unit,
     onChangePassword: (String, String, String, (String?) -> Unit) -> Unit,
@@ -44,22 +44,13 @@ fun AdminUsersScreen(
     onExportBackup: ((String?) -> Unit) -> Unit,
     onRestoreBackup: (String, (String?) -> Unit) -> Unit,
     backupFeedback: String? = null,
-    onClearBackupFeedback: () -> Unit = {},
-    onLogout: () -> Unit
+    onClearBackupFeedback: () -> Unit = {}
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.MANAGE_USERS)) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Color(0xFFF5F5F5)),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Accès refusé",
-                color = Color(0xFFF44336),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold
-            )
+        SettingsDetailScaffold(title = "Utilisateurs", onBack = onBack) {
+            Box(Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
+                Text("Accès refusé", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+            }
         }
         return
     }
@@ -187,153 +178,138 @@ fun AdminUsersScreen(
         )
     }
 
-    Scaffold(
-        floatingActionButton = {
-            if (userRole == UserRole.ADMIN) {
-                FloatingActionButton(
-                    onClick = onNavigateToAddUser,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = "Ajouter utilisateur", tint = Color.White)
-                }
-            }
-        }
-    ) { paddingValues ->
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Gestion utilisateurs",
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF1A1A1A)
-                )
-                TextButton(onClick = onLogout) {
-                    Text("Déconnexion", color = Color(0xFFF44336))
-                }
-            }
-        }
-
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F8F1))
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Mon compte", fontWeight = FontWeight.Bold)
-                        Text("Changer votre mot de passe", fontSize = 12.sp, color = Color.Gray)
-                        passwordMessage?.let {
-                            Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
-                        }
-                    }
-                    OutlinedButton(onClick = { showChangePasswordDialog = true }) {
-                        Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Modifier")
-                    }
-                }
-            }
-        }
-
-        if (userRole == UserRole.ADMIN) {
-            item {
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F6FF))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(14.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp)
+    SettingsDetailScaffold(title = "Utilisateurs", onBack = onBack) { padding ->
+        Scaffold(
+            modifier = Modifier.padding(padding),
+            floatingActionButton = {
+                if (userRole == UserRole.ADMIN) {
+                    FloatingActionButton(
+                        onClick = onNavigateToAddUser,
+                        containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Text("Sauvegarde & restauration", fontWeight = FontWeight.Bold)
-                        Text(
-                            "Exportez toutes les données de l'entreprise en JSON, ou restaurez depuis un fichier.",
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                        backupFeedback?.let {
-                            Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
-                        }
-                        backupError?.let {
-                            Text(it, fontSize = 12.sp, color = Color(0xFFF44336))
-                        }
-                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                            OutlinedButton(
-                                onClick = {
-                                    onExportBackup { json ->
-                                        if (json == null) {
-                                            backupError = "Impossible d'exporter la sauvegarde"
-                                        } else {
-                                            pendingBackupJson = json
-                                            exportLauncher.launch("abc-cash-backup.json")
-                                        }
-                                    }
-                                },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Text("Exporter", fontSize = 12.sp)
+                        Icon(Icons.Default.Add, contentDescription = "Ajouter utilisateur", tint = Color.White)
+                    }
+                }
+            }
+        ) { fabPadding ->
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(fabPadding)
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                item {
+                    Card(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F8F1))
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(14.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text("Mon compte", fontWeight = FontWeight.Bold)
+                                Text("Changer votre mot de passe", fontSize = 12.sp, color = Color.Gray)
+                                passwordMessage?.let {
+                                    Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
+                                }
                             }
-                            OutlinedButton(
-                                onClick = { importLauncher.launch(arrayOf("application/json", "text/*")) },
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                            OutlinedButton(onClick = { showChangePasswordDialog = true }) {
+                                Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Restaurer", fontSize = 12.sp)
+                                Text("Modifier")
                             }
                         }
                     }
                 }
-            }
-        }
 
-        item {
-            Text(
-                text = "Utilisateurs (${users.size})",
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+                if (userRole == UserRole.ADMIN) {
+                    item {
+                        Card(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(12.dp),
+                            colors = CardDefaults.cardColors(containerColor = Color(0xFFF3F6FF))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(14.dp),
+                                verticalArrangement = Arrangement.spacedBy(10.dp)
+                            ) {
+                                Text("Sauvegarde & restauration", fontWeight = FontWeight.Bold)
+                                Text(
+                                    "Exportez toutes les données de l'entreprise en JSON, ou restaurez depuis un fichier.",
+                                    fontSize = 12.sp,
+                                    color = Color.Gray
+                                )
+                                backupFeedback?.let {
+                                    Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
+                                }
+                                backupError?.let {
+                                    Text(it, fontSize = 12.sp, color = Color(0xFFF44336))
+                                }
+                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                    OutlinedButton(
+                                        onClick = {
+                                            onExportBackup { json ->
+                                                if (json == null) {
+                                                    backupError = "Impossible d'exporter la sauvegarde"
+                                                } else {
+                                                    pendingBackupJson = json
+                                                    exportLauncher.launch("abc-cash-backup.json")
+                                                }
+                                            }
+                                        },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Exporter", fontSize = 12.sp)
+                                    }
+                                    OutlinedButton(
+                                        onClick = { importLauncher.launch(arrayOf("application/json", "text/*")) },
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text("Restaurer", fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
 
-        if (users.isEmpty()) {
-            item {
-                Text(
-                    text = "Aucun utilisateur ajouté",
-                    color = Color.Gray,
-                    modifier = Modifier.padding(vertical = 16.dp)
-                )
+                item {
+                    Text(
+                        text = "Utilisateurs (${users.size})",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+
+                if (users.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Aucun utilisateur ajouté",
+                            color = Color.Gray,
+                            modifier = Modifier.padding(vertical = 16.dp)
+                        )
+                    }
+                } else {
+                    items(users) { user ->
+                        UserAdminCard(
+                            user = user,
+                            canManage = userRole == UserRole.ADMIN,
+                            onDelete = { onDeleteUser(user.id) },
+                            onResetPassword = { userToReset = user }
+                        )
+                    }
+                }
             }
-        } else {
-            items(users) { user ->
-                UserAdminCard(
-                    user = user,
-                    canManage = userRole == UserRole.ADMIN,
-                    onDelete = { onDeleteUser(user.id) },
-                    onResetPassword = { userToReset = user }
-                )
-            }
-        }
         }
     }
 }
