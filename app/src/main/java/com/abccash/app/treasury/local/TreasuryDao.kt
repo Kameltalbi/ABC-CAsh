@@ -78,6 +78,16 @@ interface TreasuryDao {
     @Query("DELETE FROM invoices WHERE id = :invoiceId")
     suspend fun deleteInvoiceById(invoiceId: String)
 
+    @Query(
+        """
+        SELECT * FROM invoices
+        WHERE entrepriseId = :entrepriseId
+          AND lower(trim(invoiceNumber)) = lower(trim(:invoiceNumber))
+        LIMIT 1
+        """
+    )
+    suspend fun findInvoiceByNumber(entrepriseId: String, invoiceNumber: String): InvoiceEntity?
+
     @Query("SELECT * FROM entreprises WHERE id = :id LIMIT 1")
     suspend fun findEntrepriseById(id: String): EntrepriseEntity?
 

@@ -3,55 +3,128 @@ package com.abccash.app.treasury.importer
 import com.abccash.app.treasury.data.Invoice
 import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
+import java.io.ByteArrayInputStream
 import java.io.InputStream
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import java.util.zip.ZipInputStream
 
+data class InvoiceImportResult(
+    val invoices: List<Invoice>,
+    val errorMessage: String? = null,
+    val detectedHeaders: List<String> = emptyList()
+)
+
 object InvoiceImportParser {
+    fun parse(fileName: String, inputStream: InputStream, mimeType: String? = null): InvoiceImportResult {
+        val bytes = inputStream.readBytes()
+        if (bytes.isEmpty()) {
+            return InvoiceImportResult(emptyList(), "Le fichier est vide.")
+        }
+
+        return when {
+            isXlsx(fileName, mimeType, bytes) -> parseXlsx(bytes)
+            fileName.lowercase(Locale.ROOT).endsWith(".xls") ->
+                InvoiceImportResult(emptyList(), "Le format .xls (Excel ancien) n'est pas supporté. Enregistrez en .xlsx ou CSV.")
+            else -> parseCsv(bytes)
+        }
+    }
+
     fun parse(fileName: String, inputStream: InputStream): List<Invoice> {
-        val lowerName = fileName.lowercase(Locale.ROOT)
-        return if (lowerName.endsWith(".xlsx")) {
-            parseXlsx(inputStream)
-        } else {
-            parseCsv(inputStream)
-        }
+        return parse(fileName, inputStream, mimeType = null).invoices
     }
 
-    private fun parseCsv(inputStream: InputStream): List<Invoice> {
-        val lines = inputStream.bufferedReader().readLines().filter { it.isNotBlank() }
-        if (lines.isEmpty()) return emptyList()
+    private fun isXlsx(fileName: String, mimeType: String?, bytes: ByteArray): Boolean {
+        if (fileName.lowercase(Locale.ROOT).endsWith(".xlsx")) return true
+        if (mimeType?.contains("spreadsheetml", ignoreCase = true) == true) return true
+        if (mimeType?.contains("openxmlformats", ignoreCase = true) == true) return true
+        return bytes.size >= 4 &&
+            bytes[0] == 0x50.toByte() &&
+            bytes[1] == 0x4B.toByte() &&
+            (bytes[2] == 0x03.toByte() || bytes[2] == 0x05.toByte() || bytes[2] == 0x07.toByte())
+    }
+
+    private fun parseCsv(bytes: ByteArray): InvoiceImportResult {
+        val lines = bytes.toString(Charsets.UTF_8).lines().filter { it.isNotBlank() }
+        if (lines.isEmpty()) return InvoiceImportResult(emptyList(), "Le fichier ne contient aucune ligne.")
         val delimiter = detectDelimiter(lines.first())
-        val header = splitCsvLine(lines.first(), delimiter).map { it.normalizedHeader() }
+        val rawHeaderCells = splitCsvLine(lines.first(), delimiter)
+        val header = rawHeaderCells.map { it.normalizedHeader() }
         val hasHeader = header.any { it in knownHeaders }
-        val rows = if (hasHeader) lines.drop(1) else lines
-        val indexes = if (hasHeader) headerIndexes(header) else defaultIndexes()
-        return rows.mapNotNull { line ->
-            val cells = splitCsvLine(line, delimiter)
-            invoiceFromCells(cells, indexes)
-        }
+        val dataLines = if (hasHeader) lines.drop(1) else lines
+        val dataRows = dataLines.map { splitCsvLine(it, delimiter) }
+        return rowsToInvoices(header, dataRows, dataRows, if (hasHeader) rawHeaderCells else emptyList())
     }
 
-    private fun parseXlsx(inputStream: InputStream): List<Invoice> {
+    private fun parseXlsx(bytes: ByteArray): InvoiceImportResult {
         val entries = mutableMapOf<String, ByteArray>()
-        ZipInputStream(inputStream).use { zip ->
+        ZipInputStream(ByteArrayInputStream(bytes)).use { zip ->
             var entry = zip.nextEntry
             while (entry != null) {
-                if (!entry.isDirectory && (entry.name == "xl/sharedStrings.xml" || entry.name == "xl/worksheets/sheet1.xml")) {
-                    entries[entry.name] = zip.readBytes()
+                if (!entry.isDirectory) {
+                    when {
+                        entry.name == "xl/sharedStrings.xml" -> entries[entry.name] = zip.readBytes()
+                        entry.name.startsWith("xl/worksheets/sheet") && !entries.containsKey("xl/worksheets/sheet1.xml") -> {
+                            entries["xl/worksheets/sheet1.xml"] = zip.readBytes()
+                        }
+                    }
                 }
                 entry = zip.nextEntry
             }
         }
+
+        val sheetBytes = entries["xl/worksheets/sheet1.xml"]
+            ?: return InvoiceImportResult(emptyList(), "Feuille Excel introuvable dans le fichier.")
+
         val sharedStrings = entries["xl/sharedStrings.xml"]?.inputStream()?.let(::readSharedStrings).orEmpty()
-        val rows = entries["xl/worksheets/sheet1.xml"]?.inputStream()?.let { readSheetRows(it, sharedStrings) }.orEmpty()
-        if (rows.isEmpty()) return emptyList()
+        val rows = readSheetRows(sheetBytes.inputStream(), sharedStrings)
+        if (rows.isEmpty()) {
+            return InvoiceImportResult(emptyList(), "La feuille Excel est vide.")
+        }
+
         val header = rows.first().map { it.normalizedHeader() }
         val hasHeader = header.any { it in knownHeaders }
         val dataRows = if (hasHeader) rows.drop(1) else rows
-        val indexes = if (hasHeader) headerIndexes(header) else defaultIndexes()
-        return dataRows.mapNotNull { invoiceFromCells(it, indexes) }
+        return rowsToInvoices(header, dataRows, dataRows, if (hasHeader) rows.first() else emptyList())
+    }
+
+    private fun rowsToInvoices(
+        header: List<String>,
+        dataRows: List<List<String>>,
+        allRows: List<List<String>>,
+        rawHeader: List<String>
+    ): InvoiceImportResult {
+        val hasHeader = header.any { it in knownHeaders }
+        val indexes = if (hasHeader) {
+            headerIndexes(header) ?: return InvoiceImportResult(
+                invoices = emptyList(),
+                errorMessage = buildHeaderError(rawHeader),
+                detectedHeaders = rawHeader
+            )
+        } else {
+            defaultIndexes()
+        }
+
+        val invoices = dataRows.mapNotNull { invoiceFromCells(it, indexes) }
+        if (invoices.isEmpty()) {
+            return InvoiceImportResult(
+                invoices = emptyList(),
+                errorMessage = if (hasHeader) {
+                    "Aucune ligne valide. Vérifiez montants et dates (ex. 30/06/2026)."
+                } else {
+                    buildHeaderError(rawHeader)
+                },
+                detectedHeaders = rawHeader
+            )
+        }
+        return InvoiceImportResult(invoices)
+    }
+
+    private fun buildHeaderError(rawHeader: List<String>): String {
+        val found = rawHeader.filter { it.isNotBlank() }.joinToString(", ")
+        return "Colonnes non reconnues : $found. " +
+            "Attendu : N° facture, Client, Montant, Date échéance (ou invoiceNumber, clientName, totalAmount, dueDate)."
     }
 
     private fun invoiceFromCells(cells: List<String>, indexes: Map<String, Int>): Invoice? {
@@ -72,13 +145,20 @@ object InvoiceImportParser {
         val parser = XmlPullParserFactory.newInstance().newPullParser()
         parser.setInput(inputStream, null)
         val values = mutableListOf<String>()
-        var text = ""
+        var text = StringBuilder()
+        var inStringItem = false
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
-            if (event == XmlPullParser.TEXT) text += parser.text.orEmpty()
-            if (event == XmlPullParser.END_TAG && parser.name == "si") {
-                values += text
-                text = ""
+            when (event) {
+                XmlPullParser.START_TAG -> if (parser.name == "si") {
+                    text = StringBuilder()
+                    inStringItem = true
+                }
+                XmlPullParser.TEXT -> if (inStringItem) text.append(parser.text.orEmpty())
+                XmlPullParser.END_TAG -> if (parser.name == "si") {
+                    values += text.toString()
+                    inStringItem = false
+                }
             }
             event = parser.next()
         }
@@ -89,35 +169,63 @@ object InvoiceImportParser {
         val parser = XmlPullParserFactory.newInstance().newPullParser()
         parser.setInput(inputStream, null)
         val rows = mutableListOf<List<String>>()
-        var row = mutableListOf<String>()
+        var sparseRow = mutableMapOf<Int, String>()
         var cellType: String? = null
-        var currentValue = ""
-        var inValue = false
+        var cellCol = 0
+        var cellValue = StringBuilder()
+        var inCell = false
+        var inInlineString = false
+
         var event = parser.eventType
         while (event != XmlPullParser.END_DOCUMENT) {
             when (event) {
                 XmlPullParser.START_TAG -> when (parser.name) {
-                    "row" -> row = mutableListOf()
-                    "c" -> cellType = parser.getAttributeValue(null, "t")
-                    "v" -> {
-                        currentValue = ""
-                        inValue = true
-                    }
-                }
-                XmlPullParser.TEXT -> if (inValue) currentValue += parser.text.orEmpty()
-                XmlPullParser.END_TAG -> when (parser.name) {
-                    "v" -> inValue = false
+                    "row" -> sparseRow = mutableMapOf()
                     "c" -> {
-                        row += if (cellType == "s") sharedStrings.getOrNull(currentValue.toIntOrNull() ?: -1).orEmpty() else currentValue
-                        cellType = null
-                        currentValue = ""
+                        inCell = true
+                        cellValue = StringBuilder()
+                        cellType = parser.getAttributeValue(null, "t")
+                        val ref = parser.getAttributeValue(null, "r")
+                        cellCol = if (ref != null) columnRefToIndex(ref) else sparseRow.size
+                        inInlineString = cellType == "inlineStr"
                     }
-                    "row" -> if (row.any { it.isNotBlank() }) rows += row
+                    "is" -> if (cellType == "inlineStr") inInlineString = true
+                    "v", "t" -> { /* value collected via TEXT */ }
+                }
+                XmlPullParser.TEXT -> if (inCell) cellValue.append(parser.text.orEmpty())
+                XmlPullParser.END_TAG -> when (parser.name) {
+                    "is" -> inInlineString = false
+                    "c" -> {
+                        val value = when (cellType) {
+                            "s" -> sharedStrings.getOrNull(cellValue.toString().toIntOrNull() ?: -1).orEmpty()
+                            "inlineStr" -> cellValue.toString()
+                            "str" -> cellValue.toString()
+                            else -> cellValue.toString()
+                        }
+                        sparseRow[cellCol] = value
+                        inCell = false
+                        cellType = null
+                        cellValue = StringBuilder()
+                    }
+                    "row" -> if (sparseRow.isNotEmpty()) {
+                        val maxCol = sparseRow.keys.max()
+                        val row = (0..maxCol).map { sparseRow[it].orEmpty() }
+                        if (row.any { it.isNotBlank() }) rows += row
+                    }
                 }
             }
             event = parser.next()
         }
         return rows
+    }
+
+    private fun columnRefToIndex(cellRef: String): Int {
+        val letters = cellRef.takeWhile { it.isLetter() }.uppercase(Locale.ROOT)
+        var index = 0
+        for (char in letters) {
+            index = index * 26 + (char.code - 'A'.code + 1)
+        }
+        return index - 1
     }
 
     private fun detectDelimiter(line: String): Char {
@@ -142,12 +250,37 @@ object InvoiceImportParser {
         return cells
     }
 
-    private fun headerIndexes(header: List<String>): Map<String, Int> {
+    private fun headerIndexes(header: List<String>): Map<String, Int>? {
+        fun findByPriority(vararg keys: String): Int? {
+            for (key in keys) {
+                val index = header.indexOf(key)
+                if (index >= 0) return index
+            }
+            return null
+        }
+
+        val invoiceNumber = findByPriority(
+            "invoicenumber", "numfacture", "nfacture", "numerofacture",
+            "numerodefacture", "numero", "facture", "ref", "reference"
+        ) ?: return null
+        val clientName = findByPriority(
+            "clientname", "nomclient", "nomduclient", "raisonsociale",
+            "client", "societe", "intitule", "nom"
+        ) ?: return null
+        val totalAmount = findByPriority(
+            "totalamount", "montanttotal", "montantttc", "montantht",
+            "montant", "total", "amount", "prix", "valeur"
+        ) ?: return null
+        val dueDate = findByPriority(
+            "dateecheance", "datedecheance", "echeance", "duedate",
+            "datelimite", "datefacture", "date"
+        ) ?: return null
+
         return mapOf(
-            "invoiceNumber" to header.indexOfFirst { it in setOf("invoicenumber", "numero", "numfacture", "facture", "n facture") }.coerceAtLeast(0),
-            "clientName" to header.indexOfFirst { it in setOf("clientname", "client", "nomclient") }.coerceAtLeast(1),
-            "totalAmount" to header.indexOfFirst { it in setOf("totalamount", "montant", "total", "amount") }.coerceAtLeast(2),
-            "dueDate" to header.indexOfFirst { it in setOf("duedate", "echeance", "dateecheance", "date") }.coerceAtLeast(3)
+            "invoiceNumber" to invoiceNumber,
+            "clientName" to clientName,
+            "totalAmount" to totalAmount,
+            "dueDate" to dueDate
         )
     }
 
@@ -160,8 +293,19 @@ object InvoiceImportParser {
             .replace("é", "e")
             .replace("è", "e")
             .replace("ê", "e")
+            .replace("ë", "e")
             .replace("à", "a")
+            .replace("â", "a")
+            .replace("ù", "u")
+            .replace("û", "u")
+            .replace("ô", "o")
+            .replace("î", "i")
+            .replace("ï", "i")
+            .replace("ç", "c")
             .replace("°", "")
+            .replace("'", "")
+            .replace("’", "")
+            .replace(" ", "")
             .replace("_", "")
             .replace("-", "")
             .trim()
@@ -169,6 +313,7 @@ object InvoiceImportParser {
 
     private fun String.toAmount(): Double? {
         return trim()
+            .replace("\u00A0", "")
             .replace(" ", "")
             .replace("DT", "", ignoreCase = true)
             .replace(",", ".")
@@ -176,14 +321,16 @@ object InvoiceImportParser {
     }
 
     private fun String.toLocalDate(): LocalDate? {
-        val value = trim()
+        val value = trim().substringBefore(' ').substringBefore('T')
         value.toDoubleOrNull()?.let { serial ->
-            return LocalDate.of(1899, 12, 30).plusDays(serial.toLong())
+            return LocalDate.of(1899, 12, 30).plusDays(kotlin.math.round(serial).toLong())
         }
         return listOf(
             DateTimeFormatter.ISO_LOCAL_DATE,
             DateTimeFormatter.ofPattern("dd/MM/yyyy"),
             DateTimeFormatter.ofPattern("d/M/yyyy"),
+            DateTimeFormatter.ofPattern("dd/MM/yy"),
+            DateTimeFormatter.ofPattern("d/M/yy"),
             DateTimeFormatter.ofPattern("dd-MM-yyyy"),
             DateTimeFormatter.ofPattern("d-M-yyyy")
         ).firstNotNullOfOrNull { formatter ->
@@ -192,20 +339,13 @@ object InvoiceImportParser {
     }
 
     private val knownHeaders = setOf(
-        "invoicenumber",
-        "numero",
-        "numfacture",
-        "facture",
-        "clientname",
-        "client",
-        "nomclient",
-        "totalamount",
-        "montant",
-        "total",
-        "amount",
-        "duedate",
-        "echeance",
-        "dateecheance",
-        "date"
+        "invoicenumber", "numero", "numfacture", "nfacture", "numerofacture",
+        "numerodefacture", "facture", "ref", "reference", "nfacture",
+        "clientname", "client", "nomclient", "nom", "raisonsociale",
+        "societe", "nomduclient", "intitule",
+        "totalamount", "montant", "total", "amount", "montanttotal",
+        "montantht", "montantttc", "prix", "valeur",
+        "duedate", "echeance", "dateecheance", "date", "datefacture",
+        "datelimite", "datedecheance"
     )
 }

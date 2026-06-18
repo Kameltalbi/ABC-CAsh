@@ -120,11 +120,15 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
     fun importInvoices(invoices: List<Invoice>) {
         val entrepriseId = requireEntrepriseId() ?: return
         viewModelScope.launch {
-            invoices.forEach { invoice ->
-                repository.addInvoice(invoice.copy(entrepriseId = entrepriseId))
+            val stats = repository.importInvoices(entrepriseId, invoices)
+            val message = buildString {
+                append("${stats.imported} facture(s) importée(s)")
+                if (stats.skippedDuplicates > 0) {
+                    append(", ${stats.skippedDuplicates} doublon(s) ignoré(s)")
+                }
             }
             _uiState.update {
-                it.copy(importFeedback = "${invoices.size} facture(s) importée(s)")
+                it.copy(importFeedback = message)
             }
         }
     }

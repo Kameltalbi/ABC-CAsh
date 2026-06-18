@@ -19,6 +19,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
+import java.util.Locale
+
+data class InvoiceImportStats(
+    val imported: Int,
+    val skippedDuplicates: Int
+)
 
 class TreasuryRepository(private val dao: TreasuryDao) {
 
@@ -73,8 +79,44 @@ class TreasuryRepository(private val dao: TreasuryDao) {
     fun observeUsers(entrepriseId: String): Flow<List<User>> =
         dao.observeUsers(entrepriseId).map { entities -> entities.map { it.toDomain() } }
 
-    suspend fun addInvoice(invoice: Invoice) {
+    suspend fun addInvoice(invoice: Invoice): Boolean {
+        if (invoice.invoiceNumber.isBlank()) return false
+        if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) return false
         dao.upsertInvoice(invoice.toEntity())
+        return true
+    }
+
+    suspend fun importInvoices(entrepriseId: String, invoices: List<Invoice>): InvoiceImportStats {
+        val seenInFile = mutableSetOf<String>()
+        var imported = 0
+        var skippedDuplicates = 0
+
+        for (invoice in invoices) {
+            val normalizedNumber = normalizeInvoiceNumber(invoice.invoiceNumber)
+            if (normalizedNumber.isBlank()) continue
+
+            if (!seenInFile.add(normalizedNumber)) {
+                skippedDuplicates++
+                continue
+            }
+            if (invoiceExists(entrepriseId, normalizedNumber)) {
+                skippedDuplicates++
+                continue
+            }
+
+            dao.upsertInvoice(invoice.copy(entrepriseId = entrepriseId).toEntity())
+            imported++
+        }
+
+        return InvoiceImportStats(imported = imported, skippedDuplicates = skippedDuplicates)
+    }
+
+    private suspend fun invoiceExists(entrepriseId: String, invoiceNumber: String): Boolean {
+        return dao.findInvoiceByNumber(entrepriseId, normalizeInvoiceNumber(invoiceNumber)) != null
+    }
+
+    private fun normalizeInvoiceNumber(invoiceNumber: String): String {
+        return invoiceNumber.trim().uppercase(Locale.ROOT)
     }
 
     suspend fun updateInvoice(invoice: Invoice) {
