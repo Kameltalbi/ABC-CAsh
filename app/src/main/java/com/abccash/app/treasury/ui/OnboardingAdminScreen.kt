@@ -22,7 +22,8 @@ import androidx.compose.ui.unit.sp
 
 @Composable
 fun OnboardingAdminScreen(
-    onContinue: () -> Unit
+    onContinue: () -> Unit,
+    onLogout: () -> Unit = {}
 ) {
     Column(
         modifier = Modifier
@@ -134,6 +135,17 @@ fun OnboardingAdminScreen(
                 text = "Commencer",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
+            )
+        }
+
+        TextButton(
+            onClick = onLogout,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(
+                text = "Se déconnecter",
+                color = Color.Gray,
+                fontSize = 14.sp
             )
         }
         

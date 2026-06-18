@@ -21,7 +21,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         
         val database = TreasuryDatabase.getInstance(this)
-        val repository = TreasuryRepository(database.treasuryDao())
+        val repository = TreasuryRepository(database.treasuryDao(), database)
         val factory = TreasuryViewModelFactory(repository)
 
         setContent {

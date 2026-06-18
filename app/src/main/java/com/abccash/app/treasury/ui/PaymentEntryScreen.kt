@@ -32,7 +32,7 @@ import java.util.Locale
 fun PaymentEntryScreen(
     invoice: Invoice,
     onBack: () -> Unit,
-    onSavePayment: (Double, LocalDate, PaymentMethod) -> Unit
+    onSavePayment: (Double, LocalDate, PaymentMethod) -> Boolean
 ) {
     var paymentAmount by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
@@ -244,7 +244,7 @@ fun PaymentEntryScreen(
             item {
                 Button(
                     onClick = {
-                        val amount = paymentAmount.toDoubleOrNull()
+                        val amount = paymentAmount.replace(",", ".").toDoubleOrNull()
                         when {
                             amount == null || amount <= 0 -> {
                                 paymentError = "Montant invalide"
@@ -253,15 +253,19 @@ fun PaymentEntryScreen(
                                 paymentError = "Maximum : ${currencyFormatter.format(invoice.remainingAmount)}"
                             }
                             else -> {
-                                paymentError = null
-                                onSavePayment(amount, selectedDate, selectedMethod)
+                                val saved = onSavePayment(amount, selectedDate, selectedMethod)
+                                if (saved) {
+                                    paymentError = null
+                                } else {
+                                    paymentError = "Impossible d'enregistrer le paiement"
+                                }
                             }
                         }
                     },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(56.dp),
-                    enabled = paymentAmount.toDoubleOrNull()?.let { it > 0 } ?: false,
+                    enabled = paymentAmount.replace(",", ".").toDoubleOrNull()?.let { it > 0 } ?: false,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(

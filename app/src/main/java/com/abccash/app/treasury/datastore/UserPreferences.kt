@@ -79,6 +79,9 @@ class UserPreferences(private val context: Context) {
             preferences[UserPreferencesKeys.USER_ENTREPRISE_ID] = entrepriseId
             preferences[UserPreferencesKeys.USER_PERMISSIONS] = permissions.joinToString(",") { it.name }
             preferences[UserPreferencesKeys.IS_LOGGED_IN] = true
+            if (role == UserRole.ADMIN) {
+                preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = true
+            }
         }
     }
     
@@ -90,7 +93,15 @@ class UserPreferences(private val context: Context) {
     
     suspend fun clearUserSession() {
         context.userDataStore.edit { preferences ->
-            preferences.clear()
+            val onboardingVu = preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] ?: false
+            preferences.remove(UserPreferencesKeys.USER_ID)
+            preferences.remove(UserPreferencesKeys.USER_EMAIL)
+            preferences.remove(UserPreferencesKeys.USER_NOM)
+            preferences.remove(UserPreferencesKeys.USER_ROLE)
+            preferences.remove(UserPreferencesKeys.USER_ENTREPRISE_ID)
+            preferences.remove(UserPreferencesKeys.USER_PERMISSIONS)
+            preferences[UserPreferencesKeys.IS_LOGGED_IN] = false
+            preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = onboardingVu
         }
     }
 }

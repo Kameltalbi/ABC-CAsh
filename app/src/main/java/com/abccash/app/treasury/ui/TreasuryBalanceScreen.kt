@@ -178,7 +178,7 @@ fun TreasuryBalanceScreen(
                 modifier = Modifier.weight(1f)
             )
             CompactTreasuryCard(
-                title = "Dépenses",
+                title = "Dép. payées",
                 amount = currencyFormatter.format(totalExpenses),
                 color = Color(0xFFF44336),
                 modifier = Modifier.weight(1f)

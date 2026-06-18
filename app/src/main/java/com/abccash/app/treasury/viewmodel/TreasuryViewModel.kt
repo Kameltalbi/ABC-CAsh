@@ -101,11 +101,16 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         invoiceNumber: String,
         clientName: String,
         totalAmount: Double,
-        dueDate: LocalDate
+        dueDate: LocalDate,
+        onResult: (String?) -> Unit = {}
     ) {
-        val entrepriseId = requireEntrepriseId() ?: return
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
         viewModelScope.launch {
-            repository.addInvoice(
+            val error = repository.addInvoice(
                 Invoice(
                     invoiceNumber = invoiceNumber,
                     clientName = clientName,
@@ -114,6 +119,7 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                     entrepriseId = entrepriseId
                 )
             )
+            onResult(error)
         }
     }
 
@@ -142,12 +148,16 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         invoiceNumber: String,
         clientName: String,
         totalAmount: Double,
-        dueDate: LocalDate
-    ): Boolean {
-        val existing = getInvoice(invoiceId) ?: return false
-        if (totalAmount < existing.paidAmount) return false
+        dueDate: LocalDate,
+        onResult: (String?) -> Unit = {}
+    ) {
+        val existing = getInvoice(invoiceId)
+        if (existing == null) {
+            onResult("Facture introuvable")
+            return
+        }
         viewModelScope.launch {
-            repository.updateInvoice(
+            val error = repository.updateInvoice(
                 existing.copy(
                     invoiceNumber = invoiceNumber,
                     clientName = clientName,
@@ -155,8 +165,8 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                     dueDate = dueDate
                 )
             )
+            onResult(error)
         }
-        return true
     }
 
     fun deleteInvoice(invoiceId: String) {
@@ -272,21 +282,27 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         telephone: String,
         password: String,
         role: UserRole,
-        permissions: Set<UserPermission>
+        permissions: Set<UserPermission>,
+        onResult: (String?) -> Unit = {}
     ) {
-        val entrepriseId = requireEntrepriseId() ?: return
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("Session expirée, reconnectez-vous")
+            return
+        }
         viewModelScope.launch {
-            repository.addUser(
+            val error = repository.addUser(
                 User(
-                    nom = nom,
-                    email = email.trim(),
-                    telephone = telephone.trim(),
+                    nom = nom.trim(),
+                    email = email,
+                    telephone = telephone,
                     passwordHash = password,
                     role = role,
                     permissions = permissions,
                     entrepriseId = entrepriseId
                 )
             )
+            onResult(error)
         }
     }
 
@@ -362,31 +378,26 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
     }
 
     fun getMonthlyCollections(yearMonth: YearMonth): Double {
-        return _uiState.value.invoices
-            .flatMap { it.payments }
-            .filter { YearMonth.from(it.date) == yearMonth }
-            .sumOf { it.amount }
+        return TreasuryCalculations.monthlyCollections(_uiState.value.invoices, yearMonth)
     }
 
     fun getMonthlyExpenses(yearMonth: YearMonth): Double {
-        return _uiState.value.expenses
-            .filter { it.appliesToMonth(yearMonth) }
-            .sumOf { it.amount }
+        return TreasuryCalculations.monthlyPaidExpenses(_uiState.value.expenses, yearMonth)
     }
 
     fun getMonthlyBalance(yearMonth: YearMonth): Double {
-        return getMonthlyCollections(yearMonth) - getMonthlyExpenses(yearMonth)
+        return TreasuryCalculations.monthlyBalance(
+            getMonthlyCollections(yearMonth),
+            getMonthlyExpenses(yearMonth)
+        )
     }
 
     fun getForecastedBalance(yearMonth: YearMonth): Double {
-        val currentBalance = getMonthlyBalance(yearMonth)
-        val pendingInvoices = _uiState.value.invoices
-            .filter { it.status != InvoiceStatus.PAID && YearMonth.from(it.dueDate) == yearMonth }
-            .sumOf { it.remainingAmount }
-        val upcomingExpenses = _uiState.value.expenses
-            .filter { !it.isPaid && it.appliesToMonth(yearMonth) }
-            .sumOf { it.amount }
-        return currentBalance + pendingInvoices - upcomingExpenses
+        return TreasuryCalculations.forecastedBalance(
+            invoices = _uiState.value.invoices,
+            expenses = _uiState.value.expenses,
+            month = yearMonth
+        )
     }
 }
 

@@ -25,7 +25,9 @@ import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.InvoiceStatus
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
+import com.abccash.app.treasury.data.defaultDateForMonth
 import com.abccash.app.treasury.data.hasPermission
+import com.abccash.app.treasury.data.parseFlexibleLocalDate
 import kotlinx.coroutines.delay
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -52,8 +54,8 @@ fun InvoicesListScreen(
     onClearImportFeedback: () -> Unit = {},
     onInvoiceClick: (String) -> Unit,
     onNavigateToImport: () -> Unit,
-    onAddInvoice: (String, String, Double, LocalDate) -> Unit,
-    onUpdateInvoice: (String, String, String, Double, LocalDate) -> Boolean,
+    onAddInvoice: (String, String, Double, LocalDate, (String?) -> Unit) -> Unit,
+    onUpdateInvoice: (String, String, String, Double, LocalDate, (String?) -> Unit) -> Unit,
     onDeleteInvoice: (String) -> Unit,
     onDeleteInvoices: (Collection<String>) -> Unit = {}
 ) {
@@ -66,6 +68,7 @@ fun InvoicesListScreen(
     var showBulkDeleteConfirm by remember { mutableStateOf(false) }
     var selectedInvoiceIds by remember { mutableStateOf(setOf<String>()) }
     var editError by remember { mutableStateOf<String?>(null) }
+    var addError by remember { mutableStateOf<String?>(null) }
     val isAdmin = userRole == UserRole.ADMIN
     val canView = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canAddPayment = hasPermission(userRole, permissions, UserPermission.ADD_PAYMENTS)
@@ -113,10 +116,21 @@ fun InvoicesListScreen(
     if (showAddDialog) {
         InvoiceFormDialog(
             title = "Ajouter encaissement",
-            onDismiss = { showAddDialog = false },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate ->
-                onAddInvoice(invoiceNumber, clientName, totalAmount, dueDate)
+            selectedMonth = selectedMonth,
+            errorMessage = addError,
+            onDismiss = {
                 showAddDialog = false
+                addError = null
+            },
+            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate ->
+                onAddInvoice(invoiceNumber, clientName, totalAmount, dueDate) { error ->
+                    if (error == null) {
+                        showAddDialog = false
+                        addError = null
+                    } else {
+                        addError = error
+                    }
+                }
             }
         )
     }
@@ -130,18 +144,19 @@ fun InvoicesListScreen(
                 editError = null
             },
             onConfirm = { invoiceNumber, clientName, totalAmount, dueDate ->
-                val success = onUpdateInvoice(
+                onUpdateInvoice(
                     invoice.id,
                     invoiceNumber,
                     clientName,
                     totalAmount,
                     dueDate
-                )
-                if (success) {
-                    invoiceToEdit = null
-                    editError = null
-                } else {
-                    editError = "Le montant total ne peut pas être inférieur au montant déjà encaissé."
+                ) { error ->
+                    if (error == null) {
+                        invoiceToEdit = null
+                        editError = null
+                    } else {
+                        editError = error
+                    }
                 }
             },
             errorMessage = editError
@@ -219,7 +234,10 @@ fun InvoicesListScreen(
         floatingActionButton = {
             if (isAdmin) {
                 FloatingActionButton(
-                    onClick = { showAddDialog = true },
+                    onClick = {
+                        addError = null
+                        showAddDialog = true
+                    },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
                     Icon(Icons.Default.Add, contentDescription = "Ajouter facture")
@@ -236,6 +254,13 @@ fun InvoicesListScreen(
             MonthSelectorRow(
                 selectedMonth = selectedMonth,
                 onMonthChange = onMonthChange
+            )
+
+            Text(
+                text = "Affichage par date d'échéance",
+                fontSize = 12.sp,
+                color = Color.Gray,
+                modifier = Modifier.padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.height(10.dp))
@@ -339,9 +364,14 @@ fun InvoicesListScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Aucune facture pour ce mois",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = Color.Gray
+                        text = if (invoices.any { YearMonth.from(it.dueDate) == selectedMonth }) {
+                            "Aucun encaissement ne correspond aux filtres"
+                        } else {
+                            "Aucun encaissement avec échéance en ${selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))}"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.Gray,
+                        modifier = Modifier.padding(horizontal = 24.dp)
                     )
                 }
             } else {
@@ -382,10 +412,16 @@ fun InvoicesListScreen(
 private fun InvoiceFormDialog(
     title: String,
     initialInvoice: Invoice? = null,
+    selectedMonth: YearMonth? = null,
     errorMessage: String? = null,
     onDismiss: () -> Unit,
     onConfirm: (String, String, Double, LocalDate) -> Unit
 ) {
+    val defaultDueDate = remember(initialInvoice, selectedMonth) {
+        initialInvoice?.dueDate
+            ?: selectedMonth?.let { defaultDateForMonth(it) }
+            ?: LocalDate.now().plusDays(30)
+    }
     var invoiceNumber by remember(initialInvoice) {
         mutableStateOf(initialInvoice?.invoiceNumber.orEmpty())
     }
@@ -395,14 +431,15 @@ private fun InvoiceFormDialog(
     var totalAmount by remember(initialInvoice) {
         mutableStateOf(initialInvoice?.totalAmount?.toString().orEmpty())
     }
-    var dueDate by remember(initialInvoice) {
+    var dueDate by remember(initialInvoice, selectedMonth) {
         mutableStateOf(
-            initialInvoice?.dueDate?.format(DateTimeFormatter.ISO_LOCAL_DATE)
-                ?: LocalDate.now().plusDays(30).format(DateTimeFormatter.ISO_LOCAL_DATE)
+            defaultDueDate.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
         )
     }
+    var localError by remember(initialInvoice, selectedMonth) { mutableStateOf<String?>(null) }
+    val displayError = errorMessage ?: localError
     val parsedAmount = totalAmount.replace(",", ".").toDoubleOrNull()
-    val parsedDate = runCatching { LocalDate.parse(dueDate) }.getOrNull()
+    val parsedDate = parseFlexibleLocalDate(dueDate)
     val minAmount = initialInvoice?.paidAmount ?: 0.0
     val amountTooLow = parsedAmount != null && parsedAmount < minAmount
 
@@ -442,13 +479,21 @@ private fun InvoiceFormDialog(
                 )
                 OutlinedTextField(
                     value = dueDate,
-                    onValueChange = { dueDate = it },
+                    onValueChange = {
+                        dueDate = it
+                        localError = null
+                    },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Date échéance yyyy-MM-dd") },
+                    label = { Text("Date d'échéance (jj/mm/aaaa)") },
                     singleLine = true,
-                    isError = dueDate.isNotBlank() && parsedDate == null
+                    isError = dueDate.isNotBlank() && parsedDate == null,
+                    supportingText = if (selectedMonth != null && initialInvoice == null) {
+                        { Text("Prérempli pour le mois affiché : ${selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))}") }
+                    } else {
+                        null
+                    }
                 )
-                errorMessage?.let { message ->
+                displayError?.let { message ->
                     Text(
                         text = message,
                         fontSize = 12.sp,
@@ -459,7 +504,11 @@ private fun InvoiceFormDialog(
         },
         confirmButton = {
             Button(
-                onClick = { onConfirm(invoiceNumber, clientName, parsedAmount ?: 0.0, parsedDate ?: LocalDate.now()) },
+                onClick = {
+                    val date = parsedDate ?: return@Button
+                    val amount = parsedAmount ?: return@Button
+                    onConfirm(invoiceNumber, clientName, amount, date)
+                },
                 enabled = invoiceNumber.isNotBlank() &&
                     clientName.isNotBlank() &&
                     parsedAmount != null &&

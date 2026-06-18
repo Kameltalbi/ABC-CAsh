@@ -102,11 +102,7 @@ fun TreasuryApp(
         composable(Screen.Splash.route) {
             SplashDecisionScreen(
                 repository = repository,
-                onNavigateToOnboarding = {
-                    navController.navigate(Screen.OnboardingAdmin.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                },
+                userPreferences = userPreferences,
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
@@ -123,6 +119,12 @@ fun TreasuryApp(
                     currentPermissions = permissions
                     viewModel.setSession(entrepriseId, userRole, permissions, userId)
                     navController.navigate(Screen.Invoices.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onSessionInvalid = {
+                    viewModel.clearSession()
+                    navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
@@ -142,12 +144,18 @@ fun TreasuryApp(
                         isAuthenticated = true
                         currentUserRole = role
                         currentPermissions = permissions
-                        viewModel.setSession(entrepriseId, role, permissions, userPreferences.currentUserId.first())
+                        viewModel.setSession(
+                            entrepriseId,
+                            role,
+                            permissions,
+                            userPreferences.currentUserId.first().orEmpty()
+                        )
                         navController.navigate(Screen.Invoices.route) {
                             popUpTo(Screen.OnboardingAdmin.route) { inclusive = true }
                         }
                     }
-                }
+                },
+                onLogout = ::logout
             )
         }
 
@@ -232,26 +240,49 @@ fun TreasuryApp(
             val permissions = currentPermissions.ifEmpty { uiState.permissions }
             val canPay = hasPermission(role, permissions, UserPermission.ADD_PAYMENTS)
 
-            if (invoice != null && canPay) {
-                PaymentEntryScreen(
-                    invoice = invoice,
-                    onBack = { navController.popBackStack() },
-                    onSavePayment = { amount, date, method ->
-                        viewModel.addPayment(invoice.id, amount, date, method)
-                        navController.popBackStack()
-                    }
-                )
+            when {
+                invoice != null && canPay -> {
+                    PaymentEntryScreen(
+                        invoice = invoice,
+                        onBack = { navController.popBackStack() },
+                        onSavePayment = { amount, date, method ->
+                            val saved = viewModel.addPayment(invoice.id, amount, date, method)
+                            if (saved) {
+                                navController.popBackStack()
+                            }
+                            saved
+                        }
+                    )
+                }
+                else -> {
+                    AccessDeniedScreen(
+                        message = if (invoice == null) {
+                            "Facture introuvable"
+                        } else {
+                            "Vous n'avez pas la permission d'enregistrer un paiement"
+                        },
+                        onBack = { navController.popBackStack() }
+                    )
+                }
             }
         }
 
         composable(Screen.ImportInvoices.route) {
-            InvoiceImportScreen(
-                onBack = { navController.popBackStack() },
-                onImportInvoices = { invoices ->
-                    viewModel.importInvoices(invoices)
-                    navController.popBackStack()
-                }
-            )
+            val role = currentUserRole ?: uiState.currentUserRole
+            if (role == UserRole.ADMIN) {
+                InvoiceImportScreen(
+                    onBack = { navController.popBackStack() },
+                    onImportInvoices = { invoices ->
+                        viewModel.importInvoices(invoices)
+                        navController.popBackStack()
+                    }
+                )
+            } else {
+                AccessDeniedScreen(
+                    message = "Seul l'administrateur peut importer des encaissements",
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Screen.AddExpense.route) {
@@ -268,6 +299,11 @@ fun TreasuryApp(
                         navController.popBackStack()
                     }
                 )
+            } else {
+                AccessDeniedScreen(
+                    message = "Vous n'avez pas la permission de gérer les dépenses",
+                    onBack = { navController.popBackStack() }
+                )
             }
         }
 
@@ -279,10 +315,14 @@ fun TreasuryApp(
             if (canManage && role == UserRole.ADMIN) {
                 NewUserScreen(
                     onBack = { navController.popBackStack() },
-                    onSave = { name, email, phone, password, userRole, userPermissions ->
-                        viewModel.addUser(name, email, phone, password, userRole, userPermissions)
-                        navController.popBackStack()
+                    onSave = { name, email, phone, password, userRole, userPermissions, onResult ->
+                        viewModel.addUser(name, email, phone, password, userRole, userPermissions, onResult)
                     }
+                )
+            } else {
+                AccessDeniedScreen(
+                    message = "Seul l'administrateur peut créer des utilisateurs",
+                    onBack = { navController.popBackStack() }
                 )
             }
         }
@@ -326,11 +366,11 @@ private fun MainAppScaffold(
                         onNavigateToImport = {
                             navController.navigate(Screen.ImportInvoices.route)
                         },
-                        onAddInvoice = { invoiceNumber, clientName, totalAmount, dueDate ->
-                            viewModel.addInvoice(invoiceNumber, clientName, totalAmount, dueDate)
+                        onAddInvoice = { invoiceNumber, clientName, totalAmount, dueDate, onResult ->
+                            viewModel.addInvoice(invoiceNumber, clientName, totalAmount, dueDate, onResult)
                         },
-                        onUpdateInvoice = { invoiceId, invoiceNumber, clientName, totalAmount, dueDate ->
-                            viewModel.updateInvoice(invoiceId, invoiceNumber, clientName, totalAmount, dueDate)
+                        onUpdateInvoice = { invoiceId, invoiceNumber, clientName, totalAmount, dueDate, onResult ->
+                            viewModel.updateInvoice(invoiceId, invoiceNumber, clientName, totalAmount, dueDate, onResult)
                         },
                         onDeleteInvoice = viewModel::deleteInvoice,
                         onDeleteInvoices = viewModel::deleteInvoices

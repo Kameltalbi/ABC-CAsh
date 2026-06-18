@@ -27,14 +27,13 @@ import com.abccash.app.treasury.data.UserRole
 @Composable
 fun NewUserScreen(
     onBack: () -> Unit,
-    onSave: (String, String, String, String, UserRole, Set<UserPermission>) -> Unit
+    onSave: (String, String, String, String, UserRole, Set<UserPermission>, (String?) -> Unit) -> Unit
 ) {
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var phone by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var selectedRole by remember { mutableStateOf(UserRole.STAFF) }
-    var roleMenuExpanded by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
     var selectedPermissions by remember {
         mutableStateOf(setOf(UserPermission.VIEW_INVOICES, UserPermission.ADD_PAYMENTS))
     }
@@ -102,37 +101,17 @@ fun NewUserScreen(
                 singleLine = true
             )
 
-            ExposedDropdownMenuBox(
-                expanded = roleMenuExpanded,
-                onExpandedChange = { roleMenuExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedRole.name,
-                    onValueChange = {},
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .menuAnchor(),
-                    label = { Text("Rôle") },
-                    readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = roleMenuExpanded) }
-                )
-                ExposedDropdownMenu(
-                    expanded = roleMenuExpanded,
-                    onDismissRequest = { roleMenuExpanded = false }
-                ) {
-                    UserRole.entries.forEach { role ->
-                        DropdownMenuItem(
-                            text = { Text(role.name) },
-                            onClick = {
-                                selectedRole = role
-                                if (role == UserRole.ADMIN) {
-                                    selectedPermissions = UserPermission.entries.toSet()
-                                }
-                                roleMenuExpanded = false
-                            }
-                        )
-                    }
-                }
+            OutlinedTextField(
+                value = "STAFF",
+                onValueChange = {},
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text("Rôle") },
+                readOnly = true,
+                supportingText = { Text("Seul le compte initial peut être administrateur") }
+            )
+
+            saveError?.let { error ->
+                Text(text = error, color = Color(0xFFF44336), fontSize = 13.sp)
             }
 
             Text(
@@ -147,8 +126,7 @@ fun NewUserScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Checkbox(
-                        checked = selectedRole == UserRole.ADMIN || permission in selectedPermissions,
-                        enabled = selectedRole != UserRole.ADMIN,
+                        checked = permission in selectedPermissions,
                         onCheckedChange = { checked ->
                             selectedPermissions = if (checked) {
                                 selectedPermissions + permission
@@ -165,12 +143,14 @@ fun NewUserScreen(
 
             Button(
                 onClick = {
-                    val userPermissions = if (selectedRole == UserRole.ADMIN) {
-                        UserPermission.entries.toSet()
-                    } else {
-                        selectedPermissions
+                    saveError = null
+                    onSave(name, email, phone, password, UserRole.STAFF, selectedPermissions) { error ->
+                        if (error == null) {
+                            onBack()
+                        } else {
+                            saveError = error
+                        }
                     }
-                    onSave(name, email, phone, password, selectedRole, userPermissions)
                 },
                 modifier = Modifier
                     .fillMaxWidth()

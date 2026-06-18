@@ -11,6 +11,8 @@ import com.abccash.app.treasury.local.EntrepriseEntity
 import com.abccash.app.treasury.local.ExpenseEntity
 import com.abccash.app.treasury.local.InvoiceEntity
 import com.abccash.app.treasury.local.PaymentEntity
+import androidx.room.RoomDatabase
+import androidx.room.withTransaction
 import com.abccash.app.treasury.local.TreasuryDao
 import com.abccash.app.treasury.local.UserEntity
 import com.abccash.app.treasury.security.PasswordHasher
@@ -27,7 +29,10 @@ data class InvoiceImportStats(
     val skippedDuplicates: Int
 )
 
-class TreasuryRepository(private val dao: TreasuryDao) {
+class TreasuryRepository(
+    private val dao: TreasuryDao,
+    private val database: RoomDatabase
+) {
 
     suspend fun hasAnyUser(): Boolean = dao.countUsers() > 0
 
@@ -83,11 +88,13 @@ class TreasuryRepository(private val dao: TreasuryDao) {
     fun observeUsers(entrepriseId: String): Flow<List<User>> =
         dao.observeUsers(entrepriseId).map { entities -> entities.map { it.toDomain() } }
 
-    suspend fun addInvoice(invoice: Invoice): Boolean {
-        if (invoice.invoiceNumber.isBlank()) return false
-        if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) return false
+    suspend fun addInvoice(invoice: Invoice): String? {
+        if (invoice.invoiceNumber.isBlank()) return "Le numéro de facture est obligatoire"
+        if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) {
+            return "Ce numéro de facture existe déjà"
+        }
         dao.upsertInvoice(invoice.toEntity())
-        return true
+        return null
     }
 
     suspend fun importInvoices(entrepriseId: String, invoices: List<Invoice>): InvoiceImportStats {
@@ -123,8 +130,17 @@ class TreasuryRepository(private val dao: TreasuryDao) {
         return invoiceNumber.trim().uppercase(Locale.ROOT)
     }
 
-    suspend fun updateInvoice(invoice: Invoice) {
+    suspend fun updateInvoice(invoice: Invoice): String? {
+        if (invoice.invoiceNumber.isBlank()) return "Le numéro de facture est obligatoire"
+        val existing = dao.findInvoiceByNumber(invoice.entrepriseId, normalizeInvoiceNumber(invoice.invoiceNumber))
+        if (existing != null && existing.id != invoice.id) {
+            return "Ce numéro de facture existe déjà"
+        }
+        if (invoice.totalAmount < invoice.paidAmount) {
+            return "Le montant total ne peut pas être inférieur au montant déjà encaissé"
+        }
         dao.upsertInvoice(invoice.toEntity())
+        return null
     }
 
     suspend fun deleteInvoice(invoiceId: String) {
@@ -147,7 +163,13 @@ class TreasuryRepository(private val dao: TreasuryDao) {
         dao.deleteExpenseById(expenseId)
     }
 
-    suspend fun addUser(user: User) {
+    suspend fun addUser(user: User): String? {
+        if (user.nom.isBlank()) return "Le nom est obligatoire"
+        if (user.email.isBlank()) return "L'email est obligatoire"
+        if (user.telephone.isBlank()) return "Le téléphone est obligatoire"
+        if (user.passwordHash.length < 6) return "Le mot de passe doit contenir au moins 6 caractères"
+        if (isEmailTaken(user.email)) return "Cet email est déjà utilisé"
+        if (isTelephoneTaken(user.telephone)) return "Ce téléphone est déjà utilisé"
         dao.upsertUser(
             user.copy(
                 email = normalizeEmail(user.email),
@@ -155,6 +177,7 @@ class TreasuryRepository(private val dao: TreasuryDao) {
                 passwordHash = PasswordHasher.hash(user.passwordHash)
             ).toEntity()
         )
+        return null
     }
 
     suspend fun deleteUser(userId: String) {
@@ -223,10 +246,19 @@ class TreasuryRepository(private val dao: TreasuryDao) {
             return "Cette sauvegarde appartient à une autre entreprise"
         }
 
-        backup.invoices.forEach { dao.upsertInvoice(it.toEntity()) }
-        backup.invoices.flatMap { it.payments }.forEach { dao.upsertPayment(it.toEntity()) }
-        backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
-        backup.users.forEach { dao.upsertUser(it.toEntity()) }
+        val invoiceIds = backup.invoices.map { it.id }.toSet()
+        val orphanPayments = backup.invoices.flatMap { it.payments }
+            .filter { it.invoiceId !in invoiceIds }
+        if (orphanPayments.isNotEmpty()) {
+            return "Sauvegarde invalide : paiements sans facture associée"
+        }
+
+        database.withTransaction {
+            backup.invoices.forEach { dao.upsertInvoice(it.toEntity()) }
+            backup.invoices.flatMap { it.payments }.forEach { dao.upsertPayment(it.toEntity()) }
+            backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
+            backup.users.forEach { dao.upsertUser(it.toEntity()) }
+        }
         return null
     }
 }

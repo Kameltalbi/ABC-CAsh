@@ -25,34 +25,35 @@ import kotlinx.coroutines.flow.first
 @Composable
 fun SplashDecisionScreen(
     repository: TreasuryRepository,
-    onNavigateToOnboarding: () -> Unit,
+    userPreferences: UserPreferences,
     onNavigateToLogin: () -> Unit,
     onNavigateToInscription: () -> Unit,
-    onNavigateToMainApp: (String, UserRole, String, Set<UserPermission>) -> Unit
+    onNavigateToMainApp: (String, UserRole, String, Set<UserPermission>) -> Unit,
+    onSessionInvalid: () -> Unit
 ) {
-    val context = LocalContext.current
-    val userPreferences = remember { UserPreferences(context) }
-
     LaunchedEffect(Unit) {
         delay(1200)
 
         val isLoggedIn = userPreferences.isLoggedIn.first()
         if (isLoggedIn) {
-            val isAdmin = userPreferences.isAdmin.first()
             val userId = userPreferences.currentUserId.first().orEmpty()
-            val entrepriseId = userPreferences.currentEntrepriseId.first().orEmpty()
-            val onboardingVu = userPreferences.onboardingAdminVu.first()
-            val role = if (isAdmin) UserRole.ADMIN else UserRole.STAFF
-            val storedPermissions = userPreferences.currentPermissions.first()
-            val permissions = repository.getUserById(userId)?.permissions
-                ?.let { effectivePermissions(role, it) }
-                ?: effectivePermissions(role, storedPermissions)
-
-            if (isAdmin && !onboardingVu) {
-                onNavigateToOnboarding()
-            } else {
-                onNavigateToMainApp(userId, role, entrepriseId, permissions)
+            val user = userId.takeIf { it.isNotBlank() }?.let { repository.getUserById(it) }
+            if (user == null || !user.isActive || user.entrepriseId.isBlank()) {
+                userPreferences.clearUserSession()
+                onSessionInvalid()
+                return@LaunchedEffect
             }
+
+            val permissions = effectivePermissions(user.role, user.permissions)
+            userPreferences.saveUserSession(
+                userId = user.id,
+                email = user.email,
+                nom = user.nom,
+                role = user.role,
+                entrepriseId = user.entrepriseId,
+                permissions = permissions
+            )
+            onNavigateToMainApp(user.id, user.role, user.entrepriseId, permissions)
         } else if (repository.hasAnyUser()) {
             onNavigateToLogin()
         } else {
