@@ -5,6 +5,7 @@ import org.xmlpull.v1.XmlPullParser
 import org.xmlpull.v1.XmlPullParserFactory
 import java.io.ByteArrayInputStream
 import java.io.InputStream
+import java.nio.charset.Charset
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Locale
@@ -46,7 +47,7 @@ object InvoiceImportParser {
     }
 
     private fun parseCsv(bytes: ByteArray): InvoiceImportResult {
-        val lines = bytes.toString(Charsets.UTF_8).lines().filter { it.isNotBlank() }
+        val lines = decodeCsvText(bytes).lines().filter { it.isNotBlank() }
         if (lines.isEmpty()) return InvoiceImportResult(emptyList(), "Le fichier ne contient aucune ligne.")
         val delimiter = detectDelimiter(lines.first())
         val rawHeaderCells = splitCsvLine(lines.first(), delimiter)
@@ -337,6 +338,34 @@ object InvoiceImportParser {
             runCatching { LocalDate.parse(value, formatter) }.getOrNull()
         }
     }
+
+    private fun decodeCsvText(bytes: ByteArray): String {
+        val payload = if (
+            bytes.size >= 3 &&
+            bytes[0] == 0xEF.toByte() &&
+            bytes[1] == 0xBB.toByte() &&
+            bytes[2] == 0xBF.toByte()
+        ) {
+            bytes.copyOfRange(3, bytes.size)
+        } else {
+            bytes
+        }
+
+        val utf8 = payload.toString(Charsets.UTF_8)
+        if (!looksLikeMojibake(utf8)) {
+            return utf8
+        }
+
+        return String(payload, WINDOWS_1252)
+    }
+
+    private fun looksLikeMojibake(text: String): Boolean {
+        return text.contains('\uFFFD') ||
+            text.contains("Ã") ||
+            text.contains("Â")
+    }
+
+    private val WINDOWS_1252: Charset = Charset.forName("Windows-1252")
 
     private val knownHeaders = setOf(
         "invoicenumber", "numero", "numfacture", "nfacture", "numerofacture",

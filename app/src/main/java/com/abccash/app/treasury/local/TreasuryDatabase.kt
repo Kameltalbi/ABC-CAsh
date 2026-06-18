@@ -14,7 +14,7 @@ import androidx.room.TypeConverters
         PaymentEntity::class,
         ExpenseEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 @TypeConverters(TreasuryConverters::class)
@@ -32,7 +32,7 @@ abstract class TreasuryDatabase : RoomDatabase() {
                     TreasuryDatabase::class.java,
                     "cashtrack_treasury.db"
                 )
-                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                    .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                     .build()
                     .also { INSTANCE = it }
             }

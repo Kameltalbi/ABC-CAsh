@@ -12,19 +12,26 @@ interface TreasuryDao {
     @Query(
         """
         SELECT * FROM invoices
-        WHERE entrepriseId = :entrepriseId OR entrepriseId = ''
+        WHERE entrepriseId = :entrepriseId
         ORDER BY dueDate DESC
         """
     )
     fun observeInvoices(entrepriseId: String): Flow<List<InvoiceEntity>>
 
-    @Query("SELECT * FROM payments ORDER BY date DESC")
-    fun observePayments(): Flow<List<PaymentEntity>>
+    @Query(
+        """
+        SELECT p.* FROM payments p
+        INNER JOIN invoices i ON p.invoiceId = i.id
+        WHERE i.entrepriseId = :entrepriseId
+        ORDER BY p.date DESC
+        """
+    )
+    fun observePayments(entrepriseId: String): Flow<List<PaymentEntity>>
 
     @Query(
         """
         SELECT * FROM expenses
-        WHERE entrepriseId = :entrepriseId OR entrepriseId = ''
+        WHERE entrepriseId = :entrepriseId
         ORDER BY date DESC
         """
     )
@@ -94,7 +101,7 @@ interface TreasuryDao {
     @Query(
         """
         SELECT * FROM invoices
-        WHERE entrepriseId = :entrepriseId OR entrepriseId = ''
+        WHERE entrepriseId = :entrepriseId
         """
     )
     suspend fun getInvoicesForBackup(entrepriseId: String): List<InvoiceEntity>
@@ -105,7 +112,7 @@ interface TreasuryDao {
     @Query(
         """
         SELECT * FROM expenses
-        WHERE entrepriseId = :entrepriseId OR entrepriseId = ''
+        WHERE entrepriseId = :entrepriseId
         """
     )
     suspend fun getExpensesForBackup(entrepriseId: String): List<ExpenseEntity>

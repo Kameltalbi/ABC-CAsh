@@ -72,7 +72,7 @@ class TreasuryRepository(
 
     fun observeInvoices(entrepriseId: String): Flow<List<Invoice>> = combine(
         dao.observeInvoices(entrepriseId),
-        dao.observePayments()
+        dao.observePayments(entrepriseId)
     ) { invoiceEntities, paymentEntities ->
         invoiceEntities.map { invoice ->
             val payments = paymentEntities

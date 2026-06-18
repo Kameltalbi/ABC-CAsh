@@ -4,6 +4,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.ByteArrayInputStream
+import java.nio.charset.Charset
 
 class InvoiceImportParserTest {
 
@@ -62,5 +63,15 @@ class InvoiceImportParserTest {
         val result = InvoiceImportParser.parse("test.csv", ByteArrayInputStream(csv.toByteArray()), null)
         assertTrue(result.invoices.isEmpty())
         assertTrue(result.errorMessage!!.contains("Colonnes non reconnues"))
+    }
+
+    @Test
+    fun parseCsv_windows1252Encoding() {
+        val csv = "N° Facture;Client;Montant;Date échéance\r\nFAC-003;Société ABC;1000;30/03/2026\r\n"
+        val bytes = csv.toByteArray(Charset.forName("Windows-1252"))
+        val result = InvoiceImportParser.parse("test.csv", ByteArrayInputStream(bytes), null)
+        assertEquals(1, result.invoices.size)
+        assertEquals("Société ABC", result.invoices.first().clientName)
+        assertEquals(3, result.invoices.first().dueDate.monthValue)
     }
 }

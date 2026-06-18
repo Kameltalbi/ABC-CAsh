@@ -37,3 +37,29 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE INDEX IF NOT EXISTS `index_expenses_entrepriseId` ON `expenses` (`entrepriseId`)")
     }
 }
+
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        val entrepriseId = resolveDefaultEntrepriseId(db) ?: return
+        db.execSQL(
+            "UPDATE invoices SET entrepriseId = '$entrepriseId' WHERE entrepriseId = ''"
+        )
+        db.execSQL(
+            "UPDATE expenses SET entrepriseId = '$entrepriseId' WHERE entrepriseId = ''"
+        )
+    }
+}
+
+private fun resolveDefaultEntrepriseId(db: SupportSQLiteDatabase): String? {
+    db.query("SELECT id FROM entreprises LIMIT 1").use { cursor ->
+        if (cursor.moveToFirst()) {
+            return cursor.getString(0)
+        }
+    }
+    db.query("SELECT entrepriseId FROM users WHERE entrepriseId != '' LIMIT 1").use { cursor ->
+        if (cursor.moveToFirst()) {
+            return cursor.getString(0)
+        }
+    }
+    return null
+}
