@@ -49,7 +49,10 @@ class LoginViewModel(private val repository: TreasuryRepository) : ViewModel() {
                 return@launch
             }
 
-            val user = repository.login(state.email, state.password)
+            val user = repository.login(
+                email = state.email.trim(),
+                password = state.password
+            )
             if (user == null) {
                 _uiState.update {
                     it.copy(

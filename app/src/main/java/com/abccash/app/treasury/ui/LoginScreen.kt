@@ -128,6 +128,12 @@ fun LoginScreen(
             uiState.generalError?.let { error ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = "Après réinstallation de l'app, les comptes locaux sont effacés : recréez un compte ou restaurez une sauvegarde Admin.",
+                    fontSize = 12.sp,
+                    color = Color.Gray
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))

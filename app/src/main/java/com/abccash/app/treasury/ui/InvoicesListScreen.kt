@@ -54,7 +54,8 @@ fun InvoicesListScreen(
     onNavigateToImport: () -> Unit,
     onAddInvoice: (String, String, Double, LocalDate) -> Unit,
     onUpdateInvoice: (String, String, String, Double, LocalDate) -> Boolean,
-    onDeleteInvoice: (String) -> Unit
+    onDeleteInvoice: (String) -> Unit,
+    onDeleteInvoices: (Collection<String>) -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     var showSearch by remember { mutableStateOf(false) }
@@ -62,6 +63,8 @@ fun InvoicesListScreen(
     var showAddDialog by remember { mutableStateOf(false) }
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var invoiceToDelete by remember { mutableStateOf<Invoice?>(null) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var selectedInvoiceIds by remember { mutableStateOf(setOf<String>()) }
     var editError by remember { mutableStateOf<String?>(null) }
     val isAdmin = userRole == UserRole.ADMIN
     val canView = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
@@ -101,6 +104,10 @@ fun InvoicesListScreen(
 
             matchesMonth && matchesSearch && matchesFilter
         }
+    }
+
+    LaunchedEffect(selectedMonth, selectedFilter, searchQuery) {
+        selectedInvoiceIds = emptySet()
     }
     
     if (showAddDialog) {
@@ -167,6 +174,41 @@ fun InvoicesListScreen(
             },
             dismissButton = {
                 TextButton(onClick = { invoiceToDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    if (showBulkDeleteConfirm) {
+        val selectedInvoices = filteredInvoices.filter { it.id in selectedInvoiceIds }
+        val paymentsCount = selectedInvoices.sumOf { it.payments.size }
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            title = { Text("Supprimer la sélection ?") },
+            text = {
+                Text(
+                    "Supprimer ${selectedInvoices.size} encaissement(s) ?" +
+                        if (paymentsCount > 0) {
+                            " $paymentsCount paiement(s) associé(s) seront aussi supprimés."
+                        } else {
+                            ""
+                        }
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteInvoices(selectedInvoiceIds)
+                        selectedInvoiceIds = emptySet()
+                        showBulkDeleteConfirm = false
+                    }
+                ) {
+                    Text("Supprimer", color = Color(0xFFF44336))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBulkDeleteConfirm = false }) {
                     Text("Annuler")
                 }
             }
@@ -273,6 +315,22 @@ fun InvoicesListScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            if (isAdmin && filteredInvoices.isNotEmpty()) {
+                AdminBulkSelectionBar(
+                    totalCount = filteredInvoices.size,
+                    selectedCount = selectedInvoiceIds.size,
+                    onToggleSelectAll = {
+                        selectedInvoiceIds = if (selectedInvoiceIds.size == filteredInvoices.size) {
+                            emptySet()
+                        } else {
+                            filteredInvoices.map { it.id }.toSet()
+                        }
+                    },
+                    onDeleteSelected = { showBulkDeleteConfirm = true }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
             if (filteredInvoices.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -296,6 +354,15 @@ fun InvoicesListScreen(
                             invoice = invoice,
                             isAdmin = isAdmin,
                             canAddPayment = canAddPayment,
+                            showSelection = isAdmin,
+                            isSelected = invoice.id in selectedInvoiceIds,
+                            onSelectionChange = { selected ->
+                                selectedInvoiceIds = if (selected) {
+                                    selectedInvoiceIds + invoice.id
+                                } else {
+                                    selectedInvoiceIds - invoice.id
+                                }
+                            },
                             onClick = {
                                 if (canAddPayment && invoice.status != InvoiceStatus.PAID) {
                                     onInvoiceClick(invoice.id)
@@ -415,6 +482,9 @@ fun InvoiceCard(
     invoice: Invoice,
     isAdmin: Boolean = false,
     canAddPayment: Boolean = true,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
     onClick: () -> Unit,
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
@@ -466,6 +536,12 @@ fun InvoiceCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (showSelection) {
+                    Checkbox(
+                        checked = isSelected,
+                        onCheckedChange = onSelectionChange
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = invoice.clientName,

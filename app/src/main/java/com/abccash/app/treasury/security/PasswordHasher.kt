@@ -34,7 +34,7 @@ object PasswordHasher {
         !storedHash.startsWith("$PBKDF2_PREFIX$")
 
     private fun verifyPbkdf2(password: String, storedHash: String): Boolean {
-        val parts = storedHash.split('$')
+        val parts = storedHash.split('$', limit = 4)
         if (parts.size != 4 || parts[0] != PBKDF2_PREFIX) return false
         val iterations = parts[1].toIntOrNull() ?: return false
         val salt = runCatching { Base64.decode(parts[2]) }.getOrNull() ?: return false

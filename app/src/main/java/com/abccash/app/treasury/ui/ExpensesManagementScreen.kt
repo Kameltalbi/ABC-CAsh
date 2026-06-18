@@ -44,7 +44,8 @@ fun ExpensesManagementScreen(
     onNavigateToAddExpense: () -> Unit,
     onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
-    onDeleteExpense: (String) -> Unit
+    onDeleteExpense: (String) -> Unit,
+    onDeleteExpenses: (Collection<String>) -> Unit = {}
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)) {
         Box(
@@ -87,9 +88,17 @@ fun ExpensesManagementScreen(
     
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var selectedExpenseIds by remember { mutableStateOf(setOf<String>()) }
+    val isAdmin = userRole == UserRole.ADMIN
+    val canManage = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
     
     val monthExpenses = remember(expenses, selectedMonth) {
         expenses.forMonth(selectedMonth)
+    }
+
+    LaunchedEffect(selectedMonth) {
+        selectedExpenseIds = emptySet()
     }
 
     val monthLabel = remember(selectedMonth) {
@@ -99,11 +108,13 @@ fun ExpensesManagementScreen(
 
     Scaffold(
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToAddExpense,
-                containerColor = MaterialTheme.colorScheme.primary
-            ) {
-                Icon(Icons.Default.Add, contentDescription = "Ajouter une dépense", tint = Color.White)
+            if (canManage) {
+                FloatingActionButton(
+                    onClick = onNavigateToAddExpense,
+                    containerColor = MaterialTheme.colorScheme.primary
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = "Ajouter une dépense", tint = Color.White)
+                }
             }
         }
     ) { paddingValues ->
@@ -128,6 +139,22 @@ fun ExpensesManagementScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
+            if (isAdmin && monthExpenses.isNotEmpty()) {
+                AdminBulkSelectionBar(
+                    totalCount = monthExpenses.size,
+                    selectedCount = selectedExpenseIds.size,
+                    onToggleSelectAll = {
+                        selectedExpenseIds = if (selectedExpenseIds.size == monthExpenses.size) {
+                            emptySet()
+                        } else {
+                            monthExpenses.map { it.id }.toSet()
+                        }
+                    },
+                    onDeleteSelected = { showBulkDeleteConfirm = true }
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+            }
+
             if (monthExpenses.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -150,6 +177,16 @@ fun ExpensesManagementScreen(
                         ExpenseItem(
                             expense = expense,
                             displayMonth = selectedMonth,
+                            showSelection = isAdmin,
+                            isSelected = expense.id in selectedExpenseIds,
+                            onSelectionChange = { selected ->
+                                selectedExpenseIds = if (selected) {
+                                    selectedExpenseIds + expense.id
+                                } else {
+                                    selectedExpenseIds - expense.id
+                                }
+                            },
+                            canManage = true,
                             onEdit = { expenseToEdit = expense },
                             onDelete = { expenseToDelete = expense }
                         )
@@ -192,6 +229,30 @@ fun ExpensesManagementScreen(
             },
             dismissButton = {
                 TextButton(onClick = { expenseToDelete = null }) {
+                    Text("Annuler")
+                }
+            }
+        )
+    }
+
+    if (showBulkDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            title = { Text("Supprimer la sélection ?") },
+            text = { Text("Supprimer ${selectedExpenseIds.size} dépense(s) ?") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        onDeleteExpenses(selectedExpenseIds)
+                        selectedExpenseIds = emptySet()
+                        showBulkDeleteConfirm = false
+                    }
+                ) {
+                    Text("Supprimer", color = Color(0xFFF44336))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBulkDeleteConfirm = false }) {
                     Text("Annuler")
                 }
             }
@@ -412,6 +473,10 @@ private fun ExpenseFormDialog(
 fun ExpenseItem(
     expense: Expense,
     displayMonth: YearMonth? = null,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
+    canManage: Boolean = true,
     onEdit: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
@@ -437,6 +502,12 @@ fun ExpenseItem(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
+            if (showSelection) {
+                Checkbox(
+                    checked = isSelected,
+                    onCheckedChange = onSelectionChange
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.label,
@@ -509,21 +580,23 @@ fun ExpenseItem(
                     fontWeight = FontWeight.Bold,
                     color = Color(0xFFF44336)
                 )
-                IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Modifier",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color.Gray
-                    )
-                }
-                IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = "Supprimer",
-                        modifier = Modifier.size(16.dp),
-                        tint = Color(0xFFBDBDBD)
-                    )
+                if (canManage) {
+                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Edit,
+                            contentDescription = "Modifier",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color.Gray
+                        )
+                    }
+                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                        Icon(
+                            Icons.Default.Delete,
+                            contentDescription = "Supprimer",
+                            modifier = Modifier.size(16.dp),
+                            tint = Color(0xFFBDBDBD)
+                        )
+                    }
                 }
             }
         }

@@ -117,14 +117,14 @@ class InscriptionViewModel(private val repository: TreasuryRepository) : ViewMod
 
             val entreprise = Entreprise(nom = state.nomEntreprise)
             val user = User(
-                nom = state.nom,
-                email = state.email.trim(),
-                telephone = state.telephone.trim(),
-                passwordHash = state.password,
+                nom = state.nom.trim(),
+                email = state.email,
+                telephone = state.telephone,
+                passwordHash = "",
                 role = UserRole.ADMIN,
                 entrepriseId = entreprise.id
             )
-            val registered = repository.registerAdmin(entreprise, user)
+            val registered = repository.registerAdmin(entreprise, user, state.password)
             _uiState.update { it.copy(isLoading = false, isSuccess = true) }
             onInscriptionSuccess?.invoke(registered)
         }

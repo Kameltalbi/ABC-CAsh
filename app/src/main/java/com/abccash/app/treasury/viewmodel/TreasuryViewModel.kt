@@ -165,6 +165,13 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         }
     }
 
+    fun deleteInvoices(invoiceIds: Collection<String>) {
+        if (invoiceIds.isEmpty()) return
+        viewModelScope.launch {
+            invoiceIds.forEach { repository.deleteInvoice(it) }
+        }
+    }
+
     fun addPayment(
         invoiceId: String,
         amount: Double,
@@ -215,6 +222,13 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
             repository.deleteExpense(expenseId)
+        }
+    }
+
+    fun deleteExpenses(expenseIds: Collection<String>) {
+        if (expenseIds.isEmpty()) return
+        viewModelScope.launch {
+            expenseIds.forEach { repository.deleteExpense(it) }
         }
     }
 

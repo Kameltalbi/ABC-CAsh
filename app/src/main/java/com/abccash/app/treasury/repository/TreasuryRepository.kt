@@ -5,6 +5,7 @@ import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.Payment
 import com.abccash.app.treasury.data.User
+import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.local.EntrepriseEntity
 import com.abccash.app.treasury.local.ExpenseEntity
@@ -30,11 +31,14 @@ class TreasuryRepository(private val dao: TreasuryDao) {
 
     suspend fun hasAnyUser(): Boolean = dao.countUsers() > 0
 
-    suspend fun registerAdmin(entreprise: Entreprise, user: User): User {
+    suspend fun registerAdmin(entreprise: Entreprise, user: User, plainPassword: String): User {
         dao.upsertEntreprise(entreprise.toEntity())
         val admin = user.copy(
+            email = normalizeEmail(user.email),
+            telephone = normalizePhone(user.telephone),
             role = UserRole.ADMIN,
-            passwordHash = PasswordHasher.hash(user.passwordHash),
+            permissions = UserPermission.entries.toSet(),
+            passwordHash = PasswordHasher.hash(plainPassword),
             entrepriseId = entreprise.id
         )
         dao.upsertUser(admin.toEntity())
@@ -43,7 +47,7 @@ class TreasuryRepository(private val dao: TreasuryDao) {
     }
 
     suspend fun login(email: String, password: String): User? {
-        val entity = dao.findUserByEmail(email.trim()) ?: return null
+        val entity = dao.findUserByEmail(normalizeEmail(email)) ?: return null
         if (!entity.isActive) return null
         return if (PasswordHasher.verify(password, entity.passwordHash)) {
             if (PasswordHasher.needsUpgrade(entity.passwordHash)) {
@@ -56,10 +60,10 @@ class TreasuryRepository(private val dao: TreasuryDao) {
     }
 
     suspend fun isEmailTaken(email: String): Boolean =
-        dao.findUserByEmail(email.trim()) != null
+        dao.findUserByEmail(normalizeEmail(email)) != null
 
     suspend fun isTelephoneTaken(telephone: String): Boolean =
-        dao.findUserByTelephone(telephone.trim()) != null
+        dao.findUserByTelephone(normalizePhone(telephone)) != null
 
     fun observeInvoices(entrepriseId: String): Flow<List<Invoice>> = combine(
         dao.observeInvoices(entrepriseId),
@@ -145,7 +149,11 @@ class TreasuryRepository(private val dao: TreasuryDao) {
 
     suspend fun addUser(user: User) {
         dao.upsertUser(
-            user.copy(passwordHash = PasswordHasher.hash(user.passwordHash)).toEntity()
+            user.copy(
+                email = normalizeEmail(user.email),
+                telephone = normalizePhone(user.telephone),
+                passwordHash = PasswordHasher.hash(user.passwordHash)
+            ).toEntity()
         )
     }
 
@@ -222,6 +230,12 @@ class TreasuryRepository(private val dao: TreasuryDao) {
         return null
     }
 }
+
+private fun normalizeEmail(email: String): String =
+    email.trim().lowercase(Locale.ROOT)
+
+private fun normalizePhone(telephone: String): String =
+    telephone.replace("\\s".toRegex(), "")
 
 private fun Entreprise.toEntity(): EntrepriseEntity = EntrepriseEntity(
     id = id,

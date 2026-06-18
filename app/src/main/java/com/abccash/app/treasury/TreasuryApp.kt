@@ -332,7 +332,8 @@ private fun MainAppScaffold(
                         onUpdateInvoice = { invoiceId, invoiceNumber, clientName, totalAmount, dueDate ->
                             viewModel.updateInvoice(invoiceId, invoiceNumber, clientName, totalAmount, dueDate)
                         },
-                        onDeleteInvoice = viewModel::deleteInvoice
+                        onDeleteInvoice = viewModel::deleteInvoice,
+                        onDeleteInvoices = viewModel::deleteInvoices
                     )
                 }
                 Screen.Expenses.route -> {
@@ -353,7 +354,8 @@ private fun MainAppScaffold(
                         },
                         onDeleteExpense = { expenseId ->
                             viewModel.deleteExpense(expenseId)
-                        }
+                        },
+                        onDeleteExpenses = viewModel::deleteExpenses
                     )
                 }
                 Screen.Treasury.route -> {
