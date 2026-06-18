@@ -15,5 +15,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "ABC-Cash"
+rootProject.name = "ABCCash"
 include(":app")
