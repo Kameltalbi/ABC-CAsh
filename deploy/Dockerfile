@@ -1,5 +1,5 @@
-# Build stage — Java/Gradle only inside Docker (no Java needed on VPS host)
-FROM eclipse-temurin:17-jdk-alpine AS builder
+# Build stage — Gradle needs glibc (Debian), not Alpine musl
+FROM eclipse-temurin:17-jdk-jammy AS builder
 
 WORKDIR /build
 
@@ -11,7 +11,7 @@ COPY server/src server/src
 RUN chmod +x gradlew && ./gradlew :server:jar --no-daemon -q
 
 # Runtime stage
-FROM eclipse-temurin:17-jre-alpine
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 

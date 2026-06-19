@@ -17,6 +17,20 @@ object DatabaseFactory {
         val password = System.getenv("DATABASE_PASSWORD") ?: dbConfig.property("password").getString()
         val driver = dbConfig.property("driver").getString()
 
+        var lastError: Exception? = null
+        repeat(15) { attempt ->
+            try {
+                connect(url, user, password, driver)
+                return
+            } catch (e: Exception) {
+                lastError = e
+                if (attempt < 14) Thread.sleep(2000)
+            }
+        }
+        throw lastError ?: IllegalStateException("Database connection failed")
+    }
+
+    private fun connect(url: String, user: String, password: String, driver: String) {
         val hikari = HikariConfig().apply {
             jdbcUrl = url
             username = user
@@ -25,6 +39,7 @@ object DatabaseFactory {
             maximumPoolSize = 10
             isAutoCommit = false
             transactionIsolation = "TRANSACTION_REPEATABLE_READ"
+            connectionTimeout = 5000
             validate()
         }
         dataSource = HikariDataSource(hikari)

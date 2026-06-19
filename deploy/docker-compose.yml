@@ -11,7 +11,12 @@ services:
       - abc_cash_pgdata:/var/lib/postgresql/data
     networks:
       - abc-cash-internal
-    # Postgres non exposé sur Internet — uniquement réseau Docker interne
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-abc_cash} -d ${POSTGRES_DB:-abc_cash}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   abc-cash-api:
     build:
@@ -27,7 +32,8 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
     depends_on:
-      - abc-cash-db
+      abc-cash-db:
+        condition: service_healthy
     networks:
       - abc-cash-internal
 
