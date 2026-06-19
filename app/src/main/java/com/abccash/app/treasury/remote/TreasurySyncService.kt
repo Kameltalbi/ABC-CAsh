@@ -22,6 +22,15 @@ class TreasurySyncService(
 
     suspend fun getLastSyncAt(): String? = userPreferences.getLastSyncAt()
 
+    suspend fun hasCloudSession(): Boolean = !userPreferences.getAuthToken().isNullOrBlank()
+
+    suspend fun isServerReachable(): Boolean = runCatching {
+        apiClient.updateBaseUrl(getApiBaseUrl())
+        apiClient.health()
+        true
+    }.getOrDefault(false)
+
+    /** @deprecated Use [isServerReachable]; never expose server details to the UI. */
     suspend fun testConnection(): Result<String> = runCatching {
         apiClient.updateBaseUrl(getApiBaseUrl())
         val health = apiClient.health()

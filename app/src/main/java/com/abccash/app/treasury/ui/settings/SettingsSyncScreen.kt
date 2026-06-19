@@ -4,11 +4,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.remote.TreasurySyncService
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 
 @Composable
 fun SettingsSyncScreen(
@@ -16,14 +21,21 @@ fun SettingsSyncScreen(
     onBack: () -> Unit
 ) {
     val scope = rememberCoroutineScope()
-    var apiUrl by remember { mutableStateOf("") }
     var lastSync by remember { mutableStateOf<String?>(null) }
-    var connectionStatus by remember { mutableStateOf<String?>(null) }
+    var serverOnline by remember { mutableStateOf<Boolean?>(null) }
+    var cloudLinked by remember { mutableStateOf(false) }
+    var isChecking by remember { mutableStateOf(false) }
+
+    suspend fun refreshStatus() {
+        isChecking = true
+        cloudLinked = syncService.hasCloudSession()
+        lastSync = syncService.getLastSyncAt()
+        serverOnline = syncService.isServerReachable()
+        isChecking = false
+    }
 
     LaunchedEffect(Unit) {
-        apiUrl = syncService.getApiBaseUrl()
-        lastSync = syncService.getLastSyncAt()
-        connectionStatus = syncService.testConnection().getOrNull()
+        refreshStatus()
     }
 
     SettingsDetailScaffold(title = stringResource(R.string.settings_sync), onBack = onBack) { padding ->
@@ -39,41 +51,60 @@ fun SettingsSyncScreen(
                 style = MaterialTheme.typography.bodyLarge
             )
 
-            connectionStatus?.let { status ->
-                Text(
-                    text = stringResource(R.string.settings_sync_status, status),
-                    color = MaterialTheme.colorScheme.primary
-                )
-            }
-
-            lastSync?.let {
-                Text(stringResource(R.string.settings_sync_last, it))
-            } ?: Text(stringResource(R.string.settings_sync_never))
-
-            OutlinedTextField(
-                value = apiUrl,
-                onValueChange = { apiUrl = it },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(stringResource(R.string.settings_sync_url)) },
-                singleLine = true,
-                supportingText = { Text(stringResource(R.string.settings_sync_url_hint)) }
+            SyncStatusLine(
+                label = when (serverOnline) {
+                    true -> stringResource(R.string.settings_sync_server_online)
+                    false -> stringResource(R.string.settings_sync_server_offline)
+                    null -> stringResource(R.string.settings_sync_checking)
+                },
+                color = when (serverOnline) {
+                    true -> Color(0xFF22C55E)
+                    false -> MaterialTheme.colorScheme.error
+                    null -> MaterialTheme.colorScheme.onSurfaceVariant
+                }
             )
 
-            Button(
-                onClick = {
-                    scope.launch {
-                        syncService.setApiBaseUrl(apiUrl)
-                        connectionStatus = syncService.testConnection().fold(
-                            onSuccess = { it },
-                            onFailure = { it.message ?: "Error" }
-                        )
-                        lastSync = syncService.getLastSyncAt()
-                    }
+            SyncStatusLine(
+                label = if (cloudLinked) {
+                    stringResource(R.string.settings_sync_account_linked)
+                } else {
+                    stringResource(R.string.settings_sync_account_local)
                 },
-                modifier = Modifier.fillMaxWidth()
+                color = if (cloudLinked) Color(0xFF22C55E) else Color(0xFFF59E0B)
+            )
+
+            SyncStatusLine(
+                label = lastSync?.let { formatSyncInstant(it) }?.let { formatted ->
+                    stringResource(R.string.settings_sync_last, formatted)
+                } ?: stringResource(R.string.settings_sync_never),
+                color = MaterialTheme.colorScheme.onSurface
+            )
+
+            OutlinedButton(
+                onClick = { scope.launch { refreshStatus() } },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !isChecking
             ) {
-                Text(stringResource(R.string.save))
+                Text(
+                    if (isChecking) {
+                        stringResource(R.string.settings_sync_checking)
+                    } else {
+                        stringResource(R.string.settings_sync_test)
+                    }
+                )
             }
         }
     }
 }
+
+@Composable
+private fun SyncStatusLine(label: String, color: Color) {
+    Text(text = label, color = color, style = MaterialTheme.typography.bodyMedium)
+}
+
+private fun formatSyncInstant(isoInstant: String): String? = runCatching {
+    val instant = Instant.parse(isoInstant)
+    val zoned = instant.atZone(ZoneId.systemDefault())
+    val formatter = DateTimeFormatter.ofPattern("d MMM yyyy HH:mm", AppLocale.current())
+    zoned.format(formatter)
+}.getOrNull() ?: isoInstant

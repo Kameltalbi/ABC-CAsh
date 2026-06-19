@@ -72,15 +72,10 @@ class UserPreferences(private val context: Context) {
     val isSyncEnabled: Flow<Boolean> = context.userDataStore.data
         .map { preferences -> preferences[UserPreferencesKeys.SYNC_ENABLED] ?: true }
 
-    suspend fun getApiBaseUrl(): String {
-        val stored = context.userDataStore.data.first()[UserPreferencesKeys.API_BASE_URL]
-        return stored?.takeIf { it.isNotBlank() } ?: BuildConfig.API_BASE_URL
-    }
+    suspend fun getApiBaseUrl(): String = BuildConfig.API_BASE_URL
 
-    suspend fun setApiBaseUrl(url: String) {
-        context.userDataStore.edit { preferences ->
-            preferences[UserPreferencesKeys.API_BASE_URL] = url.trim()
-        }
+    suspend fun setApiBaseUrl(@Suppress("UNUSED_PARAMETER") url: String) {
+        // Server URL is fixed in the app build — not user-configurable.
     }
 
     suspend fun setSyncEnabled(enabled: Boolean) {
