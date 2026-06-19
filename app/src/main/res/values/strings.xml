@@ -121,6 +121,14 @@
     <string name="settings_security_sub">Fingerprint and PIN code</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_sub">App display language</string>
+    <string name="settings_sync">Cloud sync</string>
+    <string name="settings_sync_sub">Backup to your server automatically</string>
+    <string name="settings_sync_enabled">Enable cloud sync</string>
+    <string name="settings_sync_url">Server URL</string>
+    <string name="settings_sync_last">Last sync: %1$s</string>
+    <string name="settings_sync_test">Test connection</string>
+    <string name="settings_sync_now">Sync now</string>
+    <string name="settings_sync_ok">Sync completed</string>
     <string name="language_title">Language</string>
     <string name="language_system_default">System default</string>
     <string name="language_en">English</string>

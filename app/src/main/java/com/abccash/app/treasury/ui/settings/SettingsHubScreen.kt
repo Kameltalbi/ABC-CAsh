@@ -31,6 +31,7 @@ object SettingsRoutes {
     const val OPTIONS_NOTIFICATIONS = "settings/options/notifications"
     const val OPTIONS_SECURITY = "settings/options/security"
     const val OPTIONS_LANGUAGE = "settings/options/language"
+    const val OPTIONS_SYNC = "settings/options/sync"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -142,6 +143,12 @@ fun SettingsHubScreen(
                     subtitle = stringResource(R.string.settings_security_sub),
                     icon = Icons.Default.Fingerprint,
                     route = SettingsRoutes.OPTIONS_SECURITY
+                ),
+                SettingsMenuEntry(
+                    title = stringResource(R.string.settings_sync),
+                    subtitle = stringResource(R.string.settings_sync_sub),
+                    icon = Icons.Default.CloudSync,
+                    route = SettingsRoutes.OPTIONS_SYNC
                 ),
                 SettingsMenuEntry(
                     title = stringResource(R.string.settings_language),

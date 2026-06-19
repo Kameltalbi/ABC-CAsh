@@ -9,7 +9,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abccash.app.treasury.TreasuryApp
+import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.local.TreasuryDatabase
+import com.abccash.app.treasury.remote.TreasuryApiClient
+import com.abccash.app.treasury.remote.TreasurySyncService
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import com.abccash.app.treasury.viewmodel.TreasuryViewModelFactory
@@ -19,10 +22,13 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        
+
+        val userPreferences = UserPreferences(this)
         val database = TreasuryDatabase.getInstance(this)
         val repository = TreasuryRepository(database.treasuryDao(), database)
-        val factory = TreasuryViewModelFactory(repository)
+        val apiClient = TreasuryApiClient(BuildConfig.API_BASE_URL)
+        val syncService = TreasurySyncService(apiClient, repository, userPreferences)
+        val factory = TreasuryViewModelFactory(repository, syncService)
 
         setContent {
             MaterialTheme(
@@ -41,7 +47,12 @@ class MainActivity : FragmentActivity() {
                 )
             ) {
                 val vm: TreasuryViewModel = viewModel(factory = factory)
-                TreasuryApp(repository = repository, viewModel = vm)
+                TreasuryApp(
+                    repository = repository,
+                    viewModel = vm,
+                    syncService = syncService,
+                    userPreferences = userPreferences
+                )
             }
         }
     }

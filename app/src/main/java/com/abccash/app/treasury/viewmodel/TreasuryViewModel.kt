@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.abccash.app.treasury.data.*
 import com.abccash.app.treasury.export.TreasuryCsvExporter
 import com.abccash.app.treasury.repository.TreasuryRepository
+import com.abccash.app.treasury.remote.TreasurySyncService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -30,7 +31,10 @@ data class TreasuryUiState(
     val backupFeedback: String? = null
 )
 
-class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel() {
+class TreasuryViewModel(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModel() {
     private val _entrepriseId = MutableStateFlow<String?>(null)
     private val _uiState = MutableStateFlow(TreasuryUiState())
     val uiState: StateFlow<TreasuryUiState> = _uiState.asStateFlow()
@@ -661,13 +665,27 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
             onResult(error)
         }
     }
+
+    fun syncNow(onResult: (String?) -> Unit) {
+        viewModelScope.launch {
+            val entrepriseId = _entrepriseId.value
+            if (entrepriseId.isNullOrBlank()) {
+                onResult("Session inactive")
+                return@launch
+            }
+            onResult(syncService.syncNow(entrepriseId))
+        }
+    }
 }
 
-class TreasuryViewModelFactory(private val repository: TreasuryRepository) : ViewModelProvider.Factory {
+class TreasuryViewModelFactory(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(TreasuryViewModel::class.java)) {
-            return TreasuryViewModel(repository) as T
+            return TreasuryViewModel(repository, syncService) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

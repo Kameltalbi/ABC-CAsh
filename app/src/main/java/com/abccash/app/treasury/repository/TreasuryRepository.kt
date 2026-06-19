@@ -18,6 +18,8 @@ import com.abccash.app.treasury.local.UserEntity
 import com.abccash.app.treasury.security.PasswordHasher
 import com.abccash.app.treasury.export.TreasuryBackupData
 import com.abccash.app.treasury.export.TreasuryBackupJson
+import com.abccash.app.treasury.remote.toDomain
+import com.abccash.app.treasury.remote.toDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -308,6 +310,45 @@ class TreasuryRepository(
             backup.users.forEach { dao.upsertUser(it.toEntity()) }
         }
         return null
+    }
+
+    suspend fun applySyncPull(
+        pull: com.abccash.app.treasury.remote.SyncPullResponse,
+        passwordHashFor: (userId: String, existingHash: String) -> String
+    ) {
+        val entreprise = pull.entreprise.toDomain()
+        database.withTransaction {
+            dao.upsertEntreprise(entreprise.toEntity())
+            pull.users.forEach { dto ->
+                val existing = dao.findUserById(dto.id)
+                val hash = passwordHashFor(dto.id, existing?.passwordHash.orEmpty())
+                dao.upsertUser(dto.toDomain(hash).toEntity())
+            }
+            pull.invoices.forEach { dao.upsertInvoice(it.toDomain().toEntity()) }
+            pull.invoices.flatMap { it.payments }.forEach { dao.upsertPayment(it.toDomain().toEntity()) }
+            pull.expenses.forEach { dao.upsertExpense(it.toDomain().toEntity()) }
+        }
+    }
+
+    suspend fun buildSyncPushRequest(entrepriseId: String): com.abccash.app.treasury.remote.SyncPushRequest {
+        val invoiceEntities = dao.getInvoicesForBackup(entrepriseId)
+        val invoiceIds = invoiceEntities.map { it.id }
+        val paymentEntities = if (invoiceIds.isEmpty()) {
+            emptyList()
+        } else {
+            dao.getPaymentsForInvoices(invoiceIds)
+        }
+        val invoices = invoiceEntities.map { invoice ->
+            val payments = paymentEntities
+                .filter { it.invoiceId == invoice.id }
+                .map { it.toDomain() }
+            invoice.toDomain(payments)
+        }
+        val expenses = dao.getExpensesForBackup(entrepriseId).map { it.toDomain() }
+        return com.abccash.app.treasury.remote.SyncPushRequest(
+            invoices = invoices.map { it.toDto() },
+            expenses = expenses.map { it.toDto() }
+        )
     }
 }
 

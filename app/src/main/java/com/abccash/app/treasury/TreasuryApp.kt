@@ -31,6 +31,7 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.datastore.UserPreferences
+import com.abccash.app.treasury.remote.TreasurySyncService
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.ui.*
@@ -96,12 +97,13 @@ private fun plusNavLabel(itemCount: Int): String {
 @Composable
 fun TreasuryApp(
     repository: TreasuryRepository,
-    viewModel: TreasuryViewModel
+    viewModel: TreasuryViewModel,
+    syncService: TreasurySyncService,
+    userPreferences: UserPreferences
 ) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val userPreferences = remember { UserPreferences(context) }
     val appSettings = remember { AppSettings(context) }
     val coroutineScope = rememberCoroutineScope()
 
@@ -126,6 +128,9 @@ fun TreasuryApp(
             viewModel.setSession(user.entrepriseId, user.role, permissions, user.id)
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
+            }
+            launch {
+                syncService.syncNow(user.entrepriseId)
             }
         }
     }
@@ -211,6 +216,7 @@ fun TreasuryApp(
         composable(Screen.Login.route) {
             LoginScreen(
                 repository = repository,
+                syncService = syncService,
                 onLoginSuccess = { user -> enterMainApp(user) }
             )
         }
@@ -233,7 +239,7 @@ fun TreasuryApp(
                         }
                     },
                     onInscriptionSuccess = { user -> enterMainApp(user) },
-                    viewModel = viewModel(factory = InscriptionViewModelFactory(repository))
+                    viewModel = viewModel(factory = InscriptionViewModelFactory(repository, syncService))
                 )
             }
         }
@@ -380,6 +386,14 @@ fun TreasuryApp(
         composable(SettingsRoutes.OPTIONS_LANGUAGE) {
             SettingsLanguageScreen(
                 appSettings = appSettings,
+                onBack = { navController.popBackStack() }
+            )
+        }
+
+        composable(SettingsRoutes.OPTIONS_SYNC) {
+            SettingsSyncScreen(
+                syncService = syncService,
+                onSyncNow = viewModel::syncNow,
                 onBack = { navController.popBackStack() }
             )
         }

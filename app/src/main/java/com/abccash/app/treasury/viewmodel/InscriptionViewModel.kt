@@ -7,7 +7,7 @@ import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.repository.TreasuryRepository
-import com.abccash.app.treasury.security.PasswordHasher
+import com.abccash.app.treasury.remote.TreasurySyncService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +32,10 @@ data class InscriptionUiState(
     val generalError: String? = null
 )
 
-class InscriptionViewModel(private val repository: TreasuryRepository) : ViewModel() {
+class InscriptionViewModel(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InscriptionUiState())
     val uiState: StateFlow<InscriptionUiState> = _uiState.asStateFlow()
@@ -92,6 +95,40 @@ class InscriptionViewModel(private val repository: TreasuryRepository) : ViewMod
             }
 
             val state = _uiState.value
+            if (repository.hasAnyUser()) {
+                _uiState.update {
+                    it.copy(
+                        generalError = "Un compte entreprise existe déjà. Contactez votre administrateur.",
+                        isLoading = false
+                    )
+                }
+                return@launch
+            }
+
+            if (syncService.isEnabled()) {
+                syncService.register(
+                    entrepriseNom = state.nomEntreprise,
+                    nom = state.nom,
+                    email = state.email,
+                    telephone = state.telephone,
+                    password = state.password
+                ).onSuccess { user ->
+                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                    onInscriptionSuccess?.invoke(user)
+                    return@launch
+                }.onFailure { error ->
+                    if (error.message != "sync_disabled") {
+                        _uiState.update {
+                            it.copy(
+                                generalError = error.message ?: "Erreur serveur",
+                                isLoading = false
+                            )
+                        }
+                        return@launch
+                    }
+                }
+            }
+
             if (repository.isEmailTaken(state.email)) {
                 _uiState.update {
                     it.copy(emailError = "Cette adresse email est déjà associée à un compte", isLoading = false)
@@ -101,16 +138,6 @@ class InscriptionViewModel(private val repository: TreasuryRepository) : ViewMod
             if (repository.isTelephoneTaken(state.telephone)) {
                 _uiState.update {
                     it.copy(telephoneError = "Ce numéro est déjà associé à un compte", isLoading = false)
-                }
-                return@launch
-            }
-
-            if (repository.hasAnyUser()) {
-                _uiState.update {
-                    it.copy(
-                        generalError = "Un compte entreprise existe déjà. Contactez votre administrateur.",
-                        isLoading = false
-                    )
                 }
                 return@launch
             }
@@ -177,11 +204,14 @@ class InscriptionViewModel(private val repository: TreasuryRepository) : ViewMod
         phone.replace("[^0-9]".toRegex(), "").length >= 8
 }
 
-class InscriptionViewModelFactory(private val repository: TreasuryRepository) : ViewModelProvider.Factory {
+class InscriptionViewModelFactory(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(InscriptionViewModel::class.java)) {
-            return InscriptionViewModel(repository) as T
+            return InscriptionViewModel(repository, syncService) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

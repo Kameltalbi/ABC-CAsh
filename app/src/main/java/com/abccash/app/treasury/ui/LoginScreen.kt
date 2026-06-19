@@ -30,6 +30,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abccash.app.R
 import com.abccash.app.treasury.data.User
+import com.abccash.app.treasury.remote.TreasurySyncService
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.viewmodel.LoginViewModel
 import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
@@ -38,8 +39,9 @@ import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
 @Composable
 fun LoginScreen(
     repository: TreasuryRepository,
+    syncService: TreasurySyncService,
     onLoginSuccess: (User) -> Unit,
-    viewModel: LoginViewModel = viewModel(factory = LoginViewModelFactory(repository))
+    viewModel: LoginViewModel = viewModel(factory = LoginViewModelFactory(repository, syncService))
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPassword by remember { mutableStateOf(false) }

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.repository.TreasuryRepository
+import com.abccash.app.treasury.remote.TreasurySyncService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -20,7 +21,10 @@ data class LoginUiState(
     val generalError: String? = null
 )
 
-class LoginViewModel(private val repository: TreasuryRepository) : ViewModel() {
+class LoginViewModel(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModel() {
 
     private val _uiState = MutableStateFlow(LoginUiState())
     val uiState: StateFlow<LoginUiState> = _uiState.asStateFlow()
@@ -49,6 +53,15 @@ class LoginViewModel(private val repository: TreasuryRepository) : ViewModel() {
                 return@launch
             }
 
+            if (syncService.isEnabled()) {
+                syncService.login(state.email.trim(), state.password)
+                    .onSuccess { user ->
+                        _uiState.update { it.copy(isLoading = false) }
+                        onLoginSuccess?.invoke(user)
+                        return@launch
+                    }
+            }
+
             val user = repository.login(
                 email = state.email.trim(),
                 password = state.password
@@ -69,11 +82,14 @@ class LoginViewModel(private val repository: TreasuryRepository) : ViewModel() {
     }
 }
 
-class LoginViewModelFactory(private val repository: TreasuryRepository) : ViewModelProvider.Factory {
+class LoginViewModelFactory(
+    private val repository: TreasuryRepository,
+    private val syncService: TreasurySyncService
+) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(LoginViewModel::class.java)) {
-            return LoginViewModel(repository) as T
+            return LoginViewModel(repository, syncService) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

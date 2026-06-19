@@ -121,6 +121,14 @@
     <string name="settings_security_sub">Empreinte digitale et code PIN</string>
     <string name="settings_language">Langue</string>
     <string name="settings_language_sub">Langue d\'affichage de l\'application</string>
+    <string name="settings_sync">Synchronisation cloud</string>
+    <string name="settings_sync_sub">Sauvegarde automatique sur votre serveur</string>
+    <string name="settings_sync_enabled">Activer la sync cloud</string>
+    <string name="settings_sync_url">URL du serveur</string>
+    <string name="settings_sync_last">Dernière sync : %1$s</string>
+    <string name="settings_sync_test">Tester la connexion</string>
+    <string name="settings_sync_now">Synchroniser maintenant</string>
+    <string name="settings_sync_ok">Synchronisation réussie</string>
     <string name="language_title">Langue</string>
     <string name="language_system_default">Langue du système</string>
     <string name="language_en">English</string>

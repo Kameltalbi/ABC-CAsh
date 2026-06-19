@@ -7,9 +7,11 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.abccash.app.BuildConfig
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 val Context.userDataStore: DataStore<Preferences> by preferencesDataStore(name = "user_preferences")
@@ -23,6 +25,10 @@ object UserPreferencesKeys {
     val USER_PERMISSIONS = stringPreferencesKey("user_permissions")
     val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     val ONBOARDING_ADMIN_VU = booleanPreferencesKey("onboarding_admin_vu")
+    val AUTH_TOKEN = stringPreferencesKey("auth_token")
+    val API_BASE_URL = stringPreferencesKey("api_base_url")
+    val LAST_SYNC_AT = stringPreferencesKey("last_sync_at")
+    val SYNC_ENABLED = booleanPreferencesKey("sync_enabled")
 }
 
 class UserPreferences(private val context: Context) {
@@ -62,6 +68,44 @@ class UserPreferences(private val context: Context) {
                 ?.toSet()
                 ?: emptySet()
         }
+
+    val isSyncEnabled: Flow<Boolean> = context.userDataStore.data
+        .map { preferences -> preferences[UserPreferencesKeys.SYNC_ENABLED] ?: true }
+
+    suspend fun getApiBaseUrl(): String {
+        val stored = context.userDataStore.data.first()[UserPreferencesKeys.API_BASE_URL]
+        return stored?.takeIf { it.isNotBlank() } ?: BuildConfig.API_BASE_URL
+    }
+
+    suspend fun setApiBaseUrl(url: String) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.API_BASE_URL] = url.trim()
+        }
+    }
+
+    suspend fun setSyncEnabled(enabled: Boolean) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.SYNC_ENABLED] = enabled
+        }
+    }
+
+    suspend fun saveAuthToken(token: String) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.AUTH_TOKEN] = token
+        }
+    }
+
+    suspend fun getAuthToken(): String? =
+        context.userDataStore.data.first()[UserPreferencesKeys.AUTH_TOKEN]
+
+    suspend fun getLastSyncAt(): String? =
+        context.userDataStore.data.first()[UserPreferencesKeys.LAST_SYNC_AT]
+
+    suspend fun setLastSyncAt(isoInstant: String) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.LAST_SYNC_AT] = isoInstant
+        }
+    }
 
     suspend fun saveUserSession(
         userId: String,
@@ -107,6 +151,7 @@ class UserPreferences(private val context: Context) {
             preferences.remove(UserPreferencesKeys.USER_ROLE)
             preferences.remove(UserPreferencesKeys.USER_ENTREPRISE_ID)
             preferences.remove(UserPreferencesKeys.USER_PERMISSIONS)
+            preferences.remove(UserPreferencesKeys.AUTH_TOKEN)
             preferences[UserPreferencesKeys.IS_LOGGED_IN] = false
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = onboardingVu
         }
