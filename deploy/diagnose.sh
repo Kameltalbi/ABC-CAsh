@@ -25,8 +25,10 @@ echo "=== Port 8081 ==="
 ss -tlnp | grep 8081 || echo "Rien n'écoute sur 8081"
 
 echo ""
-echo "=== .env (sans mots de passe) ==="
-grep -E '^(PORT|HOST|DATABASE_URL|POSTGRES_DB)=' .env 2>/dev/null || echo ".env manquant"
+echo "=== Variables dans le conteneur API ==="
+$DC exec abc-cash-api printenv DATABASE_URL 2>/dev/null || echo "DATABASE_URL: (conteneur arrêté)"
+$DC exec abc-cash-api printenv DATABASE_USER 2>/dev/null || true
+$DC exec abc-cash-api sh -c 'test -n "$DATABASE_PASSWORD" && echo DATABASE_PASSWORD=OK || echo DATABASE_PASSWORD=MANQUANT' 2>/dev/null || true
 
 echo ""
 echo "=== Logs API (30 dernières lignes) ==="

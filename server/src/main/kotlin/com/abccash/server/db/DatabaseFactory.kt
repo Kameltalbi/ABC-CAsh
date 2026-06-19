@@ -6,29 +6,53 @@ import io.ktor.server.config.*
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.slf4j.LoggerFactory
 
 object DatabaseFactory {
+    private val log = LoggerFactory.getLogger(DatabaseFactory::class.java)
     private lateinit var dataSource: HikariDataSource
 
     fun init(config: ApplicationConfig) {
         val dbConfig = config.config("database")
-        val url = System.getenv("DATABASE_URL") ?: dbConfig.property("url").getString()
-        val user = System.getenv("DATABASE_USER") ?: dbConfig.property("user").getString()
-        val password = System.getenv("DATABASE_PASSWORD") ?: dbConfig.property("password").getString()
-        val driver = dbConfig.property("driver").getString()
+        val url = envOrConfig("DATABASE_URL", dbConfig, "url")
+        val user = envOrConfig("DATABASE_USER", dbConfig, "user")
+        val password = envOrConfig("DATABASE_PASSWORD", dbConfig, "password")
+        // Ktor fusionne DATABASE_* depuis l'environnement sans inclure driver → défaut PostgreSQL
+        val driver = envOrConfig("DATABASE_DRIVER", dbConfig, "driver")
+            .ifBlank { "org.postgresql.Driver" }
+
+        require(url.isNotBlank()) { "DATABASE_URL manquant (fichier .env ou variable d'environnement)" }
+        require(user.isNotBlank()) { "DATABASE_USER manquant" }
+        require(password.isNotBlank()) { "DATABASE_PASSWORD manquant" }
+
+        log.info("Connexion PostgreSQL → {} (user={})", maskJdbcUrl(url), user)
 
         var lastError: Exception? = null
         repeat(15) { attempt ->
             try {
                 connect(url, user, password, driver)
+                log.info("Base de données connectée")
                 return
             } catch (e: Exception) {
                 lastError = e
+                log.warn("Tentative DB {}/15 échouée: {}", attempt + 1, e.message)
                 if (attempt < 14) Thread.sleep(2000)
             }
         }
-        throw lastError ?: IllegalStateException("Database connection failed")
+        throw IllegalStateException(
+            "Impossible de se connecter à PostgreSQL après 15 tentatives. " +
+                "Vérifiez deploy/.env (DATABASE_URL, DATABASE_USER, DATABASE_PASSWORD). " +
+                "Cause: ${lastError?.message}",
+            lastError
+        )
     }
+
+    private fun envOrConfig(envKey: String, config: ApplicationConfig, configKey: String): String =
+        System.getenv(envKey)?.takeIf { it.isNotBlank() }
+            ?: config.propertyOrNull(configKey)?.getString().orEmpty()
+
+    private fun maskJdbcUrl(url: String): String =
+        url.replace(Regex("password=[^&]*"), "password=***")
 
     private fun connect(url: String, user: String, password: String, driver: String) {
         val hikari = HikariConfig().apply {
