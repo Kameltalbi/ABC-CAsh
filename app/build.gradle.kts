@@ -14,8 +14,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 20
-        versionName = "1.10.1"
+        versionCode = 21
+        versionName = "1.10.2"
         buildConfigField("String", "API_BASE_URL", "\"http://213.130.144.183/abc-cash\"")
     }
 

@@ -137,7 +137,7 @@ fun TreasuryBalanceScreen(
             .background(TreasuryScreenTheme.Background)
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp)
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         TreasuryHeader(
             year = displayYear,
@@ -256,25 +256,26 @@ private fun TreasuryKpiCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = TreasuryScreenTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = title,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
-                color = TreasuryScreenTheme.Muted
+                color = TreasuryScreenTheme.Muted,
+                maxLines = 1
             )
             Text(
                 text = amount,
-                fontSize = 20.sp,
+                fontSize = 17.sp,
                 fontWeight = FontWeight.Bold,
                 color = amountColor,
                 maxLines = 1,
@@ -283,9 +284,9 @@ private fun TreasuryKpiCard(
             subtitle?.let {
                 Text(
                     text = it,
-                    fontSize = 12.sp,
+                    fontSize = 10.sp,
                     color = TreasuryScreenTheme.Muted,
-                    maxLines = 2,
+                    maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
             }
@@ -301,38 +302,43 @@ private fun ForecastBalanceChart(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = TreasuryScreenTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Text(
                 text = stringResource(R.string.treasury_month_end_balance),
-                fontSize = 17.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = TreasuryScreenTheme.Primary
             )
             Text(
                 text = stringResource(R.string.treasury_cumulative_formula),
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = TreasuryScreenTheme.Muted
             )
 
+            val balances = rows.map { it.forecastBalance }
+            val minY = balances.minOrNull() ?: 0.0
+            val maxY = balances.maxOrNull() ?: 0.0
+            val range = max(maxY - minY, 1.0)
+            val yAxisWidth = 34.dp
+            val chartHeight = 120.dp
+
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(28.dp),
+                modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom
             ) {
-                rows.forEach { row ->
-                    val balance = row.forecastBalance
+                Spacer(modifier = Modifier.width(yAxisWidth))
+                balances.forEach { balance ->
                     Text(
                         text = formatChartAmount(balance),
                         modifier = Modifier.weight(1f),
-                        fontSize = 9.sp,
+                        fontSize = 8.sp,
                         fontWeight = FontWeight.Bold,
                         color = if (balance >= 0) TreasuryScreenTheme.Positive else TreasuryScreenTheme.Negative,
                         textAlign = TextAlign.Center,
@@ -342,26 +348,49 @@ private fun ForecastBalanceChart(
                 }
             }
 
-            ForecastBalanceLine(
-                balances = rows.map { it.forecastBalance },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(132.dp)
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(
+                    modifier = Modifier
+                        .width(yAxisWidth)
+                        .height(chartHeight),
+                    verticalArrangement = Arrangement.SpaceBetween,
+                    horizontalAlignment = Alignment.End
+                ) {
+                    for (i in 0..3) {
+                        val tickValue = maxY - range * i / 3.0
+                        Text(
+                            text = formatChartAmount(tickValue),
+                            fontSize = 8.sp,
+                            color = TreasuryScreenTheme.Muted,
+                            textAlign = TextAlign.End,
+                            maxLines = 1
+                        )
+                    }
+                }
+                ForecastBalanceLine(
+                    balances = balances,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(chartHeight)
+                )
+            }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
+                Spacer(modifier = Modifier.width(yAxisWidth))
                 rows.forEach { row ->
                     Text(
                         text = "%02d".format(row.month.monthValue),
                         modifier = Modifier.weight(1f),
-                        fontSize = 10.sp,
+                        fontSize = 9.sp,
                         color = TreasuryScreenTheme.Muted,
                         textAlign = TextAlign.Center,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        maxLines = 1
                     )
                 }
             }
@@ -391,9 +420,9 @@ private fun ForecastBalanceLine(
     val range = max(maxY - minY, 1.0)
 
     Canvas(modifier = modifier) {
-        val padH = 8.dp.toPx()
-        val padTop = 12.dp.toPx()
-        val padBottom = 12.dp.toPx()
+        val padH = 4.dp.toPx()
+        val padTop = 8.dp.toPx()
+        val padBottom = 8.dp.toPx()
         val chartW = size.width - padH * 2
         val chartH = size.height - padTop - padBottom
 
