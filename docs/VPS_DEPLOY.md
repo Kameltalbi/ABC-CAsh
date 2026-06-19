@@ -9,16 +9,22 @@ Conçue pour coexister avec d'autres applications sur le même VPS (port local *
 - Docker + Docker Compose
 - Nginx (déjà utilisé pour vos autres apps)
 
-## 1. Build du JAR (en local ou sur le VPS)
+## 1. Clone sur le VPS
 
 ```bash
-cd "/chemin/vers/ABC CASH"
-./gradlew :server:jar
+mkdir -p /var/www/abc-cash
+cd /var/www/abc-cash
+git clone https://github.com/Kameltalbi/ABC-CAsh.git .
+bash deploy/setup-vps.sh
 ```
 
-Le JAR est généré dans `server/build/libs/server-1.0.0.jar`.
+**Java n'est pas nécessaire sur le VPS** — le build Kotlin se fait dans Docker.
 
-## 2. Déploiement Docker
+## 1bis. Build JAR en local (optionnel)
+
+```bash
+./gradlew :server:jar
+```
 
 ```bash
 cd deploy

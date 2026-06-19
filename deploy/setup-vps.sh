@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Commandes à lancer SUR LE VPS après rsync depuis le Mac
-# Usage: bash setup-vps.sh
+# À lancer SUR LE VPS après git clone (Java non requis — build dans Docker)
+# Usage: bash deploy/setup-vps.sh
 
 set -euo pipefail
 
@@ -21,21 +21,23 @@ if [[ ! -f .env ]]; then
   cp .env.example .env
   sed -i "s/remplacer-par-une-longue-chaine-aleatoire/$JWT/" .env
   sed -i "s/remplacer-mot-de-passe-fort/$DB_PASS/g" .env
-  echo "==> .env créé"
+  echo "==> .env créé avec mots de passe aléatoires"
 fi
 
-if [[ ! -f ../server/build/libs/server-1.0.0.jar ]]; then
-  echo "ERREUR: JAR manquant. Depuis votre Mac, lancez:"
-  echo "  cd \"/Users/kameltalbi/MyFiveApps/ABC CASH\""
-  echo "  ./deploy/deploy-from-mac.sh"
-  exit 1
-fi
-
+echo "==> Build Docker (compile Kotlin + démarre Postgres + API)..."
+echo "    (première fois : 3–5 min)"
 $DC build --no-cache
 $DC up -d
 
-sleep 4
-curl -sf http://127.0.0.1:8081/health && echo "" || echo "ERREUR: vérifiez: $DC logs abc-cash-api"
+sleep 5
+if curl -sf http://127.0.0.1:8081/health; then
+  echo ""
+  echo "==> API OK sur http://127.0.0.1:8081"
+else
+  echo "ERREUR — logs API:"
+  $DC logs abc-cash-api --tail 30
+  exit 1
+fi
 
 cat > /etc/nginx/snippets/abc-cash.conf <<'EOF'
 location /abc-cash/ {
@@ -49,8 +51,8 @@ location /abc-cash/ {
 EOF
 
 echo ""
-echo "==> OK. Ajoutez dans votre site Nginx (server { }):"
-echo "    include snippets/abc-cash.conf;"
-echo "    nginx -t && systemctl reload nginx"
+echo "==> Nginx snippet: /etc/nginx/snippets/abc-cash.conf"
+echo "    Ajoutez dans server { }:  include snippets/abc-cash.conf;"
+echo "    Puis: nginx -t && systemctl reload nginx"
 echo ""
-echo "    curl http://127.0.0.1:8081/health"
+echo "    curl http://213.130.144.183/abc-cash/health"

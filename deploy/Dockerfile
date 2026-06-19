@@ -1,8 +1,21 @@
+# Build stage — Java/Gradle only inside Docker (no Java needed on VPS host)
+FROM eclipse-temurin:17-jdk-alpine AS builder
+
+WORKDIR /build
+
+COPY gradlew gradlew.bat settings.gradle.kts build.gradle.kts ./
+COPY gradle gradle/
+COPY server/build.gradle.kts server/build.gradle.kts
+COPY server/src server/src
+
+RUN chmod +x gradlew && ./gradlew :server:jar --no-daemon -q
+
+# Runtime stage
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
-COPY server/build/libs/server-1.0.0.jar /app/abc-cash-api.jar
+COPY --from=builder /build/server/build/libs/server-1.0.0.jar /app/abc-cash-api.jar
 
 EXPOSE 8081
 

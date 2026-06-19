@@ -1,0 +1,12 @@
+.git
+.gitignore
+.gradle
+.kotlin
+**/build
+app/
+docs/
+*.md
+deploy/.env
+.idea
+*.iml
+.DS_Store
