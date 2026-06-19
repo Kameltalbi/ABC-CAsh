@@ -1,5 +1,6 @@
 package com.abccash.server.service
 
+import com.abccash.server.config.AppConfig
 import com.abccash.server.db.Entreprises
 import com.abccash.server.db.Users
 import com.abccash.server.model.AuthResponse
@@ -22,11 +23,11 @@ import java.util.UUID
 class AuthService(private val config: ApplicationConfig) {
 
     private val jwtSecret: String
-        get() = System.getenv("JWT_SECRET") ?: config.property("abc.jwtSecret").getString()
+        get() = AppConfig.jwtSecret(config)
     private val issuer: String
-        get() = config.property("abc.jwtIssuer").getString()
+        get() = AppConfig.jwtIssuer(config)
     private val audience: String
-        get() = config.property("abc.jwtAudience").getString()
+        get() = AppConfig.jwtAudience(config)
 
     fun register(request: RegisterRequest): Result<AuthResponse> {
         if (request.entrepriseNom.isBlank()) return Result.failure(IllegalArgumentException("Company name required"))

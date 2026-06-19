@@ -34,6 +34,9 @@ services:
       DATABASE_PASSWORD: ${DATABASE_PASSWORD:?DATABASE_PASSWORD manquant dans deploy/.env}
       DATABASE_DRIVER: org.postgresql.Driver
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET manquant dans deploy/.env}
+      JWT_ISSUER: abc-cash
+      JWT_AUDIENCE: abc-cash-app
+      JWT_REALM: ABC Cash API
     ports:
       - "127.0.0.1:8081:8081"
     depends_on:
