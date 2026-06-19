@@ -94,8 +94,11 @@ location /abc-cash/ {
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 60s;
 }
 EOF
 
-echo ""
-echo "==> Nginx: include snippets/abc-cash.conf; puis nginx -t && systemctl reload nginx"
+bash "$APP_DIR/deploy/setup-nginx.sh" 2>/dev/null || {
+  echo ""
+  echo "==> Nginx: bash deploy/setup-nginx.sh (root) si le test ci-dessous échoue"
+}
