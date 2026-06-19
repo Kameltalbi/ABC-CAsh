@@ -29,6 +29,7 @@ object UserPreferencesKeys {
     val API_BASE_URL = stringPreferencesKey("api_base_url")
     val LAST_SYNC_AT = stringPreferencesKey("last_sync_at")
     val SYNC_ENABLED = booleanPreferencesKey("sync_enabled")
+    val PENDING_DELETED_USER_IDS = stringPreferencesKey("pending_deleted_user_ids")
 }
 
 class UserPreferences(private val context: Context) {
@@ -99,6 +100,31 @@ class UserPreferences(private val context: Context) {
     suspend fun setLastSyncAt(isoInstant: String) {
         context.userDataStore.edit { preferences ->
             preferences[UserPreferencesKeys.LAST_SYNC_AT] = isoInstant
+        }
+    }
+
+    suspend fun getPendingDeletedUserIds(): List<String> =
+        context.userDataStore.data.first()[UserPreferencesKeys.PENDING_DELETED_USER_IDS]
+            ?.split(',')
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+
+    suspend fun addPendingDeletedUserId(userId: String) {
+        if (userId.isBlank()) return
+        context.userDataStore.edit { preferences ->
+            val current = preferences[UserPreferencesKeys.PENDING_DELETED_USER_IDS]
+                ?.split(',')
+                ?.filter { it.isNotBlank() }
+                ?.toMutableSet()
+                ?: mutableSetOf()
+            current.add(userId)
+            preferences[UserPreferencesKeys.PENDING_DELETED_USER_IDS] = current.joinToString(",")
+        }
+    }
+
+    suspend fun clearPendingDeletedUserIds() {
+        context.userDataStore.edit { preferences ->
+            preferences.remove(UserPreferencesKeys.PENDING_DELETED_USER_IDS)
         }
     }
 

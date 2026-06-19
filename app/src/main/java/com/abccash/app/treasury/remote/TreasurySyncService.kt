@@ -76,11 +76,18 @@ class TreasurySyncService(
         return runCatching {
             apiClient.updateBaseUrl(getApiBaseUrl())
             mergePull(apiClient.pull(token), null, null)
-            val pushRequest = repository.buildSyncPushRequest(entrepriseId)
+            val pushRequest = repository.buildSyncPushRequest(entrepriseId).copy(
+                deletedUserIds = userPreferences.getPendingDeletedUserIds()
+            )
             apiClient.push(token, pushRequest)
+            userPreferences.clearPendingDeletedUserIds()
             userPreferences.setLastSyncAt(Instant.now().toString())
             null
         }.getOrElse { it.message ?: "Erreur de synchronisation" }
+    }
+
+    suspend fun trackUserDeletion(userId: String) {
+        userPreferences.addPendingDeletedUserId(userId)
     }
 
     private suspend fun mergePull(pull: SyncPullResponse, passwordUserId: String?, plainPassword: String?) {

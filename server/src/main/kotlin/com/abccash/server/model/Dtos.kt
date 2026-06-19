@@ -98,9 +98,24 @@ data class SyncPullResponse(
 )
 
 @Serializable
+data class UserPushDto(
+    val id: String,
+    val nom: String,
+    val email: String,
+    val telephone: String,
+    val role: String,
+    val permissions: List<String>,
+    val entrepriseId: String,
+    val passwordHash: String,
+    val isActive: Boolean = true
+)
+
+@Serializable
 data class SyncPushRequest(
     val invoices: List<InvoiceDto> = emptyList(),
-    val expenses: List<ExpenseDto> = emptyList()
+    val expenses: List<ExpenseDto> = emptyList(),
+    val users: List<UserPushDto> = emptyList(),
+    val deletedUserIds: List<String> = emptyList()
 )
 
 @Serializable

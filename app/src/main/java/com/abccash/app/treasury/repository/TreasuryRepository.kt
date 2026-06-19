@@ -20,6 +20,7 @@ import com.abccash.app.treasury.export.TreasuryBackupData
 import com.abccash.app.treasury.export.TreasuryBackupJson
 import com.abccash.app.treasury.remote.toDomain
 import com.abccash.app.treasury.remote.toDto
+import com.abccash.app.treasury.remote.toPushDto
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -345,9 +346,11 @@ class TreasuryRepository(
             invoice.toDomain(payments)
         }
         val expenses = dao.getExpensesForBackup(entrepriseId).map { it.toDomain() }
+        val users = dao.getUsersForBackup(entrepriseId).map { it.toDomain().toPushDto() }
         return com.abccash.app.treasury.remote.SyncPushRequest(
             invoices = invoices.map { it.toDto() },
-            expenses = expenses.map { it.toDto() }
+            expenses = expenses.map { it.toDto() },
+            users = users
         )
     }
 }

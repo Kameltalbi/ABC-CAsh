@@ -12,8 +12,11 @@ import com.abccash.server.model.PaymentDto
 import com.abccash.server.model.SyncPullResponse
 import com.abccash.server.model.SyncPushRequest
 import com.abccash.server.model.UserDto
+import com.abccash.server.model.UserPushDto
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inList
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
@@ -119,6 +122,12 @@ class SyncService {
     }
 
     fun push(entrepriseId: String, request: SyncPushRequest): String? = transaction {
+        for (user in request.users) {
+            upsertUser(user, entrepriseId)?.let { return@transaction it }
+        }
+        for (userId in request.deletedUserIds) {
+            deleteUser(userId, entrepriseId)?.let { return@transaction it }
+        }
         for (invoice in request.invoices) {
             if (invoice.entrepriseId != entrepriseId) return@transaction "Invoice belongs to another company"
             upsertInvoice(invoice)
@@ -128,6 +137,73 @@ class SyncService {
             upsertExpense(expense)
         }
         null
+    }
+
+    private fun upsertUser(user: UserPushDto, entrepriseId: String): String? {
+        if (user.entrepriseId != entrepriseId) return "User belongs to another company"
+        if (user.nom.isBlank()) return "User name required"
+        if (user.email.isBlank()) return "User email required"
+        if (user.passwordHash.isBlank()) return "User password required"
+
+        val email = user.email.trim().lowercase()
+        val phone = user.telephone.replace("\\s".toRegex(), "")
+
+        val emailTaken = Users.selectAll()
+            .where { Users.email eq email }
+            .any { it[Users.id] != user.id }
+        if (emailTaken) return "Email already used"
+
+        if (phone.isNotBlank()) {
+            val phoneTaken = Users.selectAll()
+                .where { Users.telephone eq phone }
+                .any { it[Users.id] != user.id }
+            if (phoneTaken) return "Phone already used"
+        }
+
+        val now = Instant.now()
+        val permissions = user.permissions.joinToString(",") { it.trim() }.trim(',')
+        val exists = Users.selectAll().where { Users.id eq user.id }.count() > 0
+        if (exists) {
+            Users.update({ Users.id eq user.id }) {
+                it[nom] = user.nom.trim()
+                it[Users.email] = email
+                it[telephone] = phone
+                it[passwordHash] = user.passwordHash
+                it[role] = user.role
+                it[Users.permissions] = permissions
+                it[isActive] = user.isActive
+                it[updatedAt] = now
+            }
+        } else {
+            Users.insert {
+                it[id] = user.id
+                it[Users.entrepriseId] = entrepriseId
+                it[nom] = user.nom.trim()
+                it[Users.email] = email
+                it[telephone] = phone
+                it[passwordHash] = user.passwordHash
+                it[role] = user.role
+                it[Users.permissions] = permissions
+                it[dateInscription] = now
+                it[isActive] = user.isActive
+                it[updatedAt] = now
+            }
+        }
+        return null
+    }
+
+    private fun deleteUser(userId: String, entrepriseId: String): String? {
+        val row = Users.selectAll().where { Users.id eq userId }.singleOrNull()
+            ?: return null
+        if (row[Users.entrepriseId] != entrepriseId) return "User belongs to another company"
+        if (row[Users.role] == "ADMIN") {
+            val adminCount = Users.selectAll()
+                .where { (Users.entrepriseId eq entrepriseId) and (Users.role eq "ADMIN") }
+                .count()
+            if (adminCount <= 1) return "Cannot delete the last admin"
+        }
+        Users.deleteWhere { Users.id eq userId }
+        return null
     }
 
     private fun upsertInvoice(invoice: InvoiceDto) {

@@ -543,6 +543,7 @@ class TreasuryViewModel(
     fun deleteUser(userId: String) {
         viewModelScope.launch {
             repository.deleteUser(userId)
+            syncService.trackUserDeletion(userId)
             scheduleAutoSync()
         }
     }
@@ -554,13 +555,17 @@ class TreasuryViewModel(
         onResult: (String?) -> Unit
     ) {
         viewModelScope.launch {
-            onResult(repository.changePassword(userId, currentPassword, newPassword))
+            val error = repository.changePassword(userId, currentPassword, newPassword)
+            onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
     fun resetUserPassword(userId: String, newPassword: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            onResult(repository.resetUserPassword(userId, newPassword))
+            val error = repository.resetUserPassword(userId, newPassword)
+            onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 

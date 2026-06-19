@@ -119,3 +119,15 @@ fun Expense.toDto(): ExpenseDto = ExpenseDto(
     category = category.name,
     categoryLabel = categoryLabel
 )
+
+fun User.toPushDto(): UserPushDto = UserPushDto(
+    id = id,
+    nom = nom,
+    email = email,
+    telephone = telephone,
+    role = role.name,
+    permissions = permissions.map { it.name },
+    entrepriseId = entrepriseId,
+    passwordHash = passwordHash,
+    isActive = isActive
+)

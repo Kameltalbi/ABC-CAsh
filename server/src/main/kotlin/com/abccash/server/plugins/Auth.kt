@@ -38,3 +38,6 @@ fun ApplicationCall.entrepriseId(): String? =
 
 fun ApplicationCall.userId(): String? =
     principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
+
+fun ApplicationCall.userRole(): String? =
+    principal<JWTPrincipal>()?.payload?.getClaim("role")?.asString()
