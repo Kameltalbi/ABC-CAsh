@@ -121,8 +121,12 @@
     <string name="settings_security_sub">Empreinte digitale et code PIN</string>
     <string name="settings_language">Langue</string>
     <string name="settings_language_sub">Langue d\'affichage de l\'application</string>
-    <string name="settings_sync">Synchronisation cloud</string>
-    <string name="settings_sync_sub">Sauvegarde automatique sur votre serveur</string>
+    <string name="settings_sync">Sauvegarde cloud</string>
+    <string name="settings_sync_sub">Automatique — rien à faire</string>
+    <string name="settings_sync_auto_info">Vos factures et dépenses sont enregistrées sur le serveur automatiquement quand vous modifiez quelque chose, à l\'ouverture de l\'app, et toutes les 15 minutes en arrière-plan.</string>
+    <string name="settings_sync_status">Serveur : %1$s</string>
+    <string name="settings_sync_never">Pas encore synchronisé — ouvrez l\'app en ligne après connexion.</string>
+    <string name="settings_sync_url_hint">Ne modifiez que si votre administrateur vous a donné une autre adresse.</string>
     <string name="settings_sync_enabled">Activer la sync cloud</string>
     <string name="settings_sync_url">URL du serveur</string>
     <string name="settings_sync_last">Dernière sync : %1$s</string>

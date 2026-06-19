@@ -14,8 +14,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.10.0"
+        versionCode = 20
+        versionName = "1.10.1"
         buildConfigField("String", "API_BASE_URL", "\"http://213.130.144.183/abc-cash\"")
     }
 
@@ -97,6 +97,8 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
     implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
+
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

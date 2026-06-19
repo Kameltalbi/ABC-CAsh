@@ -12,6 +12,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
@@ -38,6 +40,7 @@ class TreasuryViewModel(
     private val _entrepriseId = MutableStateFlow<String?>(null)
     private val _uiState = MutableStateFlow(TreasuryUiState())
     val uiState: StateFlow<TreasuryUiState> = _uiState.asStateFlow()
+    private var autoSyncJob: Job? = null
 
     init {
         viewModelScope.launch {
@@ -104,9 +107,22 @@ class TreasuryViewModel(
     }
 
     fun clearSession() {
+        autoSyncJob?.cancel()
         _entrepriseId.value = null
         _uiState.value = TreasuryUiState()
     }
+
+    /** Sync silencieuse — debounce 2 s après une modification, ou immédiate à l'ouverture de l'app. */
+    fun syncSilently(immediate: Boolean = false) {
+        val entrepriseId = _entrepriseId.value ?: return
+        autoSyncJob?.cancel()
+        autoSyncJob = viewModelScope.launch {
+            if (!immediate) delay(2_000)
+            syncService.syncNow(entrepriseId)
+        }
+    }
+
+    private fun scheduleAutoSync() = syncSilently(immediate = false)
 
     fun setUserRole(role: UserRole) {
         _uiState.update { it.copy(currentUserRole = role) }
@@ -154,6 +170,7 @@ class TreasuryViewModel(
                 )
             }
             onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -196,6 +213,7 @@ class TreasuryViewModel(
                 )
             }
             onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -234,6 +252,7 @@ class TreasuryViewModel(
                 )
             )
             onResult(null)
+            scheduleAutoSync()
         }
     }
 
@@ -245,7 +264,9 @@ class TreasuryViewModel(
         onResult: (String?) -> Unit
     ) {
         viewModelScope.launch {
-            onResult(repository.updateUserProfile(userId, nom, email, telephone))
+            val error = repository.updateUserProfile(userId, nom, email, telephone)
+            onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -261,7 +282,9 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            onResult(repository.updateEntrepriseProfile(entrepriseId, nom, email, telephone, adresse))
+            val error = repository.updateEntrepriseProfile(entrepriseId, nom, email, telephone, adresse)
+            onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -291,6 +314,7 @@ class TreasuryViewModel(
                 )
             )
             onResult(null)
+            scheduleAutoSync()
         }
     }
 
@@ -307,6 +331,7 @@ class TreasuryViewModel(
             _uiState.update {
                 it.copy(importFeedback = message)
             }
+            scheduleAutoSync()
         }
     }
 
@@ -337,12 +362,14 @@ class TreasuryViewModel(
                 )
             )
             onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
     fun deleteInvoice(invoiceId: String) {
         viewModelScope.launch {
             repository.deleteInvoice(invoiceId)
+            scheduleAutoSync()
         }
     }
 
@@ -350,6 +377,7 @@ class TreasuryViewModel(
         if (invoiceIds.isEmpty()) return
         viewModelScope.launch {
             invoiceIds.forEach { repository.deleteInvoice(it) }
+            scheduleAutoSync()
         }
     }
 
@@ -370,6 +398,7 @@ class TreasuryViewModel(
                     method = method
                 )
             )
+            scheduleAutoSync()
         }
         return true
     }
@@ -397,12 +426,14 @@ class TreasuryViewModel(
                     entrepriseId = entrepriseId
                 )
             )
+            scheduleAutoSync()
         }
     }
 
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
             repository.deleteExpense(expenseId)
+            scheduleAutoSync()
         }
     }
 
@@ -410,6 +441,7 @@ class TreasuryViewModel(
         if (expenseIds.isEmpty()) return
         viewModelScope.launch {
             expenseIds.forEach { repository.deleteExpense(it) }
+            scheduleAutoSync()
         }
     }
 
@@ -433,6 +465,7 @@ class TreasuryViewModel(
                 )
             )
             onResult(null)
+            scheduleAutoSync()
         }
     }
 
@@ -463,6 +496,7 @@ class TreasuryViewModel(
                     }
                 )
             )
+            scheduleAutoSync()
         }
     }
 
@@ -471,6 +505,7 @@ class TreasuryViewModel(
         if (!existing.isRecurring) return
         viewModelScope.launch {
             repository.updateExpense(existing.copy(recurrenceEndDate = endDate))
+            scheduleAutoSync()
         }
     }
 
@@ -501,12 +536,14 @@ class TreasuryViewModel(
                 )
             )
             onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
     fun deleteUser(userId: String) {
         viewModelScope.launch {
             repository.deleteUser(userId)
+            scheduleAutoSync()
         }
     }
 
@@ -558,6 +595,7 @@ class TreasuryViewModel(
             val error = repository.restoreBackup(entrepriseId, json)
             if (error == null) {
                 _uiState.update { it.copy(backupFeedback = "Sauvegarde restaurée avec succès") }
+                scheduleAutoSync()
             }
             onResult(error)
         }
@@ -663,6 +701,7 @@ class TreasuryViewModel(
                 null
             }
             onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 

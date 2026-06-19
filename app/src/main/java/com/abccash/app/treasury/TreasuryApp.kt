@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -31,6 +34,7 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.datastore.UserPreferences
+import com.abccash.app.treasury.remote.TreasurySyncScheduler
 import com.abccash.app.treasury.remote.TreasurySyncService
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.datastore.AppSettings
@@ -129,14 +133,14 @@ fun TreasuryApp(
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
             }
-            launch {
-                syncService.syncNow(user.entrepriseId)
-            }
+            TreasurySyncScheduler.schedule(context)
+            viewModel.syncSilently(immediate = true)
         }
     }
 
     fun logout() {
         coroutineScope.launch {
+            TreasurySyncScheduler.cancel(context)
             userPreferences.clearUserSession()
             viewModel.clearSession()
             isAuthenticated = false
@@ -149,6 +153,17 @@ fun TreasuryApp(
     }
 
     AppCurrencyProvider(appSettings = appSettings) {
+        val lifecycleOwner = LocalLifecycleOwner.current
+        DisposableEffect(lifecycleOwner, isAuthenticated) {
+            val observer = LifecycleEventObserver { _, event ->
+                if (event == Lifecycle.Event.ON_RESUME && isAuthenticated) {
+                    viewModel.syncSilently(immediate = true)
+                }
+            }
+            lifecycleOwner.lifecycle.addObserver(observer)
+            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        }
+
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route
@@ -172,6 +187,8 @@ fun TreasuryApp(
                     currentUserRole = userRole
                     currentPermissions = permissions
                     viewModel.setSession(entrepriseId, userRole, permissions, userId)
+                    TreasurySyncScheduler.schedule(context)
+                    viewModel.syncSilently(immediate = true)
                     navController.navigate(Screen.Dashboard.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
@@ -393,7 +410,6 @@ fun TreasuryApp(
         composable(SettingsRoutes.OPTIONS_SYNC) {
             SettingsSyncScreen(
                 syncService = syncService,
-                onSyncNow = viewModel::syncNow,
                 onBack = { navController.popBackStack() }
             )
         }
