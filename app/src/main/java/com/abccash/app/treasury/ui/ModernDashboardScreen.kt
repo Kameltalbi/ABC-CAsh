@@ -299,8 +299,8 @@ fun ModernDashboardScreen(
                 Box(Modifier.padding(horizontal = 20.dp)) {
                     TreasuryTrendCard(
                         points = data.balanceHistory,
-                        expenseTotal = data.expenseTotal,
-                        monthLabel = data.monthLabel,
+                        currentBalance = data.displayBalance,
+                        forecastBalance = data.forecastBalance30Days,
                         formatAmount = formatAmount
                     )
                 }
@@ -630,12 +630,19 @@ private fun ModernBreakdownLegendGrid(
 @Composable
 private fun TreasuryTrendCard(
     points: List<DashboardBalancePoint>,
-    expenseTotal: Double,
-    monthLabel: String,
+    currentBalance: Double,
+    forecastBalance: Double,
     formatAmount: (Double) -> String
 ) {
     DashboardCard {
         SectionTitle(stringResource(R.string.dashboard_treasury_forecasts))
+        Text(
+            text = stringResource(R.string.dashboard_treasury_curve_explain),
+            fontSize = 11.sp,
+            color = ModernDashboardTheme.Muted,
+            lineHeight = 15.sp
+        )
+        Spacer(Modifier.height(10.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -643,32 +650,46 @@ private fun TreasuryTrendCard(
         ) {
             Column(modifier = Modifier.weight(0.42f)) {
                 Text(
-                    text = stringResource(R.string.expense_title),
-                    fontSize = 12.sp,
+                    text = stringResource(R.string.dashboard_balance_today),
+                    fontSize = 11.sp,
                     color = ModernDashboardTheme.Muted
                 )
                 Text(
-                    text = formatAmount(expenseTotal),
-                    fontSize = 22.sp,
+                    text = formatAmount(currentBalance),
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = ModernDashboardTheme.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    text = monthLabel,
+                    text = stringResource(R.string.dashboard_balance_forecast_30d),
                     fontSize = 11.sp,
                     color = ModernDashboardTheme.Muted
                 )
-                Spacer(Modifier.height(8.dp))
+                Text(
+                    text = formatAmount(forecastBalance),
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (forecastBalance >= currentBalance) {
+                        ModernDashboardTheme.Positive
+                    } else {
+                        ModernDashboardTheme.Negative
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Spacer(Modifier.height(10.dp))
                 TrendLegendRow(
                     color = ModernDashboardTheme.Positive,
-                    label = stringResource(R.string.your_treasury)
+                    label = stringResource(R.string.dashboard_treasury_curve_history_legend)
                 )
                 Spacer(Modifier.height(6.dp))
                 TrendLegendRow(
                     color = ModernDashboardTheme.Positive.copy(alpha = 0.45f),
-                    label = stringResource(R.string.forecasts_30_days)
+                    label = stringResource(R.string.dashboard_treasury_curve_forecast_legend),
+                    dashed = true
                 )
             }
             if (points.size < 2) {
@@ -692,7 +713,7 @@ private fun TreasuryTrendCard(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        forecastAxisLabels().forEach { label ->
+                        treasuryCurveAxisLabels().forEach { label ->
                             Text(
                                 text = label,
                                 fontSize = 9.sp,
@@ -710,16 +731,28 @@ private fun TreasuryTrendCard(
 }
 
 @Composable
-private fun TrendLegendRow(color: Color, label: String) {
+private fun TrendLegendRow(color: Color, label: String, dashed: Boolean = false) {
     Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .width(12.dp)
-                .height(3.dp)
-                .background(color, RoundedCornerShape(2.dp))
-        )
+        if (dashed) {
+            Canvas(modifier = Modifier.width(12.dp).height(3.dp)) {
+                drawLine(
+                    color = color,
+                    start = Offset(0f, size.height / 2f),
+                    end = Offset(size.width, size.height / 2f),
+                    strokeWidth = 3f,
+                    pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 3f))
+                )
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .width(12.dp)
+                    .height(3.dp)
+                    .background(color, RoundedCornerShape(2.dp))
+            )
+        }
         Spacer(Modifier.width(6.dp))
-        Text(text = label, fontSize = 10.sp, color = ModernDashboardTheme.Muted, maxLines = 1)
+        Text(text = label, fontSize = 10.sp, color = ModernDashboardTheme.Muted, maxLines = 2)
     }
 }
 
@@ -932,11 +965,11 @@ private fun MonthlyGroupedBarChart(
 }
 
 @Composable
-private fun forecastAxisLabels(): List<String> = listOf(
+private fun treasuryCurveAxisLabels(): List<String> = listOf(
+    stringResource(R.string.dashboard_axis_30d_ago),
+    stringResource(R.string.dashboard_axis_15d_ago),
     stringResource(R.string.dashboard_today),
-    stringResource(R.string.dashboard_plus_days, 7),
-    stringResource(R.string.dashboard_plus_days, 14),
-    stringResource(R.string.dashboard_plus_days, 21),
+    stringResource(R.string.dashboard_axis_plus_15),
     stringResource(R.string.dashboard_plus_days, 30)
 )
 

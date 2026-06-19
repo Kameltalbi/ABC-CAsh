@@ -1,8 +1,12 @@
 package com.abccash.app.treasury.ui
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -10,6 +14,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -20,6 +26,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
@@ -36,6 +43,35 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.hasPermission
 import java.time.LocalDate
 import java.time.YearMonth
+
+private object PrevisionsTheme {
+    val Background = Color(0xFFF5F7FA)
+    val Primary = Color(0xFF1A1A1A)
+    val Income = Color(0xFF22C55E)
+    val Expense = Color(0xFFEF4444)
+    val Muted = Color(0xFF94A3B8)
+    val Divider = Color(0xFFEEEEEE)
+    val ChipInactive = Color(0xFF64748B)
+    val Overdue = Color(0xFFEF4444)
+}
+
+private enum class PrevisionTypeFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.filter_all),
+    INCOME(R.string.income_title),
+    EXPENSE(R.string.expense_title)
+}
+
+private enum class PrevisionTimingFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.filter_all),
+    OVERDUE(R.string.forecasts_filter_overdue),
+    UPCOMING(R.string.upcoming_badge)
+}
+
+private enum class PrevisionSort(@StringRes val labelRes: Int) {
+    DATE(R.string.transactions_sort_date),
+    AMOUNT_DESC(R.string.transactions_sort_amount_desc),
+    AMOUNT_ASC(R.string.transactions_sort_amount_asc)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +106,6 @@ fun PrevisionsScreen(
     val isAdmin = userRole == UserRole.ADMIN
     val canAddIncome = isAdmin && canViewIncome
     val canAddExpense = canManageExpense
-    var showTypeSheet by remember { mutableStateOf(false) }
 
     if (!hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -79,11 +114,26 @@ fun PrevisionsScreen(
         return
     }
 
+    var showTypeSheet by remember { mutableStateOf(false) }
+    var typeFilter by remember { mutableStateOf(PrevisionTypeFilter.ALL) }
+    var timingFilter by remember { mutableStateOf(PrevisionTimingFilter.ALL) }
+    var selectedClient by remember { mutableStateOf<String?>(null) }
+    var sortMode by remember { mutableStateOf(PrevisionSort.DATE) }
+    var showClientMenu by remember { mutableStateOf(false) }
+
+    var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
+    var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
+    var itemToDelete by remember { mutableStateOf<EcheanceItem?>(null) }
+    var invoiceToMarkPaid by remember { mutableStateOf<Invoice?>(null) }
+    var expenseToMarkPaid by remember { mutableStateOf<Pair<Expense, LocalDate>?>(null) }
+    var editError by remember { mutableStateOf<String?>(null) }
+
     val formatAmount = rememberFormatMoney()
     val dateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
     val today = remember { LocalDate.now() }
+    val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
 
-    val monthItems = remember(invoices, expenses, selectedMonth, canViewIncome, canViewExpenses) {
+    val allItems = remember(invoices, expenses, selectedMonth, canViewIncome, canViewExpenses) {
         val filteredInvoices = if (canViewIncome) invoices else emptyList()
         val filteredExpenses = if (canViewExpenses) expenses else emptyList()
         EcheanceForecast.buildItemsForMonth(
@@ -93,23 +143,67 @@ fun PrevisionsScreen(
         )
     }
 
-    val forecastIncome = remember(monthItems) {
-        monthItems.filter { it.type == EcheanceType.INCOME }.sumOf { it.amount }
-    }
-    val forecastExpenses = remember(monthItems) {
-        monthItems.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
+    val typeFilters = remember(canViewIncome, canViewExpenses) {
+        buildList {
+            add(PrevisionTypeFilter.ALL)
+            if (canViewIncome) add(PrevisionTypeFilter.INCOME)
+            if (canViewExpenses) add(PrevisionTypeFilter.EXPENSE)
+        }
     }
 
-    var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
-    var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
-    var itemToDelete by remember { mutableStateOf<EcheanceItem?>(null) }
-    var invoiceToMarkPaid by remember { mutableStateOf<Invoice?>(null) }
-    var expenseToMarkPaid by remember { mutableStateOf<Pair<Expense, LocalDate>?>(null) }
-    var editError by remember { mutableStateOf<String?>(null) }
+    val availableClients = remember(allItems) {
+        allItems
+            .filter { it.type == EcheanceType.INCOME }
+            .map { it.label }
+            .distinct()
+            .sortedBy { it.lowercase() }
+    }
+
+    LaunchedEffect(selectedMonth) {
+        selectedClient = null
+        timingFilter = PrevisionTimingFilter.ALL
+    }
+
+    val filteredItems = remember(allItems, typeFilter, timingFilter, selectedClient, sortMode, today) {
+        var result = allItems
+
+        result = when (typeFilter) {
+            PrevisionTypeFilter.ALL -> result
+            PrevisionTypeFilter.INCOME -> result.filter { it.type == EcheanceType.INCOME }
+            PrevisionTypeFilter.EXPENSE -> result.filter { it.type == EcheanceType.EXPENSE }
+        }
+
+        selectedClient?.let { client ->
+            result = result.filter { it.type == EcheanceType.INCOME && it.label == client }
+        }
+
+        if (timingFilter != PrevisionTimingFilter.ALL && selectedClient == null) {
+            result = result.filter { item ->
+                when (timingFilter) {
+                    PrevisionTimingFilter.OVERDUE -> item.dueDate.isBefore(today)
+                    PrevisionTimingFilter.UPCOMING -> !item.dueDate.isBefore(today)
+                    PrevisionTimingFilter.ALL -> true
+                }
+            }
+        }
+
+        when (sortMode) {
+            PrevisionSort.DATE -> result.sortedBy { it.dueDate }
+            PrevisionSort.AMOUNT_DESC -> result.sortedByDescending { it.amount }
+            PrevisionSort.AMOUNT_ASC -> result.sortedBy { it.amount }
+        }
+    }
+
+    val forecastIncome = remember(allItems) {
+        allItems.filter { it.type == EcheanceType.INCOME }.sumOf { it.amount }
+    }
+    val forecastExpenses = remember(allItems) {
+        allItems.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
+    }
 
     invoiceToEdit?.let { invoice ->
         InvoiceFormDialog(
-            title = "Modifier l'encaissement",
+            title = stringResource(R.string.edit),
             initialInvoice = invoice,
             selectedMonth = YearMonth.from(invoice.dueDate),
             onDismiss = {
@@ -223,12 +317,12 @@ fun PrevisionsScreen(
     }
 
     Scaffold(
-        containerColor = Color(0xFFFAF9F6),
+        containerColor = PrevisionsTheme.Background,
         floatingActionButton = {
             if (canAddIncome || canAddExpense) {
                 FloatingActionButton(
                     onClick = { showTypeSheet = true },
-                    containerColor = Color(0xFF1E293B),
+                    containerColor = PrevisionsTheme.Primary,
                     contentColor = Color.White,
                     shape = CircleShape
                 ) {
@@ -237,127 +331,153 @@ fun PrevisionsScreen(
             }
         }
     ) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .background(Color(0xFFFAF9F6)),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
                     Text(
                         text = stringResource(R.string.forecasts),
-                        fontSize = 22.sp,
+                        fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A1A)
+                        color = PrevisionsTheme.Primary
                     )
-                    IconButton(onClick = onNavigateToSettings) {
-                        Icon(
-                            Icons.Default.Settings,
-                            contentDescription = stringResource(R.string.settings),
-                            tint = Color(0xFF64748B)
+                    Text(monthLabel, fontSize = 12.sp, color = PrevisionsTheme.Muted)
+                }
+                IconButton(onClick = onNavigateToSettings) {
+                    Icon(
+                        Icons.Default.Settings,
+                        contentDescription = stringResource(R.string.settings),
+                        tint = PrevisionsTheme.ChipInactive
+                    )
+                }
+            }
+
+            MonthSelectorRow(selectedMonth = selectedMonth, onMonthChange = onMonthChange)
+
+            PrevisionSummaryRow(
+                incomeLabel = stringResource(R.string.expected_income),
+                incomeAmount = formatAmount(forecastIncome),
+                expenseLabel = stringResource(R.string.expected_expenses),
+                expenseAmount = formatAmount(forecastExpenses)
+            )
+
+            PrevisionTypeTabs(
+                filters = typeFilters,
+                selected = typeFilter,
+                onSelect = { typeFilter = it }
+            )
+
+            PrevisionSecondaryFilters(
+                timingFilter = timingFilter,
+                onTimingFilterChange = { timingFilter = it },
+                selectedClient = selectedClient,
+                showClientMenu = showClientMenu,
+                onShowClientMenu = { showClientMenu = it },
+                availableClients = availableClients,
+                onClientSelected = {
+                    selectedClient = it
+                    showClientMenu = false
+                },
+                sortMode = sortMode,
+                onSortClick = {
+                    sortMode = when (sortMode) {
+                        PrevisionSort.DATE -> PrevisionSort.AMOUNT_DESC
+                        PrevisionSort.AMOUNT_DESC -> PrevisionSort.AMOUNT_ASC
+                        PrevisionSort.AMOUNT_ASC -> PrevisionSort.DATE
+                    }
+                },
+                showClientFilter = canViewIncome && typeFilter != PrevisionTypeFilter.EXPENSE
+            )
+
+            if (filteredItems.isEmpty()) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            stringResource(R.string.no_forecasts),
+                            fontSize = 13.sp,
+                            color = PrevisionsTheme.Muted,
+                            fontWeight = FontWeight.Medium
                         )
                     }
                 }
-            }
-
-            item {
-                MonthSelectorRow(
-                    selectedMonth = selectedMonth,
-                    onMonthChange = onMonthChange
-                )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                ) {
-                    ForecastSummaryCard(
-                        label = stringResource(R.string.expected_income),
-                        amount = formatAmount(forecastIncome),
-                        color = Color(0xFF16A34A),
-                        modifier = Modifier.weight(1f)
-                    )
-                    ForecastSummaryCard(
-                        label = stringResource(R.string.expected_expenses),
-                        amount = formatAmount(forecastExpenses),
-                        color = Color(0xFFDC2626),
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-
-            if (monthItems.isEmpty()) {
-                item {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 48.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(
-                                stringResource(R.string.no_forecasts),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                            Text(
-                                AppLocale.monthYear(selectedMonth),
-                                fontSize = 13.sp,
-                                color = Color.Gray
-                            )
-                        }
-                    }
-                }
             } else {
-                items(monthItems, key = { it.id }) { item ->
-                    EcheanceRow(
-                        item = item,
-                        formattedAmount = formatAmount(item.amount),
-                        formattedDate = item.dueDate.format(dateFormatter),
-                        isOverdue = item.dueDate.isBefore(today),
-                        canMarkPaid = when (item.type) {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(bottom = 88.dp)
+                ) {
+                    items(filteredItems, key = { it.id }) { item ->
+                        val isOverdue = item.dueDate.isBefore(today)
+                        val statusLabel = when {
+                            isOverdue -> stringResource(R.string.forecasts_filter_overdue)
+                            else -> stringResource(R.string.upcoming_badge)
+                        }
+                        val statusColor = if (isOverdue) PrevisionsTheme.Overdue else PrevisionsTheme.Muted
+                        val isIncome = item.type == EcheanceType.INCOME
+                        val canMarkPaid = when (item.type) {
                             EcheanceType.INCOME -> canMarkPaidIncome
                             EcheanceType.EXPENSE -> canManageExpense
-                        },
-                        canEdit = when (item.type) {
-                            EcheanceType.INCOME -> userRole == UserRole.ADMIN
+                        }
+                        val canEdit = when (item.type) {
+                            EcheanceType.INCOME -> isAdmin
                             EcheanceType.EXPENSE -> canManageExpense
-                        },
-                        onMarkPaid = {
-                            when (item.type) {
-                                EcheanceType.INCOME -> item.invoiceId?.let { id ->
-                                    invoices.find { it.id == id }?.let { invoiceToMarkPaid = it }
-                                }
-                                EcheanceType.EXPENSE -> item.expenseId?.let { id ->
-                                    expenses.find { it.id == id }?.let { expense ->
-                                        expenseToMarkPaid = expense to item.dueDate
+                        }
+                        val detail = if (isIncome) {
+                            stringResource(R.string.upcoming_forecast)
+                        } else {
+                            null
+                        }
+
+                        PrevisionLineRow(
+                            isIncome = isIncome,
+                            title = item.label,
+                            subtitle = "${statusLabel} · ${item.dueDate.format(dateFormatter)}",
+                            subtitleColor = statusColor,
+                            detail = detail,
+                            amount = formatAmount(item.amount),
+                            canMarkPaid = canMarkPaid,
+                            canEdit = canEdit,
+                            onMarkPaid = {
+                                when (item.type) {
+                                    EcheanceType.INCOME -> item.invoiceId?.let { id ->
+                                        invoices.find { it.id == id }?.let { invoiceToMarkPaid = it }
+                                    }
+                                    EcheanceType.EXPENSE -> item.expenseId?.let { id ->
+                                        expenses.find { it.id == id }?.let { expense ->
+                                            expenseToMarkPaid = expense to item.dueDate
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        onEdit = {
-                            when (item.type) {
-                                EcheanceType.INCOME -> {
-                                    invoiceToEdit = item.invoiceId?.let { id ->
-                                        invoices.find { it.id == id }
+                            },
+                            onEdit = {
+                                when (item.type) {
+                                    EcheanceType.INCOME -> {
+                                        invoiceToEdit = item.invoiceId?.let { id ->
+                                            invoices.find { it.id == id }
+                                        }
+                                    }
+                                    EcheanceType.EXPENSE -> {
+                                        expenseToEdit = item.expenseId?.let { id ->
+                                            expenses.find { it.id == id }
+                                        }
                                     }
                                 }
-                                EcheanceType.EXPENSE -> {
-                                    expenseToEdit = item.expenseId?.let { id ->
-                                        expenses.find { it.id == id }
-                                    }
-                                }
-                            }
-                        },
-                        onDelete = { itemToDelete = item }
-                    )
+                            },
+                            onDelete = { itemToDelete = item }
+                        )
+                        HorizontalDivider(color = PrevisionsTheme.Divider, thickness = 1.dp)
+                    }
                 }
             }
         }
@@ -365,34 +485,217 @@ fun PrevisionsScreen(
 }
 
 @Composable
-private fun ForecastSummaryCard(
+private fun PrevisionSummaryRow(
+    incomeLabel: String,
+    incomeAmount: String,
+    expenseLabel: String,
+    expenseAmount: String
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        PrevisionSummaryMetric(
+            label = incomeLabel,
+            amount = incomeAmount,
+            color = PrevisionsTheme.Income,
+            modifier = Modifier.weight(1f)
+        )
+        PrevisionSummaryMetric(
+            label = expenseLabel,
+            amount = expenseAmount,
+            color = PrevisionsTheme.Expense,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+private fun PrevisionSummaryMetric(
     label: String,
     amount: String,
     color: Color,
     modifier: Modifier = Modifier
 ) {
-    Card(
-        modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Column(
-            modifier = Modifier.padding(12.dp),
-            verticalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            Text(label, fontSize = 12.sp, color = Color(0xFF64748B))
-            Text(amount, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = color)
+        Text(label, fontSize = 11.sp, color = PrevisionsTheme.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(modifier = Modifier.height(2.dp))
+        Text(amount, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = color, maxLines = 1)
+    }
+}
+
+@Composable
+private fun PrevisionTypeTabs(
+    filters: List<PrevisionTypeFilter>,
+    selected: PrevisionTypeFilter,
+    onSelect: (PrevisionTypeFilter) -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 6.dp)
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color.White)
+            .padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp)
+    ) {
+        filters.forEach { filter ->
+            val isSelected = filter == selected
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(if (isSelected) PrevisionsTheme.Primary else Color.Transparent)
+                    .clickable { onSelect(filter) }
+                    .padding(vertical = 9.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = stringResource(filter.labelRes),
+                    fontSize = 12.sp,
+                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
+                    color = if (isSelected) Color.White else PrevisionsTheme.ChipInactive,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }
 
 @Composable
-private fun EcheanceRow(
-    item: EcheanceItem,
-    formattedAmount: String,
-    formattedDate: String,
-    isOverdue: Boolean,
+private fun PrevisionSecondaryFilters(
+    timingFilter: PrevisionTimingFilter,
+    onTimingFilterChange: (PrevisionTimingFilter) -> Unit,
+    selectedClient: String?,
+    showClientMenu: Boolean,
+    onShowClientMenu: (Boolean) -> Unit,
+    availableClients: List<String>,
+    onClientSelected: (String?) -> Unit,
+    sortMode: PrevisionSort,
+    onSortClick: () -> Unit,
+    showClientFilter: Boolean
+) {
+    LazyRow(
+        modifier = Modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(18.dp)
+    ) {
+        items(PrevisionTimingFilter.entries) { filter ->
+            PrevisionUnderlineChip(
+                label = stringResource(filter.labelRes),
+                selected = timingFilter == filter && selectedClient == null,
+                onClick = {
+                    onClientSelected(null)
+                    onTimingFilterChange(filter)
+                }
+            )
+        }
+
+        if (showClientFilter) {
+            item {
+                Box {
+                    PrevisionUnderlineChip(
+                        label = selectedClient ?: stringResource(R.string.client),
+                        selected = selectedClient != null,
+                        onClick = { onShowClientMenu(true) }
+                    )
+                    DropdownMenu(
+                        expanded = showClientMenu,
+                        onDismissRequest = { onShowClientMenu(false) }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.filter_all)) },
+                            onClick = { onClientSelected(null) }
+                        )
+                        availableClients.forEach { client ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(client, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                },
+                                onClick = { onClientSelected(client) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        item {
+            PrevisionUnderlineChip(
+                label = stringResource(sortMode.labelRes),
+                selected = sortMode != PrevisionSort.DATE,
+                onClick = onSortClick,
+                trailingIcon = when (sortMode) {
+                    PrevisionSort.AMOUNT_DESC -> Icons.Default.KeyboardArrowDown
+                    PrevisionSort.AMOUNT_ASC -> Icons.Default.KeyboardArrowUp
+                    PrevisionSort.DATE -> null
+                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun PrevisionUnderlineChip(
+    label: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
+) {
+    Column(
+        modifier = Modifier.clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            Text(
+                text = label,
+                fontSize = 13.sp,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (selected) PrevisionsTheme.Primary else PrevisionsTheme.ChipInactive,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            trailingIcon?.let {
+                Icon(
+                    imageVector = it,
+                    contentDescription = null,
+                    modifier = Modifier.size(16.dp),
+                    tint = if (selected) PrevisionsTheme.Primary else PrevisionsTheme.ChipInactive
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(6.dp))
+        Box(
+            modifier = Modifier
+                .width(if (selected) 24.dp else 0.dp)
+                .height(2.dp)
+                .background(
+                    if (selected) PrevisionsTheme.Primary else Color.Transparent,
+                    RoundedCornerShape(1.dp)
+                )
+        )
+    }
+}
+
+@Composable
+private fun PrevisionLineRow(
+    isIncome: Boolean,
+    title: String,
+    subtitle: String,
+    subtitleColor: Color,
+    detail: String?,
+    amount: String,
     canMarkPaid: Boolean,
     canEdit: Boolean,
     onMarkPaid: () -> Unit,
@@ -400,89 +703,110 @@ private fun EcheanceRow(
     onDelete: () -> Unit
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    val isIncome = item.type == EcheanceType.INCOME
-    val accent = if (isIncome) Color(0xFF4CAF50) else Color(0xFFF44336)
-    val iconBg = accent.copy(alpha = 0.12f)
+    val iconTint = if (isIncome) PrevisionsTheme.Income else PrevisionsTheme.Expense
+    val amountColor = if (isIncome) PrevisionsTheme.Primary else PrevisionsTheme.Expense
+    val showMenu = canMarkPaid || canEdit
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Color.White)
+            .padding(horizontal = 20.dp, vertical = 11.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                .size(38.dp)
+                .border(1.dp, iconTint.copy(alpha = 0.35f), CircleShape)
+                .background(iconTint.copy(alpha = 0.08f), CircleShape),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(36.dp)
-                    .clip(CircleShape)
-                    .background(iconBg),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    imageVector = if (isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-                    contentDescription = null,
-                    tint = accent,
-                    modifier = Modifier.size(18.dp)
-                )
-            }
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.label,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color(0xFF1A1A1A),
-                    maxLines = 1
-                )
-                Text(
-                    text = if (isOverdue) "$formattedDate · En retard" else formattedDate,
-                    fontSize = 12.sp,
-                    color = if (isOverdue) Color(0xFFF44336) else Color(0xFF9E9E9E)
-                )
-            }
-            Text(
-                text = formattedAmount,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Bold,
-                color = accent
+            Icon(
+                imageVector = if (isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
+                contentDescription = null,
+                tint = iconTint,
+                modifier = Modifier.size(17.dp)
             )
-            Box {
-                IconButton(onClick = { menuExpanded = true }) {
-                    Icon(Icons.Default.MoreVert, contentDescription = null, tint = Color(0xFF9E9E9E))
-                }
-                DropdownMenu(
-                    expanded = menuExpanded,
-                    onDismissRequest = { menuExpanded = false }
-                ) {
-                    if (canMarkPaid) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.mark_paid)) },
-                            onClick = {
-                                menuExpanded = false
-                                onMarkPaid()
-                            }
+        }
+
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = PrevisionsTheme.Primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                fontSize = 11.sp,
+                color = subtitleColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            detail?.let {
+                Text(
+                    text = it,
+                    fontSize = 10.sp,
+                    color = PrevisionsTheme.Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
+
+        Column(horizontalAlignment = Alignment.End) {
+            Text(
+                text = amount,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Bold,
+                color = amountColor,
+                maxLines = 1
+            )
+            if (showMenu) {
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(28.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.actions),
+                            tint = PrevisionsTheme.ChipInactive,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
-                    if (canEdit) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.edit)) },
-                            onClick = {
-                                menuExpanded = false
-                                onEdit()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
-                            onClick = {
-                                menuExpanded = false
-                                onDelete()
-                            }
-                        )
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        if (canMarkPaid) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.mark_paid)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onMarkPaid()
+                                }
+                            )
+                        }
+                        if (canEdit) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onEdit()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onDelete()
+                                }
+                            )
+                        }
                     }
                 }
             }

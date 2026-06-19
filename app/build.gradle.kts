@@ -14,8 +14,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 22
-        versionName = "1.11.0"
+        versionCode = 25
+        versionName = "1.11.3"
         buildConfigField("String", "API_BASE_URL", "\"http://213.130.144.183/abc-cash\"")
     }
 
@@ -29,6 +29,9 @@ android {
     }
 
     buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
         release {
             isMinifyEnabled = false
             signingConfig = signingConfigs.getByName("release")

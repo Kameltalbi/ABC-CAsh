@@ -64,6 +64,14 @@
     <string name="dashboard_income_breakdown">Répartition des entrées par catégorie</string>
     <string name="dashboard_expense_breakdown">Répartition des sorties par catégorie</string>
     <string name="dashboard_treasury_forecasts">Prévisions de trésorerie</string>
+    <string name="dashboard_treasury_curve_explain">Courbe du solde de trésorerie : encaissements − dépenses, jour par jour.</string>
+    <string name="dashboard_balance_today">Solde aujourd\'hui</string>
+    <string name="dashboard_balance_forecast_30d">Solde prévu dans 30 j</string>
+    <string name="dashboard_treasury_curve_history_legend">30 j passés (réel)</string>
+    <string name="dashboard_treasury_curve_forecast_legend">30 j à venir (prévu)</string>
+    <string name="dashboard_axis_30d_ago">J-30</string>
+    <string name="dashboard_axis_15d_ago">J-15</string>
+    <string name="dashboard_axis_plus_15">J+15</string>
     <string name="dashboard_today">Aujourd\'hui</string>
     <string name="dashboard_plus_days">+%1$d jours</string>
     <string name="dashboard_trend_week">%1$s cette semaine</string>
@@ -150,6 +158,9 @@
     <!-- TRANSACTIONS -->
     <string name="transactions">Transactions</string>
     <string name="no_transactions_month">Aucune transaction ce mois-ci</string>
+    <string name="transactions_sort_date">Date</string>
+    <string name="transactions_sort_amount_desc">Montant ↓</string>
+    <string name="transactions_sort_amount_asc">Montant ↑</string>
     <string name="mark_paid">Marquer comme payé</string>
     <string name="mark_paid_confirm">Marquer %1$s comme payé ?</string>
     <string name="delete_invoice">Supprimer l\'encaissement</string>
@@ -172,6 +183,7 @@
     <!-- FORECASTS -->
     <string name="forecasts">Prévisions</string>
     <string name="no_forecasts">Aucune prévision à venir</string>
+    <string name="forecasts_filter_overdue">En retard</string>
     <string name="delete_forecast">Supprimer la prévision</string>
     <string name="delete_forecast_confirm">Supprimer la prévision %1$s ?</string>
 

@@ -64,6 +64,14 @@
     <string name="dashboard_income_breakdown">Income by category</string>
     <string name="dashboard_expense_breakdown">Expense by category</string>
     <string name="dashboard_treasury_forecasts">Cash flow forecasts</string>
+    <string name="dashboard_treasury_curve_explain">Treasury balance curve: cash in minus cash out, day by day.</string>
+    <string name="dashboard_balance_today">Balance today</string>
+    <string name="dashboard_balance_forecast_30d">Balance in 30 days</string>
+    <string name="dashboard_treasury_curve_history_legend">Last 30 days (actual)</string>
+    <string name="dashboard_treasury_curve_forecast_legend">Next 30 days (forecast)</string>
+    <string name="dashboard_axis_30d_ago">D-30</string>
+    <string name="dashboard_axis_15d_ago">D-15</string>
+    <string name="dashboard_axis_plus_15">D+15</string>
     <string name="dashboard_today">Today</string>
     <string name="dashboard_plus_days">+%1$d days</string>
     <string name="dashboard_trend_week">%1$s this week</string>
@@ -150,6 +158,9 @@
     <!-- TRANSACTIONS -->
     <string name="transactions">Transactions</string>
     <string name="no_transactions_month">No transactions this month</string>
+    <string name="transactions_sort_date">Date</string>
+    <string name="transactions_sort_amount_desc">Amount ↓</string>
+    <string name="transactions_sort_amount_asc">Amount ↑</string>
     <string name="mark_paid">Mark as paid</string>
     <string name="mark_paid_confirm">Mark %1$s as paid?</string>
     <string name="delete_invoice">Delete income</string>
@@ -172,6 +183,7 @@
     <!-- FORECASTS -->
     <string name="forecasts">Forecasts</string>
     <string name="no_forecasts">No upcoming forecasts</string>
+    <string name="forecasts_filter_overdue">Overdue</string>
     <string name="delete_forecast">Delete forecast</string>
     <string name="delete_forecast_confirm">Delete forecast %1$s?</string>
 
