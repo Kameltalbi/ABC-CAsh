@@ -64,7 +64,7 @@ $DC build
 $DC up -d --force-recreate
 
 echo "==> Attente démarrage..."
-for i in $(seq 1 30); do
+for i in $(seq 1 60); do
   if curl -sf http://127.0.0.1:8081/health >/dev/null 2>&1; then
     echo ""
     curl -sf http://127.0.0.1:8081/health
@@ -72,9 +72,11 @@ for i in $(seq 1 30); do
     echo "==> API OK sur http://127.0.0.1:8081"
     break
   fi
-  if [[ $i -eq 30 ]]; then
+  if [[ $i -eq 60 ]]; then
     echo "ERREUR — logs API:"
     $DC logs abc-cash-api --tail 40
+    echo ""
+    echo "Si 'password authentication failed' → bash deploy/reset-db-volume.sh"
     echo ""
     echo "Variables dans le conteneur API:"
     $DC exec abc-cash-api printenv DATABASE_URL 2>/dev/null || true

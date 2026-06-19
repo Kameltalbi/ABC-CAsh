@@ -35,7 +35,16 @@ object DatabaseFactory {
                 return
             } catch (e: Exception) {
                 lastError = e
-                log.warn("Tentative DB {}/15 échouée: {}", attempt + 1, e.message)
+                val msg = e.message.orEmpty()
+                log.warn("Tentative DB {}/15 échouée: {}", attempt + 1, msg)
+                if (msg.contains("password authentication failed", ignoreCase = true)) {
+                    throw IllegalStateException(
+                        "Mot de passe PostgreSQL refusé. Si deploy/.env a été régénéré, " +
+                            "le volume Docker conserve l'ancien mot de passe. " +
+                            "Lancez: cd deploy && docker-compose down -v && docker-compose up -d",
+                        e
+                    )
+                }
                 if (attempt < 14) Thread.sleep(2000)
             }
         }

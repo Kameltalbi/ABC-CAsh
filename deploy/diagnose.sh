@@ -39,5 +39,28 @@ echo "=== Logs DB (10 dernières lignes) ==="
 $DC logs abc-cash-db --tail 10 2>/dev/null || echo "Conteneur abc-cash-db absent"
 
 echo ""
+echo "=== Test mot de passe PostgreSQL (.env → DB) ==="
+if [[ -f .env ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source .env
+  set +a
+  if $DC exec -T abc-cash-db pg_isready -U "${POSTGRES_USER:-abc_cash}" -d "${POSTGRES_DB:-abc_cash}" >/dev/null 2>&1; then
+    if PGPASSWORD="$POSTGRES_PASSWORD" $DC exec -T -e PGPASSWORD="$POSTGRES_PASSWORD" abc-cash-db \
+      psql -h localhost -U "${POSTGRES_USER:-abc_cash}" -d "${POSTGRES_DB:-abc_cash}" -c 'SELECT 1' >/dev/null 2>&1; then
+      echo "Mot de passe OK"
+    else
+      echo "ERREUR: mot de passe .env refusé par Postgres (volume créé avec un autre mot de passe)"
+      echo "  → bash deploy/reset-db-volume.sh"
+    fi
+  else
+    echo "Postgres pas prêt"
+  fi
+else
+  echo "deploy/.env absent"
+fi
+
+echo ""
 echo "=== Relancer ==="
 echo "  cd $APP_DIR && git pull && bash deploy/setup-vps.sh"
+echo "  Mot de passe DB incohérent → bash deploy/reset-db-volume.sh"
