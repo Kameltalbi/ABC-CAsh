@@ -1,9 +1,8 @@
 package com.abccash.app.treasury.data
 
+import com.abccash.app.locale.AppLocale
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 enum class EcheanceType {
     INCOME,
@@ -25,11 +24,47 @@ data class EcheanceMonthSection(
     val items: List<EcheanceItem>
 ) {
     val label: String
-        get() = month.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))
-            .replaceFirstChar { it.uppercase() }
+        get() = AppLocale.monthYear(month)
 }
 
 object EcheanceForecast {
+
+    fun buildItemsForMonth(
+        month: YearMonth,
+        invoices: List<Invoice>,
+        expenses: List<Expense>
+    ): List<EcheanceItem> {
+        val income = invoices
+            .filter { it.status != InvoiceStatus.PAID && it.remainingAmount > 0 }
+            .filter { YearMonth.from(it.dueDate) == month }
+            .map { invoice ->
+                EcheanceItem(
+                    id = "inv_${invoice.id}",
+                    type = EcheanceType.INCOME,
+                    label = invoice.clientName,
+                    amount = invoice.remainingAmount,
+                    dueDate = invoice.dueDate,
+                    invoiceId = invoice.id
+                )
+            }
+
+        val expenseItems = expenses
+            .filter { !it.isPaid }
+            .filter { it.appliesToMonth(month) }
+            .mapNotNull { expense ->
+                val dueDate = expense.occurrenceDateIn(month) ?: return@mapNotNull null
+                EcheanceItem(
+                    id = if (expense.isRecurring) "exp_${expense.id}_$dueDate" else "exp_${expense.id}",
+                    type = EcheanceType.EXPENSE,
+                    label = expense.label,
+                    amount = expense.amount,
+                    dueDate = dueDate,
+                    expenseId = expense.id
+                )
+            }
+
+        return (income + expenseItems).sortedBy { it.dueDate }
+    }
 
     fun buildItems(
         invoices: List<Invoice>,
@@ -49,6 +84,9 @@ object EcheanceForecast {
                 EcheanceMonthSection(month = month, items = sectionItems.sortedBy { it.dueDate })
             }
 
+    private fun isWithinRange(date: LocalDate, from: LocalDate, to: LocalDate): Boolean =
+        !date.isBefore(from) && !date.isAfter(to)
+
     private fun buildIncomeItems(
         invoices: List<Invoice>,
         from: LocalDate,
@@ -56,7 +94,7 @@ object EcheanceForecast {
     ): List<EcheanceItem> =
         invoices
             .filter { it.status != InvoiceStatus.PAID && it.remainingAmount > 0 }
-            .filter { !it.dueDate.isAfter(to) }
+            .filter { isWithinRange(it.dueDate, from, to) }
             .map { invoice ->
                 EcheanceItem(
                     id = "inv_${invoice.id}",
@@ -79,7 +117,7 @@ object EcheanceForecast {
 
         expenses.filter { !it.isPaid }.forEach { expense ->
             if (!expense.isRecurring) {
-                if (!expense.date.isAfter(to)) {
+                if (isWithinRange(expense.date, from, to)) {
                     items.add(
                         EcheanceItem(
                             id = "exp_${expense.id}",
@@ -96,7 +134,7 @@ object EcheanceForecast {
                 while (!month.isAfter(horizonEnd)) {
                     if (expense.appliesToMonth(month)) {
                         val occurrence = expense.occurrenceDateIn(month)
-                        if (occurrence != null && !occurrence.isAfter(to)) {
+                        if (occurrence != null && isWithinRange(occurrence, from, to)) {
                             items.add(
                                 EcheanceItem(
                                     id = "exp_${expense.id}_$occurrence",

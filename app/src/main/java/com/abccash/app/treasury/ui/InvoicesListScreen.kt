@@ -30,18 +30,21 @@ import com.abccash.app.treasury.data.hasPermission
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.res.stringResource
+import androidx.annotation.StringRes
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.data.PaymentMethod
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
-enum class InvoiceFilter(val label: String) {
-    ALL("Toutes"),
-    DUE("Dues"),
-    PARTIAL("Partielles"),
-    PAID("Soldées")
+enum class InvoiceFilter(@StringRes val labelRes: Int) {
+    ALL(R.string.filter_all),
+    DUE(R.string.filter_due),
+    PARTIAL(R.string.filter_partial),
+    PAID(R.string.filter_paid)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -81,7 +84,7 @@ fun InvoicesListScreen(
             modifier = Modifier.fillMaxSize(),
             contentAlignment = Alignment.Center
         ) {
-            Text("Accès refusé", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.access_denied), color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
         }
         return
     }
@@ -118,13 +121,13 @@ fun InvoicesListScreen(
     
     invoiceToEdit?.let { invoice ->
         InvoiceFormDialog(
-            title = "Modifier encaissement",
+            title = stringResource(R.string.edit),
             initialInvoice = invoice,
             onDismiss = {
                 invoiceToEdit = null
                 editError = null
             },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _ ->
+            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _, _ ->
                 onUpdateInvoice(
                     invoice.id,
                     invoiceNumber,
@@ -145,33 +148,17 @@ fun InvoicesListScreen(
     }
 
     invoiceToMarkPaid?.let { invoice ->
-        AlertDialog(
-            onDismissRequest = { invoiceToMarkPaid = null },
-            title = { Text("Marquer comme soldé") },
-            text = {
-                Text(
-                    "Encaisser ${formatMoney(invoice.remainingAmount)} pour ${invoice.clientName} ?"
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        onRecordPayment(
-                            invoice.id,
-                            invoice.remainingAmount,
-                            LocalDate.now(),
-                            PaymentMethod.CASH
-                        ) { error ->
-                            if (error == null) invoiceToMarkPaid = null
-                        }
-                    }
-                ) {
-                    Text("Soldé", color = Color(0xFF4CAF50))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { invoiceToMarkPaid = null }) {
-                    Text("Annuler")
+        FullPaymentConfirmDialog(
+            invoice = invoice,
+            onDismiss = { invoiceToMarkPaid = null },
+            onConfirm = { date, method ->
+                onRecordPayment(
+                    invoice.id,
+                    invoice.remainingAmount,
+                    date,
+                    method
+                ) { error ->
+                    if (error == null) invoiceToMarkPaid = null
                 }
             }
         )
@@ -201,10 +188,10 @@ fun InvoicesListScreen(
     invoiceToDelete?.let { invoice ->
         AlertDialog(
             onDismissRequest = { invoiceToDelete = null },
-            title = { Text("Supprimer l'encaissement ?") },
+            title = { Text(stringResource(R.string.delete_invoice_question)) },
             text = {
                 Text(
-                    "Supprimer ${invoice.clientName} (${invoice.invoiceNumber}) ?" +
+                    stringResource(R.string.delete_invoice_confirm, invoice.clientName) +
                         if (invoice.payments.isNotEmpty()) {
                             " Les ${invoice.payments.size} paiement(s) associé(s) seront aussi supprimés."
                         } else {
@@ -219,12 +206,12 @@ fun InvoicesListScreen(
                         invoiceToDelete = null
                     }
                 ) {
-                    Text("Supprimer", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { invoiceToDelete = null }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -235,10 +222,10 @@ fun InvoicesListScreen(
         val paymentsCount = selectedInvoices.sumOf { it.payments.size }
         AlertDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
-            title = { Text("Supprimer la sélection ?") },
+            title = { Text(stringResource(R.string.delete_selection_question)) },
             text = {
                 Text(
-                    "Supprimer ${selectedInvoices.size} encaissement(s) ?" +
+                    stringResource(R.string.delete_count, selectedInvoices.size) +
                         if (paymentsCount > 0) {
                             " $paymentsCount paiement(s) associé(s) seront aussi supprimés."
                         } else {
@@ -254,12 +241,12 @@ fun InvoicesListScreen(
                         showBulkDeleteConfirm = false
                     }
                 ) {
-                    Text("Supprimer", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBulkDeleteConfirm = false }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -272,7 +259,7 @@ fun InvoicesListScreen(
                     onClick = onNavigateToAddInvoice,
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Nouvel encaissement")
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_collection))
                 }
             }
         }
@@ -289,7 +276,7 @@ fun InvoicesListScreen(
             )
 
             Text(
-                text = "Affichage par date d'échéance",
+                text = stringResource(R.string.due_date_display),
                 fontSize = 12.sp,
                 color = Color.Gray,
                 modifier = Modifier.padding(top = 4.dp)
@@ -305,7 +292,7 @@ fun InvoicesListScreen(
                 IconButton(onClick = { showSearch = !showSearch }) {
                     Icon(
                         imageVector = Icons.Default.Search,
-                        contentDescription = "Rechercher",
+                        contentDescription = stringResource(R.string.search),
                         tint = if (showSearch || searchQuery.isNotEmpty()) {
                             MaterialTheme.colorScheme.primary
                         } else {
@@ -317,7 +304,7 @@ fun InvoicesListScreen(
                     IconButton(onClick = onNavigateToImport) {
                         Icon(
                             imageVector = Icons.Default.FileUpload,
-                            contentDescription = "Importer",
+                            contentDescription = stringResource(R.string.import_action),
                             tint = MaterialTheme.colorScheme.primary
                         )
                     }
@@ -330,13 +317,13 @@ fun InvoicesListScreen(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text("Client ou n° facture", fontSize = 14.sp) },
+                    placeholder = { Text(stringResource(R.string.search_placeholder), fontSize = 14.sp) },
                     singleLine = true,
                     shape = RoundedCornerShape(12.dp),
                     trailingIcon = {
                         if (searchQuery.isNotEmpty()) {
                             IconButton(onClick = { searchQuery = "" }) {
-                                Icon(Icons.Default.Clear, contentDescription = "Effacer")
+                                Icon(Icons.Default.Clear, contentDescription = stringResource(R.string.clear))
                             }
                         }
                     }
@@ -361,7 +348,7 @@ fun InvoicesListScreen(
                     FilterChip(
                         selected = selectedFilter == filter,
                         onClick = { selectedFilter = filter },
-                        label = { Text(filter.label, fontSize = 13.sp) },
+                        label = { Text(stringResource(filter.labelRes), fontSize = 13.sp) },
                         colors = FilterChipDefaults.filterChipColors(
                             selectedContainerColor = MaterialTheme.colorScheme.primary,
                             selectedLabelColor = Color.White
@@ -397,9 +384,9 @@ fun InvoicesListScreen(
                 ) {
                     Text(
                         text = if (invoices.any { YearMonth.from(it.dueDate) == selectedMonth }) {
-                            "Aucun encaissement ne correspond aux filtres"
+                            stringResource(R.string.no_invoice_match_filters)
                         } else {
-                            "Aucun encaissement avec échéance en ${selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))}"
+                            stringResource(R.string.no_collections_month, AppLocale.monthYear(selectedMonth))
                         },
                         style = MaterialTheme.typography.bodyMedium,
                         color = Color.Gray,
@@ -447,10 +434,11 @@ internal fun InvoiceFormDialog(
     selectedMonth: YearMonth? = null,
     errorMessage: String? = null,
     onDismiss: () -> Unit,
-    onConfirm: (String, String, Double, LocalDate, Boolean) -> Unit
+    onConfirm: (String, String, Double, LocalDate, Boolean, PaymentMethod) -> Unit
 ) {
     val isNew = initialInvoice == null
     var markAsCollected by remember { mutableStateOf(false) }
+    var paymentMethod by remember { mutableStateOf(PaymentMethod.CASH) }
     val defaultDueDate = remember(initialInvoice, selectedMonth) {
         initialInvoice?.dueDate
             ?: selectedMonth?.let { defaultDateForMonth(it) }
@@ -473,6 +461,7 @@ internal fun InvoiceFormDialog(
     val parsedAmount = totalAmount.replace(",", ".").toDoubleOrNull()
     val minAmount = initialInvoice?.paidAmount ?: 0.0
     val amountTooLow = parsedAmount != null && parsedAmount < minAmount
+    val dueDateLabel = stringResource(R.string.date)
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -483,35 +472,35 @@ internal fun InvoiceFormDialog(
                     value = invoiceNumber,
                     onValueChange = { invoiceNumber = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("N° facture") },
+                    label = { Text(stringResource(R.string.invoice_number)) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = clientName,
                     onValueChange = { clientName = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Client") },
+                    label = { Text(stringResource(R.string.client)) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = totalAmount,
                     onValueChange = { totalAmount = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Montant total") },
+                    label = { Text(stringResource(R.string.total_amount)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     suffix = { CurrencySuffix() },
                     isError = amountTooLow,
                     supportingText = if (amountTooLow) {
-                        { Text("Minimum : $minAmount") }
+                        { Text(stringResource(R.string.amount_minimum, minAmount.toString())) }
                     } else if (initialInvoice != null && initialInvoice.paidAmount > 0) {
-                        { Text("Déjà encaissé : ${initialInvoice.paidAmount}") }
+                        { Text(stringResource(R.string.already_collected) + " : ${initialInvoice.paidAmount}") }
                     } else {
                         null
                     }
                 )
                 TreasuryDateField(
-                    label = "Date d'échéance",
+                    label = dueDateLabel,
                     date = dueDate,
                     onDateChange = { dueDate = it }
                 )
@@ -532,8 +521,14 @@ internal fun InvoiceFormDialog(
                             onCheckedChange = { markAsCollected = it }
                         )
                         Text(
-                            text = "Encaissé intégralement (soldé)",
+                            text = stringResource(R.string.fully_collected_settled),
                             fontSize = 13.sp
+                        )
+                    }
+                    if (markAsCollected) {
+                        TreasuryPaymentMethodField(
+                            selectedMethod = paymentMethod,
+                            onMethodChange = { paymentMethod = it }
                         )
                     }
                 }
@@ -543,19 +538,19 @@ internal fun InvoiceFormDialog(
             Button(
                 onClick = {
                     val amount = parsedAmount ?: return@Button
-                    onConfirm(invoiceNumber, clientName, amount, dueDate, markAsCollected)
+                    onConfirm(invoiceNumber, clientName, amount, dueDate, markAsCollected, paymentMethod)
                 },
                 enabled = invoiceNumber.isNotBlank() &&
                     clientName.isNotBlank() &&
                     parsedAmount != null &&
                     !amountTooLow
             ) {
-                Text(if (initialInvoice == null) "Ajouter" else "Enregistrer")
+                Text(if (initialInvoice == null) stringResource(R.string.add) else stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuler")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -584,9 +579,9 @@ fun InvoiceCard(
     }
 
     val statusLabel = when (invoice.status) {
-        InvoiceStatus.PAID -> "Soldé"
-        InvoiceStatus.PARTIAL -> "Partiel"
-        InvoiceStatus.DUE -> "Dû"
+        InvoiceStatus.PAID -> stringResource(R.string.status_paid)
+        InvoiceStatus.PARTIAL -> stringResource(R.string.status_partial)
+        InvoiceStatus.DUE -> stringResource(R.string.status_due)
     }
 
     var showMenu by remember { mutableStateOf(false) }
@@ -625,20 +620,28 @@ fun InvoiceCard(
                         maxLines = 1
                     )
                     Text(
-                        text = "${invoice.invoiceNumber} · éch. ${invoice.dueDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))}",
+                        text = stringResource(
+                            R.string.invoice_due_meta,
+                            invoice.invoiceNumber,
+                            invoice.dueDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))
+                        ),
                         fontSize = 11.sp,
                         color = Color.Gray,
                         maxLines = 1
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "Total ${formatAmount(invoice.totalAmount)}",
+                        text = stringResource(R.string.invoice_total_meta, formatAmount(invoice.totalAmount)),
                         fontSize = 12.sp,
                         color = Color(0xFF424242)
                     )
                     if (!isPaid) {
                         Text(
-                            text = "Encaissé ${formatAmount(invoice.paidAmount)} · Reste ${formatAmount(invoice.remainingAmount)}",
+                            text = stringResource(
+                                R.string.invoice_paid_remaining,
+                                formatAmount(invoice.paidAmount),
+                                formatAmount(invoice.remainingAmount)
+                            ),
                             fontSize = 11.sp,
                             color = statusColor,
                             fontWeight = FontWeight.Medium
@@ -667,7 +670,7 @@ fun InvoiceCard(
                             ) {
                                 Icon(
                                     Icons.Default.MoreVert,
-                                    contentDescription = "Actions",
+                                    contentDescription = stringResource(R.string.actions),
                                     tint = Color(0xFF64748B)
                                 )
                             }
@@ -677,14 +680,14 @@ fun InvoiceCard(
                             ) {
                                 if (canAddPayment && !isPaid) {
                                     DropdownMenuItem(
-                                        text = { Text("Soldé") },
+                                        text = { Text(stringResource(R.string.action_validate)) },
                                         onClick = {
                                             showMenu = false
                                             onMarkPaid()
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Paiement partiel") },
+                                        text = { Text(stringResource(R.string.partial_payment)) },
                                         onClick = {
                                             showMenu = false
                                             onPartialPayment()
@@ -693,14 +696,14 @@ fun InvoiceCard(
                                 }
                                 if (isAdmin) {
                                     DropdownMenuItem(
-                                        text = { Text("Modifier") },
+                                        text = { Text(stringResource(R.string.edit)) },
                                         onClick = {
                                             showMenu = false
                                             onEdit()
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Supprimer", color = Color(0xFFF44336)) },
+                                        text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
                                         onClick = {
                                             showMenu = false
                                             onDelete()
@@ -741,18 +744,21 @@ internal fun PartialPaymentDialog(
     }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
-    var showMethodMenu by remember { mutableStateOf(false) }
 
     val parsedAmount = amountText.replace(" ", "").replace(",", ".").toDoubleOrNull()
     val formatAmount = rememberFormatMoney()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Paiement partiel") },
+        title = { Text(stringResource(R.string.partial_payment)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(
-                    text = "${invoice.clientName} · Reste ${formatAmount(invoice.remainingAmount)}",
+                    text = stringResource(
+                        R.string.client_remaining,
+                        invoice.clientName,
+                        formatAmount(invoice.remainingAmount)
+                    ),
                     fontSize = 13.sp,
                     color = Color.Gray
                 )
@@ -760,46 +766,21 @@ internal fun PartialPaymentDialog(
                     value = amountText,
                     onValueChange = { amountText = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Montant encaissé") },
+                    label = { Text(stringResource(R.string.collected_amount_label)) },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     suffix = { CurrencySuffix() },
                     isError = parsedAmount != null && parsedAmount > invoice.remainingAmount
                 )
                 TreasuryDateField(
-                    label = "Date d'encaissement",
+                    label = stringResource(R.string.payment_date),
                     date = selectedDate,
                     onDateChange = { selectedDate = it }
                 )
-                ExposedDropdownMenuBox(
-                    expanded = showMethodMenu,
-                    onExpandedChange = { showMethodMenu = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedMethod.label,
-                        onValueChange = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        label = { Text("Mode de règlement") },
-                        readOnly = true,
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showMethodMenu) }
-                    )
-                    ExposedDropdownMenu(
-                        expanded = showMethodMenu,
-                        onDismissRequest = { showMethodMenu = false }
-                    ) {
-                        PaymentMethod.entries.forEach { method ->
-                            DropdownMenuItem(
-                                text = { Text(method.label) },
-                                onClick = {
-                                    selectedMethod = method
-                                    showMethodMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
+                TreasuryPaymentMethodField(
+                    selectedMethod = selectedMethod,
+                    onMethodChange = { selectedMethod = it }
+                )
                 errorMessage?.let {
                     Text(text = it, color = Color(0xFFF44336), fontSize = 12.sp)
                 }
@@ -815,12 +796,109 @@ internal fun PartialPaymentDialog(
                     parsedAmount > 0 &&
                     parsedAmount <= invoice.remainingAmount
             ) {
-                Text("Enregistrer")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuler")
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+internal fun FullPaymentConfirmDialog(
+    invoice: Invoice,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate, PaymentMethod) -> Unit
+) {
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
+    var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    val formatAmount = rememberFormatMoney()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.mark_as_settled)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.client_remaining,
+                        invoice.clientName,
+                        formatAmount(invoice.remainingAmount)
+                    ),
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                TreasuryDateField(
+                    label = stringResource(R.string.payment_date),
+                    date = selectedDate,
+                    onDateChange = { selectedDate = it }
+                )
+                TreasuryPaymentMethodField(
+                    selectedMethod = selectedMethod,
+                    onMethodChange = { selectedMethod = it }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedDate, selectedMethod) }) {
+                Text(stringResource(R.string.confirm), color = Color(0xFF4CAF50))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
+            }
+        }
+    )
+}
+
+@Composable
+internal fun ExpensePaymentConfirmDialog(
+    expense: com.abccash.app.treasury.data.Expense,
+    dueDate: LocalDate,
+    onDismiss: () -> Unit,
+    onConfirm: (LocalDate, PaymentMethod) -> Unit
+) {
+    var selectedDate by remember { mutableStateOf(dueDate) }
+    var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    val formatAmount = rememberFormatMoney()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.validate_expense)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(
+                    text = stringResource(
+                        R.string.expense_amount_meta,
+                        expense.label,
+                        formatAmount(expense.amount)
+                    ),
+                    fontSize = 13.sp,
+                    color = Color.Gray
+                )
+                TreasuryDateField(
+                    label = stringResource(R.string.payment_date),
+                    date = selectedDate,
+                    onDateChange = { selectedDate = it }
+                )
+                TreasuryPaymentMethodField(
+                    selectedMethod = selectedMethod,
+                    onMethodChange = { selectedMethod = it }
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = { onConfirm(selectedDate, selectedMethod) }) {
+                Text(stringResource(R.string.action_validate), color = Color(0xFF4CAF50))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text(stringResource(R.string.cancel))
             }
         }
     )

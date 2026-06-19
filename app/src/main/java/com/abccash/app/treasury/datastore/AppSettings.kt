@@ -17,7 +17,8 @@ data class AppSettingsState(
     val notificationsEnabled: Boolean = true,
     val biometricEnabled: Boolean = false,
     val pinEnabled: Boolean = false,
-    val hasPin: Boolean = false
+    val hasPin: Boolean = false,
+    val appLanguageTag: String? = null
 ) {
     fun requiresLock(): Boolean = biometricEnabled || (pinEnabled && hasPin)
 }
@@ -48,8 +49,26 @@ class AppSettings(private val context: Context) {
             notificationsEnabled = prefs[Keys.NOTIFICATIONS_ENABLED] ?: true,
             biometricEnabled = prefs[Keys.BIOMETRIC_ENABLED] ?: false,
             pinEnabled = prefs[Keys.PIN_ENABLED] ?: false,
-            hasPin = !prefs[Keys.PIN_HASH].isNullOrBlank()
+            hasPin = !prefs[Keys.PIN_HASH].isNullOrBlank(),
+            appLanguageTag = prefs[Keys.APP_LANGUAGE]
         )
+    }
+
+    fun appLanguageFlow(): Flow<String?> = context.userDataStore.data.map { prefs ->
+        prefs[Keys.APP_LANGUAGE]
+    }
+
+    suspend fun getAppLanguageTag(): String? =
+        context.userDataStore.data.first()[Keys.APP_LANGUAGE]
+
+    suspend fun setAppLanguage(languageTag: String?) {
+        context.userDataStore.edit { prefs ->
+            if (languageTag.isNullOrBlank()) {
+                prefs.remove(Keys.APP_LANGUAGE)
+            } else {
+                prefs[Keys.APP_LANGUAGE] = languageTag
+            }
+        }
     }
 
     fun customIncomeCategories(entrepriseId: String): Flow<List<String>> =
@@ -154,6 +173,30 @@ class AppSettings(private val context: Context) {
         }
     }
 
+    suspend fun renameCustomIncomeCategory(
+        entrepriseId: String,
+        oldLabel: String,
+        newLabel: String
+    ): String? {
+        val trimmed = newLabel.trim()
+        if (trimmed.isBlank()) return "label_required"
+        val key = customIncomeKey(entrepriseId)
+        val current = decodeList(context.userDataStore.data.first()[key])
+        if (current.none { it.equals(oldLabel, ignoreCase = true) }) return null
+        if (current.any { it.equals(trimmed, ignoreCase = true) && !it.equals(oldLabel, ignoreCase = true) }) {
+            return "category_exists"
+        }
+        context.userDataStore.edit { prefs ->
+            val items = decodeList(prefs[key]).toMutableList()
+            val index = items.indexOfFirst { it.equals(oldLabel, ignoreCase = true) }
+            if (index >= 0) {
+                items[index] = trimmed
+                prefs[key] = encodeList(items)
+            }
+        }
+        return null
+    }
+
     suspend fun addCustomExpenseCategory(entrepriseId: String, label: String) {
         val trimmed = label.trim()
         if (trimmed.isBlank()) return
@@ -175,6 +218,30 @@ class AppSettings(private val context: Context) {
         }
     }
 
+    suspend fun renameCustomExpenseCategory(
+        entrepriseId: String,
+        oldLabel: String,
+        newLabel: String
+    ): String? {
+        val trimmed = newLabel.trim()
+        if (trimmed.isBlank()) return "label_required"
+        val key = customExpenseKey(entrepriseId)
+        val current = decodeList(context.userDataStore.data.first()[key])
+        if (current.none { it.equals(oldLabel, ignoreCase = true) }) return null
+        if (current.any { it.equals(trimmed, ignoreCase = true) && !it.equals(oldLabel, ignoreCase = true) }) {
+            return "category_exists"
+        }
+        context.userDataStore.edit { prefs ->
+            val items = decodeList(prefs[key]).toMutableList()
+            val index = items.indexOfFirst { it.equals(oldLabel, ignoreCase = true) }
+            if (index >= 0) {
+                items[index] = trimmed
+                prefs[key] = encodeList(items)
+            }
+        }
+        return null
+    }
+
     private object Keys {
         val SELECTED_CURRENCY_ID = stringPreferencesKey("selected_currency_id")
         val LEGACY_DEFAULT_CURRENCY = stringPreferencesKey("default_currency")
@@ -183,6 +250,7 @@ class AppSettings(private val context: Context) {
         val BIOMETRIC_ENABLED = booleanPreferencesKey("biometric_enabled")
         val PIN_ENABLED = booleanPreferencesKey("pin_enabled")
         val PIN_HASH = stringPreferencesKey("app_pin_hash")
+        val APP_LANGUAGE = stringPreferencesKey("app_language")
     }
 
     private fun customIncomeKey(entrepriseId: String) =

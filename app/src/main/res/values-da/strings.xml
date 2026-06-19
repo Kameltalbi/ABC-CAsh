@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ABC Cash</string>
+
+    <!-- NAV -->
+    <string name="nav_home">Hjem</string>
+    <string name="nav_home_short">Hjem</string>
+    <string name="nav_transactions">Transaktioner</string>
+    <string name="nav_transactions_short">Trans.</string>
+    <string name="nav_treasury">Likviditet</string>
+    <string name="nav_treasury_short">Likv.</string>
+    <string name="nav_settings">Indstillinger</string>
+    <string name="nav_settings_short">Indst.</string>
+    <string name="nav_plus">Mere</string>
+    <string name="nav_forecasts">Prognoser</string>
+
+    <!-- COMMON -->
+    <string name="ok">OK</string>
+    <string name="cancel">Annuller</string>
+    <string name="confirm">Bekræft</string>
+    <string name="save">Gem</string>
+    <string name="delete">Slet</string>
+    <string name="edit">Rediger</string>
+    <string name="action_validate">Valider</string>
+    <string name="partial_payment">Delbetaling</string>
+    <string name="add">Tilføj</string>
+    <string name="back">Tilbage</string>
+    <string name="access_denied">Adgang nægtet</string>
+    <string name="logout">Log ud</string>
+    <string name="loading">Indlæser…</string>
+
+    <!-- AUTH -->
+    <string name="login">Log ind</string>
+    <string name="sign_in">Log ind</string>
+    <string name="email">E-mail</string>
+    <string name="password">Adgangskode</string>
+    <string name="create_account">Opret konto</string>
+    <string name="full_name">Fulde navn</string>
+    <string name="company_name">Firmanavn</string>
+    <string name="phone">Telefon</string>
+    <string name="confirm_password">Bekræft adgangskode</string>
+    <string name="password_min_chars">Adgangskoden skal have mindst 6 tegn</string>
+
+    <!-- DASHBOARD -->
+    <string name="hello_name">Hej %1$s</string>
+    <string name="your_treasury">Din likviditet</string>
+    <string name="company_fallback">Dit firma</string>
+    <string name="account_up_to_date">Konto opdateret</string>
+    <string name="balance_evolution">Saldo udvikling</string>
+    <string name="last_30_days">Seneste 30 dage</string>
+    <string name="not_enough_data">Ikke nok data</string>
+    <string name="income_title">Indtægter</string>
+    <string name="expense_title">Udgifter</string>
+    <string name="forecasts_upcoming">Kommende prognoser</string>
+    <string name="forecasts_30_days">Næste 30 dage</string>
+    <string name="expected_income">Forventede indtægter</string>
+    <string name="expected_expenses">Forventede udgifter</string>
+    <string name="healthy_treasury">Sund likviditet</string>
+    <string name="end_of_month_estimate">Estimat månedsslut</string>
+    <string name="quick_entry">Hurtig indtastning</string>
+    <string name="income_breakdown">Indtægtsfordeling</string>
+    <string name="dashboard_planned_outflows">Planlagte udgifter</string>
+    <string name="dashboard_income_breakdown">Indtægter per kategori</string>
+    <string name="dashboard_expense_breakdown">Udgifter per kategori</string>
+    <string name="dashboard_treasury_forecasts">Likviditetsprognoser</string>
+    <string name="dashboard_today">I dag</string>
+    <string name="dashboard_plus_days">+%1$d dage</string>
+    <string name="dashboard_trend_week">%1$s denne uge</string>
+    <string name="dashboard_trend_30d">%1$s om 30 dage</string>
+    <string name="dashboard_notifications">Notifikationer</string>
+    <string name="dashboard_monthly_bars_title">Indbetalinger vs udgifter</string>
+    <string name="dashboard_monthly_bars_subtitle_12m">Seneste 12 måneder</string>
+    <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
+    <string name="dashboard_period_year">År</string>
+    <string name="dashboard_period_month">Måned</string>
+    <string name="previous_year">Forrige år</string>
+    <string name="next_year">Næste år</string>
+    <string name="collected_month">Indbetalt · %1$s</string>
+    <string name="collected_year">Indbetalt · %1$s</string>
+    <string name="expense_paid_pending_year">Betalt %1$s · Kommende %2$s · %3$s</string>
+    <string name="expense_paid_year">Betalt %1$s · %2$s</string>
+    <string name="expense_structure">Omkostningsstruktur</string>
+    <string name="expense_paid_pending_month">Betalt %1$s · Kommende %2$s · %3$s</string>
+    <string name="expense_paid_month">Betalt %1$s · %2$s</string>
+    <string name="bank_balance_month">Banksaldo · %1$s</string>
+    <string name="calculated_balance_month">Beregnet saldo · %1$s</string>
+    <string name="forecasts_due_dates">Prognoser og forfaldsdatoer</string>
+    <string name="forecasts_real_data">Næste 30 dage · reelle data</string>
+    <string name="no_income_month">Ingen indtægter denne måned</string>
+    <string name="no_expense_month">Ingen udgifter denne måned</string>
+    <string name="no_data">Ingen data</string>
+    <string name="user_fallback">Bruger</string>
+    <string name="plus_settings_sub_full">Profil, kategorier, valuta, sikkerhed</string>
+    <string name="balance_evolution_30d">Saldo udvikling (30 dage)</string>
+    <string name="balance_range">D-30 %1$s · I dag %2$s</string>
+    <string name="displayed_month">Vist måned: %1$s</string>
+    <string name="previous_month">Forrige måned</string>
+    <string name="next_month">Næste måned</string>
+
+    <!-- SETTINGS -->
+    <string name="settings">Indstillinger</string>
+    <string name="settings_management">Administration</string>
+    <string name="settings_profile">Profil</string>
+    <string name="settings_categories">Kategorier</string>
+    <string name="settings_options">Indstillinger</string>
+    <string name="settings_users">Brugere</string>
+    <string name="settings_users_sub">Liste, tilføj, adgangskoder, sikkerhedskopi</string>
+    <string name="settings_my_profile">Min profil</string>
+    <string name="settings_my_profile_sub">Navn, e-mail, telefon</string>
+    <string name="settings_company">Firma</string>
+    <string name="settings_company_sub">Firmaoplysninger</string>
+    <string name="settings_income_categories">Indtægtskategorier</string>
+    <string name="settings_income_categories_sub">Brugerdefinerede indtægtskategorier</string>
+    <string name="settings_expense_categories">Udgiftskategorier</string>
+    <string name="settings_expense_categories_sub">Brugerdefinerede udgiftskategorier</string>
+    <string name="settings_currency">Standardvaluta</string>
+    <string name="settings_currency_sub">Indbyggede og brugerdefinerede valutaer</string>
+    <string name="settings_notifications">Notifikationer</string>
+    <string name="settings_notifications_sub">Påmindelser og advarsler</string>
+    <string name="settings_security">Sikkerhed</string>
+    <string name="settings_security_sub">Fingeraftryk og PIN-kode</string>
+    <string name="settings_language">Sprog</string>
+    <string name="settings_language_sub">Appens visningssprog</string>
+    <string name="language_title">Sprog</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="language_en">English</string>
+    <string name="language_fr">Français</string>
+    <string name="language_es">Español</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_pt">Português</string>
+    <string name="language_it">Italiano</string>
+    <string name="language_sv">Svenska</string>
+    <string name="language_nb">Norsk</string>
+    <string name="language_da">Dansk</string>
+    <string name="language_tr">Türkçe</string>
+
+    <!-- TRANSACTIONS -->
+    <string name="transactions">Transaktioner</string>
+    <string name="no_transactions_month">Ingen transaktioner denne måned</string>
+    <string name="mark_paid">Markér som betalt</string>
+    <string name="mark_paid_confirm">Markér %1$s som betalt?</string>
+    <string name="delete_invoice">Slet indtægt</string>
+    <string name="delete_invoice_confirm">Slet indtægt %1$s?</string>
+    <string name="delete_expense">Slet udgift</string>
+    <string name="delete_expense_confirm">Slet udgift %1$s?</string>
+
+    <!-- TREASURY -->
+    <string name="treasury">Likviditet</string>
+    <string name="collections">Indtægter</string>
+    <string name="expenses">Udgifter</string>
+    <string name="forecast_balance">Prognosticeret saldo</string>
+    <string name="bank_account">Bankkonto</string>
+    <string name="bank_balance">Aktuel banksaldo</string>
+    <string name="calculated_treasury">Beregnet likviditet</string>
+    <string name="last_saved_balance">Senest gemte saldo</string>
+    <string name="invalid_amount">Ugyldigt beløb</string>
+    <string name="clear_saved_balance">Ryd gemt saldo</string>
+
+    <!-- FORECASTS -->
+    <string name="forecasts">Prognoser</string>
+    <string name="no_forecasts">Ingen kommende prognoser</string>
+    <string name="delete_forecast">Slet prognose</string>
+    <string name="delete_forecast_confirm">Slet prognose %1$s?</string>
+
+    <!-- PLUS -->
+    <string name="plus">Mere</string>
+    <string name="plus_forecasts">Prognoser</string>
+    <string name="plus_forecasts_sub">Kommende indtægter og udgifter</string>
+    <string name="plus_settings">Indstillinger</string>
+    <string name="plus_settings_sub">Profil, kategorier, sikkerhed</string>
+    <string name="plus_import">Importer fakturaer</string>
+    <string name="plus_import_sub">Importer data fra en CSV-fil</string>
+    <string name="plus_bank_reconciliation">Bankafstemning</string>
+    <string name="plus_bank_reconciliation_sub">Juster banksaldoen</string>
+
+    <!-- PERMISSIONS -->
+    <string name="admin_import_only">Kun administratorer kan importere data</string>
+    <string name="admin_income_only">Kun administratorer kan administrere indtægter</string>
+    <string name="no_expense_permission">Du har ikke tilladelse til at administrere udgifter</string>
+    <string name="invalid_transaction_type">Ugyldig transaktionstype</string>
+    <string name="no_bank_permission">Du har ikke tilladelse til at få adgang til bankkontoen</string>
+    <string name="admin_users_only">Kun administratorer kan administrere brugere</string>
+    <string name="no_treasury_permission">Du har ikke tilladelse til at se likviditeten</string>
+
+    <!-- CATEGORIES -->
+    <string name="category_service">Tjenester</string>
+    <string name="category_goods">Varer</string>
+    <string name="category_other">Andet</string>
+    <string name="category_material">Materialer</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_meals">Måltider</string>
+    <string name="category_taxes">Skatter</string>
+    <string name="category_subscription">Abonnementer</string>
+    <string name="built_in_categories">Indbyggede kategorier</string>
+    <string name="custom_categories">Brugerdefinerede kategorier</string>
+    <string name="new_category">Ny kategori</string>
+
+    <!-- ERRORS -->
+    <string name="label_required">Etiket er påkrævet</string>
+    <string name="symbol_required">Symbol er påkrævet</string>
+    <string name="decimals_range">Decimaler skal være mellem 0 og 4</string>
+    <string name="session_expired">Session udløbet. Log ind igen</string>
+    <string name="invoice_not_found">Faktura ikke fundet</string>
+    <string name="no_payment_permission">Du har ikke tilladelse til at registrere en betaling</string>
+    <string name="category_builtin_tag">Indbygget</string>
+    <string name="category_required">Vælg en kategori</string>
+    <string name="category_exists">Denne kategori findes allerede</string>
+    <string name="add_category_in_settings">Tilføj kategorier i Indstillinger, før du registrerer en transaktion.</string>
+    <string name="edit_category">Rediger kategori</string>
+    <string name="delete_category_confirm">Slet kategori \"%1$s\"?</string>
+    <string name="no_custom_categories">Ingen brugerdefinerede kategorier endnu</string>
+    <string name="category_custom_tag">Brugerdefineret</string>
+
+    <!-- TREASURY SCREEN -->
+    <string name="treasury_year_title">Likviditet %1$d</string>
+    <string name="treasury_year_range">Januar → December</string>
+    <string name="treasury_month_end_balance">Saldo ved månedsslut</string>
+    <string name="treasury_cumulative_formula">Akkumuleret: forrige saldo + indtægter − udgifter</string>
+    <string name="treasury_december_end">Slut december: %1$s</string>
+    <string name="treasury_upcoming_part">Heraf %1$s kommende</string>
+    <string name="treasury_december_subtitle">Pr. 31. december</string>
+    <string name="export_csv">Eksporter CSV</string>
+    <string name="bank_reconciliation_cd">Bankafstemning</string>
+
+    <!-- AUTH -->
+    <string name="login_subtitle">Log ind i dit likviditetsområde</string>
+    <string name="login_reinstall_hint">Efter geninstallation af appen slettes lokale konti: opret en konto igen eller gendan en Admin-sikkerhedskopi.</string>
+    <string name="signup_admin_title">Adminregistrering</string>
+    <string name="signup_admin_subtitle">Opret din konto for at blive administrator for dit firma</string>
+    <string name="signup_create_button">Opret min konto</string>
+    <string name="signup_admin_note">Du bliver automatisk udpeget som administrator</string>
+    <string name="your_name">Dit navn</string>
+    <string name="company_name_placeholder">Dit firmanavn</string>
+    <string name="email_placeholder">eksempel@email.com</string>
+    <string name="phone_placeholder">+216 XX XXX XXX</string>
+    <string name="password_placeholder_min">Mindst 6 tegn</string>
+    <string name="repeat_password">Gentag din adgangskode</string>
+    <string name="splash_tagline">Likviditetsstyring</string>
+
+    <!-- ONBOARDING -->
+    <string name="onboarding_welcome">Velkommen, administrator!</string>
+    <string name="onboarding_desc">Som opretter af firmaet har du eksklusiv adgang til at administrere likviditeten.</string>
+    <string name="onboarding_first_admin">Du er firmaets første administrator</string>
+    <string name="onboarding_start">Kom i gang</string>
+
+    <!-- FORM -->
+    <string name="label">Etiket</string>
+    <string name="amount">Beløb</string>
+    <string name="frequency">Frekvens</string>
+    <string name="invoice_number">Fakturanr.</string>
+    <string name="client">Kunde</string>
+    <string name="supplier">Leverandør</string>
+    <string name="total_amount">Samlet beløb</string>
+    <string name="address">Adresse</string>
+    <string name="role">Rolle</string>
+    <string name="initial_password">Startadgangskode</string>
+    <string name="permissions">Tilladelser</string>
+    <string name="only_initial_admin">Kun den første konto kan være administrator</string>
+    <string name="name">Navn</string>
+    <string name="date">Dato</string>
+    <string name="end_date">Slutdato</string>
+    <string name="amount_placeholder">0.000</string>
+    <string name="income_category">Indtægtskategori</string>
+    <string name="expense_category">Udgiftskategori</string>
+    <string name="note_optional">Note (valgfrit)</string>
+    <string name="note_placeholder">f.eks. teamkaffe mandag</string>
+    <string name="client_placeholder">f.eks. Kunde X</string>
+    <string name="supplier_placeholder">f.eks. Carrefour</string>
+    <string name="recurrence_end">Slut på gentagelse</string>
+    <string name="payment_method">Betalingsmetode</string>
+
+    <!-- EXPENSES -->
+    <string name="new_expense">Ny udgift</string>
+    <string name="edit_expense">Rediger udgift</string>
+    <string name="save_expense">Gem udgift</string>
+    <string name="recurring_expense">Tilbagevendende udgift</string>
+    <string name="expense_label_placeholder">f.eks. Kontorleje</string>
+    <string name="no_expenses_month">Ingen udgifter denne måned</string>
+    <string name="delete_expense_question">Slet udgift?</string>
+    <string name="delete_selection_question">Slet markering?</string>
+    <string name="upcoming_badge">Kommende</string>
+    <string name="expenses_month_title">Udgifter — %1$s</string>
+    <string name="stop_recurrence_on">Gentagelse stoppet %1$s</string>
+    <string name="recurrence_end_short">Slut %1$s</string>
+    <string name="stop_after_month">Stop efter denne måned</string>
+    <string name="add_expense">Tilføj udgift</string>
+    <string name="recurring_badge">Tilbagevendende</string>
+    <string name="delete_expense_item_confirm">Slet \"%1$s\" (%2$s)?</string>
+    <string name="already_paid_expense">Allerede betalt</string>
+    <string name="upcoming_forecast">Kommende (prognose)</string>
+    <string name="end_date_after_expense">Slutdato skal være efter udgiftsdato</string>
+    <string name="forecast_expense">Prognosticeret udgift</string>
+
+    <!-- INCOME -->
+    <string name="new_invoice">Ny indtægt</string>
+    <string name="save_invoice">Gem indtægt</string>
+    <string name="fully_collected">Fuldt indbetalt</string>
+    <string name="mark_settled_on_save">Markér som afregnet ved gem</string>
+    <string name="fully_collected_settled">Fuldt indbetalt (afregnet)</string>
+    <string name="due_date_display">Vis efter forfaldsdato</string>
+    <string name="search_placeholder">Kunde eller fakturanr.</string>
+    <string name="no_collections_month">Ingen indbetalinger med forfald i %1$s</string>
+    <string name="mark_as_settled">Markér som afregnet</string>
+    <string name="validate_expense">Valider udgift</string>
+    <string name="collected_amount_label">Indbetalt beløb</string>
+    <string name="delete_invoice_question">Slet indtægt?</string>
+    <string name="new_collection">Ny indtægt</string>
+    <string name="invoice_due_meta">%1$s · forf. %2$s</string>
+    <string name="invoice_total_meta">I alt %1$s</string>
+    <string name="invoice_paid_remaining">Indbetalt %1$s · Resterende %2$s</string>
+    <string name="client_remaining">%1$s · Resterende %2$s</string>
+    <string name="expense_amount_meta">%1$s · %2$s</string>
+    <string name="already_collected">Allerede indbetalt</string>
+    <string name="forecast_income">Prognosticeret indtægt</string>
+    <string name="no_income_permission">Du har ikke tilladelse til at administrere indtægter</string>
+
+    <!-- PAYMENTS -->
+    <string name="record_payment">Registrer en betaling</string>
+    <string name="payment_total">Samlet beløb</string>
+    <string name="already_paid">Allerede betalt</string>
+    <string name="remaining_to_collect">Resterende at inddrive</string>
+    <string name="new_payment">Ny betaling</string>
+    <string name="advance_amount">Forudbetalingsbeløb</string>
+    <string name="payment_date">Betalingsdato</string>
+    <string name="save_payment">Gem betaling</string>
+    <string name="payment_history">Betalingshistorik</string>
+    <string name="choose_date">Vælg dato</string>
+
+    <!-- IMPORT -->
+    <string name="import_invoices_title">Importer indtægter</string>
+    <string name="file_structure">Filstruktur</string>
+    <string name="import_columns">Accepterede kolonner: Fakturanr., Kunde, Beløb, Forfaldsdato</string>
+    <string name="import_columns_en">(eller på engelsk: invoiceNumber, clientName, totalAmount, dueDate)</string>
+    <string name="import_due_date_note">Forfaldsdatoen bestemmer visningsmåneden for hver faktura.</string>
+    <string name="import_formats">CSV (komma, semikolon eller tab) eller Excel .xlsx</string>
+    <string name="android_file_picker">Android filvælger</string>
+    <string name="android_file_picker_note">Det er ikke appen: Android åbner sin filhåndtering.</string>
+    <string name="empty_file_list_hint">Tom liste? Menu ☰ → Downloads. Deaktiver \"Large files\"-filtre.</string>
+    <string name="choose_file">Vælg fil</string>
+
+    <!-- BANK -->
+    <string name="bank_reconciliation_how">Hvordan fungerer det?</string>
+    <string name="bank_reconciliation_steps">• Indtast saldoen på din kontoudskrift\n• Sammenlign med beregnet likviditet\n• Juster om nødvendigt</string>
+    <string name="align_treasury">Juster likviditet</string>
+    <string name="gap_label">Afvigelse: %1$s</string>
+    <string name="bank_reconciliation_intro">Sammenlign din faktiske kontosaldo med likviditeten beregnet af appen (%1$d).</string>
+
+    <!-- SETTINGS EXTRA -->
+    <string name="restore_backup_question">Gendan sikkerhedskopi?</string>
+    <string name="change_password">Skift adgangskode</string>
+    <string name="reset_password">Nulstil adgangskode</string>
+    <string name="current_password">Nuværende adgangskode</string>
+    <string name="new_password">Ny adgangskode</string>
+    <string name="set_pin">Angiv PIN-kode</string>
+    <string name="pin_code">PIN-kode</string>
+    <string name="fingerprint_lock">Fingeraftrykslås</string>
+    <string name="pin_lock">PIN-lås</string>
+    <string name="change_pin">Skift PIN</string>
+    <string name="enable_notifications">Aktivér notifikationer</string>
+    <string name="add_custom_currency">Tilføj brugerdefineret valuta</string>
+    <string name="new_currency">Ny valuta</string>
+    <string name="currency_label_placeholder">f.eks. Algerisk dinar</string>
+    <string name="currency_symbol_placeholder">f.eks. DZD</string>
+    <string name="decimal_places">Antal decimaler</string>
+    <string name="decimal_places_placeholder">0 til 4</string>
+    <string name="no_users_added">Ingen brugere tilføjet</string>
+    <string name="save_user">Gem bruger</string>
+    <string name="new_user">Ny bruger</string>
+    <string name="add_user">Tilføj bruger</string>
+    <string name="my_account">Min konto</string>
+    <string name="change_your_password">Skift din adgangskode</string>
+    <string name="backup_restore">Sikkerhedskopi og gendannelse</string>
+    <string name="export_action">Eksporter</string>
+    <string name="restore_action">Gendan</string>
+    <string name="profile_saved">Profil gemt</string>
+    <string name="company_saved">Firma gemt</string>
+    <string name="pwd_short">PWD</string>
+
+    <!-- APP LOCK / RECEIPT -->
+    <string name="take_photo">Tag et foto</string>
+    <string name="choose_from_gallery">Vælg fra galleri</string>
+    <string name="use_pin">Brug PIN</string>
+    <string name="unlock">Lås op</string>
+    <string name="fingerprint">Fingeraftryk</string>
+    <string name="app_locked">App låst</string>
+    <string name="scan_receipt">Scan en kvittering</string>
+    <string name="reading_receipt">Læser kvittering…</string>
+    <string name="take_receipt_photo">Tag et foto af kvitteringen</string>
+    <string name="receipt_auto_fill">Beløb og dato udfyldes automatisk</string>
+
+    <!-- MISC UI -->
+    <string name="new_transaction">Ny transaktion</string>
+    <string name="import_action">Importer</string>
+    <string name="search">Søg</string>
+    <string name="clear">Ryd</string>
+    <string name="actions">Handlinger</string>
+    <string name="delete_count">Slet (%1$d)</string>
+    <string name="select_all">Vælg alle</string>
+    <string name="deselect_all">Fravælg alle</string>
+
+    <!-- PAYMENT METHODS -->
+    <string name="payment_check">Check</string>
+    <string name="payment_transfer">Overførsel</string>
+    <string name="payment_cash">Kontanter</string>
+    <string name="payment_bill">Veksel</string>
+
+    <!-- RECURRENCE -->
+    <string name="recurrence_weekly">Ugentlig</string>
+    <string name="recurrence_monthly">Månedlig</string>
+    <string name="recurrence_every_2_months">Hver 2. måned</string>
+    <string name="recurrence_every_3_months">Hver 3. måned</string>
+    <string name="recurrence_every_4_months">Hver 4. måned</string>
+    <string name="recurrence_every_6_months">Hver 6. måned</string>
+    <string name="recurrence_annual">Årlig</string>
+
+    <!-- PERMISSIONS LABELS -->
+    <string name="permission_view_invoices">Se fakturaer</string>
+    <string name="permission_add_payments">Tilføj betalinger</string>
+    <string name="permission_manage_expenses">Administrer udgifter</string>
+    <string name="permission_view_treasury">Se likviditet</string>
+    <string name="permission_manage_users">Administrer brugere</string>
+
+    <!-- INVOICE FILTERS & STATUS -->
+    <string name="filter_all">Alle</string>
+    <string name="filter_due">Forfaldne</string>
+    <string name="filter_partial">Delvise</string>
+    <string name="filter_paid">Betalte</string>
+    <string name="status_paid">Betalt</string>
+    <string name="status_partial">Delvis</string>
+    <string name="status_due">Forfalden</string>
+    <string name="symbol">Symbol</string>
+    <string name="scan_success">✓ %1$s</string>
+    <string name="onboarding_privilege_expenses_title">Udgiftsstyring</string>
+    <string name="onboarding_privilege_expenses_desc">Registrer og følg alle virksomhedsudgifter, faste eller engangs.</string>
+    <string name="onboarding_privilege_treasury_title">Likviditetsopfølgning</string>
+    <string name="onboarding_privilege_treasury_desc">Se månedlig saldo, indbetalinger og finansielle prognoser.</string>
+    <string name="onboarding_privilege_collection_title">Inddrivelse</string>
+    <string name="onboarding_privilege_collection_desc">Administrer kundefakturaer og følg betalinger i realtid.</string>
+</resources>

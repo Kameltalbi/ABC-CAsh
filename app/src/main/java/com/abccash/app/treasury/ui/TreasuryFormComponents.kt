@@ -1,17 +1,12 @@
 package com.abccash.app.treasury.ui
 
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -19,13 +14,17 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.treasury.data.PaymentMethod
+import androidx.compose.ui.res.stringResource
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import java.time.Instant
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 val TreasuryFormDateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/yyyy")
@@ -39,10 +38,7 @@ fun millisToLocalDate(millis: Long): LocalDate =
 @Composable
 fun TreasurySelectedMonthHint(selectedMonth: YearMonth) {
     Text(
-        text = "Mois affiché : ${
-            selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))
-                .replaceFirstChar { it.uppercase() }
-        }",
+        text = stringResource(R.string.displayed_month, AppLocale.monthYear(selectedMonth)),
         fontSize = 13.sp,
         color = Color.Gray
     )
@@ -73,12 +69,12 @@ fun TreasuryDatePickerDialog(
                     onDismiss()
                 }
             ) {
-                Text("OK")
+                Text(stringResource(R.string.ok))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuler")
+                Text(stringResource(R.string.cancel))
             }
         }
     ) {
@@ -101,23 +97,93 @@ fun TreasuryDateField(
         visible = showPicker,
         selectedDate = date,
         onDismiss = { showPicker = false },
-        onConfirm = onDateChange
-    )
-
-    OutlinedTextField(
-        value = date.format(TreasuryFormDateFormatter),
-        onValueChange = {},
-        modifier = modifier.fillMaxWidth(),
-        label = { Text(label) },
-        readOnly = true,
-        enabled = enabled,
-        trailingIcon = {
-            IconButton(
-                onClick = { showPicker = true },
-                enabled = enabled
-            ) {
-                Icon(Icons.Default.CalendarToday, contentDescription = "Choisir la date")
-            }
+        onConfirm = {
+            onDateChange(it)
+            showPicker = false
         }
     )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .then(
+                if (enabled) {
+                    Modifier.clickable { showPicker = true }
+                } else {
+                    Modifier
+                }
+            )
+    ) {
+        OutlinedTextField(
+            value = date.format(TreasuryFormDateFormatter),
+            onValueChange = {},
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label) },
+            readOnly = true,
+            enabled = false,
+            trailingIcon = {
+                Icon(
+                    Icons.Default.CalendarToday,
+                    contentDescription = null,
+                    tint = if (enabled) Color(0xFF64748B) else Color(0xFFBDBDBD)
+                )
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledContainerColor = Color.White,
+                disabledBorderColor = Color(0xFFE8E4DD),
+                disabledTextColor = Color(0xFF1A1A1A),
+                disabledLabelColor = Color(0xFF64748B)
+            )
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun TreasuryPaymentMethodField(
+    selectedMethod: PaymentMethod,
+    onMethodChange: (PaymentMethod) -> Unit,
+    modifier: Modifier = Modifier,
+    label: String? = null
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val fieldLabel = label ?: stringResource(R.string.payment_method)
+
+    Column(modifier = modifier.fillMaxWidth()) {
+        ExposedDropdownMenuBox(
+            expanded = expanded,
+            onExpandedChange = { expanded = it }
+        ) {
+            OutlinedTextField(
+                value = selectedMethod.localizedLabel(),
+                onValueChange = {},
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .menuAnchor(),
+                label = { Text(fieldLabel) },
+                readOnly = true,
+                trailingIcon = {
+                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
+                },
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color.White,
+                    unfocusedContainerColor = Color.White
+                )
+            )
+            ExposedDropdownMenu(
+                expanded = expanded,
+                onDismissRequest = { expanded = false }
+            ) {
+                PaymentMethod.entries.forEach { method ->
+                    DropdownMenuItem(
+                        text = { Text(method.localizedLabel()) },
+                        onClick = {
+                            onMethodChange(method)
+                            expanded = false
+                        }
+                    )
+                }
+            }
+        }
+    }
 }

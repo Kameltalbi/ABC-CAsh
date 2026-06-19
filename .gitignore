@@ -8,5 +8,7 @@
 .externalNativeBuild
 .cxx
 app/build
+server/build
+.kotlin
 *.keystore
 keystore.properties

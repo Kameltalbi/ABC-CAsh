@@ -15,7 +15,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.abccash.app.R
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,7 +56,7 @@ fun OnboardingAdminScreen(
         
         // Titre
         Text(
-            text = "Bienvenue, Administrateur !",
+            text = stringResource(R.string.onboarding_welcome),
             fontSize = 28.sp,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center,
@@ -65,7 +67,7 @@ fun OnboardingAdminScreen(
         
         // Sous-titre
         Text(
-            text = "En tant que créateur de l'entreprise, vous disposez d'accès exclusifs pour gérer la trésorerie.",
+            text = stringResource(R.string.onboarding_desc),
             fontSize = 16.sp,
             textAlign = TextAlign.Center,
             color = Color.Gray,
@@ -81,20 +83,20 @@ fun OnboardingAdminScreen(
         ) {
             PrivilegeItem(
                 icon = Icons.Default.MoneyOff,
-                title = "Gestion des Dépenses",
-                description = "Enregistrez et suivez toutes les dépenses de l'entreprise, récurrentes ou ponctuelles."
+                title = stringResource(R.string.onboarding_privilege_expenses_title),
+                description = stringResource(R.string.onboarding_privilege_expenses_desc)
             )
             
             PrivilegeItem(
                 icon = Icons.AutoMirrored.Filled.TrendingUp,
-                title = "Suivi de Trésorerie",
-                description = "Visualisez le solde mensuel, les encaissements et les prévisions financières."
+                title = stringResource(R.string.onboarding_privilege_treasury_title),
+                description = stringResource(R.string.onboarding_privilege_treasury_desc)
             )
             
             PrivilegeItem(
                 icon = Icons.Default.AccountBalance,
-                title = "Recouvrement",
-                description = "Gérez les factures clients et suivez les paiements en temps réel."
+                title = stringResource(R.string.onboarding_privilege_collection_title),
+                description = stringResource(R.string.onboarding_privilege_collection_desc)
             )
         }
         
@@ -113,7 +115,7 @@ fun OnboardingAdminScreen(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                text = "Vous êtes le premier administrateur de l'entreprise",
+                text = stringResource(R.string.onboarding_first_admin),
                 fontSize = 14.sp,
                 color = Color(0xFF4CAF50),
                 fontWeight = FontWeight.Medium
@@ -132,7 +134,7 @@ fun OnboardingAdminScreen(
             )
         ) {
             Text(
-                text = "Commencer",
+                text = stringResource(R.string.onboarding_start),
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -143,7 +145,7 @@ fun OnboardingAdminScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                text = "Se déconnecter",
+                text = stringResource(R.string.logout),
                 color = Color.Gray,
                 fontSize = 14.sp
             )

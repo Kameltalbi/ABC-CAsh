@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ABC Cash</string>
+
+    <!-- NAV -->
+    <string name="nav_home">Ana sayfa</string>
+    <string name="nav_home_short">Ana sayfa</string>
+    <string name="nav_transactions">İşlemler</string>
+    <string name="nav_transactions_short">İşl.</string>
+    <string name="nav_treasury">Hazine</string>
+    <string name="nav_treasury_short">Hazine</string>
+    <string name="nav_settings">Ayarlar</string>
+    <string name="nav_settings_short">Ayarlar</string>
+    <string name="nav_plus">Daha fazla</string>
+    <string name="nav_forecasts">Tahminler</string>
+
+    <!-- COMMON -->
+    <string name="ok">Tamam</string>
+    <string name="cancel">İptal</string>
+    <string name="confirm">Onayla</string>
+    <string name="save">Kaydet</string>
+    <string name="delete">Sil</string>
+    <string name="edit">Düzenle</string>
+    <string name="action_validate">Doğrula</string>
+    <string name="partial_payment">Kısmi ödeme</string>
+    <string name="add">Ekle</string>
+    <string name="back">Geri</string>
+    <string name="access_denied">Erişim reddedildi</string>
+    <string name="logout">Çıkış yap</string>
+    <string name="loading">Yükleniyor…</string>
+
+    <!-- AUTH -->
+    <string name="login">Giriş yap</string>
+    <string name="sign_in">Oturum aç</string>
+    <string name="email">E-posta</string>
+    <string name="password">Şifre</string>
+    <string name="create_account">Hesap oluştur</string>
+    <string name="full_name">Ad soyad</string>
+    <string name="company_name">Şirket adı</string>
+    <string name="phone">Telefon</string>
+    <string name="confirm_password">Şifreyi onayla</string>
+    <string name="password_min_chars">Şifre en az 6 karakter olmalıdır</string>
+
+    <!-- DASHBOARD -->
+    <string name="hello_name">Merhaba %1$s</string>
+    <string name="your_treasury">Hazineniz</string>
+    <string name="company_fallback">Şirketiniz</string>
+    <string name="account_up_to_date">Hesap güncel</string>
+    <string name="balance_evolution">Bakiye trendi</string>
+    <string name="last_30_days">Son 30 gün</string>
+    <string name="not_enough_data">Yeterli veri yok</string>
+    <string name="income_title">Gelirler</string>
+    <string name="expense_title">Giderler</string>
+    <string name="forecasts_upcoming">Yaklaşan tahminler</string>
+    <string name="forecasts_30_days">Sonraki 30 gün</string>
+    <string name="expected_income">Beklenen gelirler</string>
+    <string name="expected_expenses">Beklenen giderler</string>
+    <string name="healthy_treasury">Sağlıklı hazine</string>
+    <string name="end_of_month_estimate">Ay sonu tahmini</string>
+    <string name="quick_entry">Hızlı giriş</string>
+    <string name="income_breakdown">Gelir dağılımı</string>
+    <string name="dashboard_planned_outflows">Planlanan çıkışlar</string>
+    <string name="dashboard_income_breakdown">Kategoriye göre gelirler</string>
+    <string name="dashboard_expense_breakdown">Kategoriye göre giderler</string>
+    <string name="dashboard_treasury_forecasts">Nakit akışı tahminleri</string>
+    <string name="dashboard_today">Bugün</string>
+    <string name="dashboard_plus_days">+%1$d gün</string>
+    <string name="dashboard_trend_week">%1$s bu hafta</string>
+    <string name="dashboard_trend_30d">%1$s 30 günde</string>
+    <string name="dashboard_notifications">Bildirimler</string>
+    <string name="dashboard_monthly_bars_title">Tahsilatlar vs giderler</string>
+    <string name="dashboard_monthly_bars_subtitle_12m">Son 12 ay</string>
+    <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
+    <string name="dashboard_period_year">Yıl</string>
+    <string name="dashboard_period_month">Ay</string>
+    <string name="previous_year">Önceki yıl</string>
+    <string name="next_year">Sonraki yıl</string>
+    <string name="collected_month">Tahsil edildi · %1$s</string>
+    <string name="collected_year">Tahsil edildi · %1$s</string>
+    <string name="expense_paid_pending_year">Ödendi %1$s · Yaklaşan %2$s · %3$s</string>
+    <string name="expense_paid_year">Ödendi %1$s · %2$s</string>
+    <string name="expense_structure">Maliyet yapısı</string>
+    <string name="expense_paid_pending_month">Ödendi %1$s · Yaklaşan %2$s · %3$s</string>
+    <string name="expense_paid_month">Ödendi %1$s · %2$s</string>
+    <string name="bank_balance_month">Banka bakiyesi · %1$s</string>
+    <string name="calculated_balance_month">Hesaplanan bakiye · %1$s</string>
+    <string name="forecasts_due_dates">Tahminler ve vade tarihleri</string>
+    <string name="forecasts_real_data">Sonraki 30 gün · gerçek veriler</string>
+    <string name="no_income_month">Bu ay gelir yok</string>
+    <string name="no_expense_month">Bu ay gider yok</string>
+    <string name="no_data">Veri yok</string>
+    <string name="user_fallback">Kullanıcı</string>
+    <string name="plus_settings_sub_full">Profil, kategoriler, para birimi, güvenlik</string>
+    <string name="balance_evolution_30d">Bakiye trendi (30 gün)</string>
+    <string name="balance_range">G-30 %1$s · Bugün %2$s</string>
+    <string name="displayed_month">Gösterilen ay: %1$s</string>
+    <string name="previous_month">Önceki ay</string>
+    <string name="next_month">Sonraki ay</string>
+
+    <!-- SETTINGS -->
+    <string name="settings">Ayarlar</string>
+    <string name="settings_management">Yönetim</string>
+    <string name="settings_profile">Profil</string>
+    <string name="settings_categories">Kategoriler</string>
+    <string name="settings_options">Seçenekler</string>
+    <string name="settings_users">Kullanıcılar</string>
+    <string name="settings_users_sub">Liste, ekleme, şifreler, yedekleme</string>
+    <string name="settings_my_profile">Profilim</string>
+    <string name="settings_my_profile_sub">Ad, e-posta, telefon</string>
+    <string name="settings_company">Şirket</string>
+    <string name="settings_company_sub">Şirket bilgileri</string>
+    <string name="settings_income_categories">Gelir kategorileri</string>
+    <string name="settings_income_categories_sub">Özel gelir kategorileri</string>
+    <string name="settings_expense_categories">Gider kategorileri</string>
+    <string name="settings_expense_categories_sub">Özel gider kategorileri</string>
+    <string name="settings_currency">Varsayılan para birimi</string>
+    <string name="settings_currency_sub">Yerleşik ve özel para birimleri</string>
+    <string name="settings_notifications">Bildirimler</string>
+    <string name="settings_notifications_sub">Hatırlatmalar ve uyarılar</string>
+    <string name="settings_security">Güvenlik</string>
+    <string name="settings_security_sub">Parmak izi ve PIN kodu</string>
+    <string name="settings_language">Dil</string>
+    <string name="settings_language_sub">Uygulama görüntüleme dili</string>
+    <string name="language_title">Dil</string>
+    <string name="language_system_default">Sistem varsayılanı</string>
+    <string name="language_en">English</string>
+    <string name="language_fr">Français</string>
+    <string name="language_es">Español</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_pt">Português</string>
+    <string name="language_it">Italiano</string>
+    <string name="language_sv">Svenska</string>
+    <string name="language_nb">Norsk</string>
+    <string name="language_da">Dansk</string>
+    <string name="language_tr">Türkçe</string>
+
+    <!-- TRANSACTIONS -->
+    <string name="transactions">İşlemler</string>
+    <string name="no_transactions_month">Bu ay işlem yok</string>
+    <string name="mark_paid">Ödendi olarak işaretle</string>
+    <string name="mark_paid_confirm">%1$s ödendi olarak işaretlensin mi?</string>
+    <string name="delete_invoice">Geliri sil</string>
+    <string name="delete_invoice_confirm">%1$s geliri silinsin mi?</string>
+    <string name="delete_expense">Gideri sil</string>
+    <string name="delete_expense_confirm">%1$s gideri silinsin mi?</string>
+
+    <!-- TREASURY -->
+    <string name="treasury">Hazine</string>
+    <string name="collections">Gelirler</string>
+    <string name="expenses">Giderler</string>
+    <string name="forecast_balance">Tahmini bakiye</string>
+    <string name="bank_account">Banka hesabı</string>
+    <string name="bank_balance">Güncel banka bakiyesi</string>
+    <string name="calculated_treasury">Hesaplanan hazine</string>
+    <string name="last_saved_balance">Son kaydedilen bakiye</string>
+    <string name="invalid_amount">Geçersiz tutar</string>
+    <string name="clear_saved_balance">Kaydedilen bakiyeyi temizle</string>
+
+    <!-- FORECASTS -->
+    <string name="forecasts">Tahminler</string>
+    <string name="no_forecasts">Yaklaşan tahmin yok</string>
+    <string name="delete_forecast">Tahmini sil</string>
+    <string name="delete_forecast_confirm">%1$s tahmini silinsin mi?</string>
+
+    <!-- PLUS -->
+    <string name="plus">Daha fazla</string>
+    <string name="plus_forecasts">Tahminler</string>
+    <string name="plus_forecasts_sub">Yaklaşan gelirler ve giderler</string>
+    <string name="plus_settings">Ayarlar</string>
+    <string name="plus_settings_sub">Profil, kategoriler, güvenlik</string>
+    <string name="plus_import">Faturaları içe aktar</string>
+    <string name="plus_import_sub">CSV dosyasından veri içe aktar</string>
+    <string name="plus_bank_reconciliation">Banka mutabakatı</string>
+    <string name="plus_bank_reconciliation_sub">Banka bakiyesini ayarla</string>
+
+    <!-- PERMISSIONS -->
+    <string name="admin_import_only">Yalnızca yöneticiler veri içe aktarabilir</string>
+    <string name="admin_income_only">Yalnızca yöneticiler gelirleri yönetebilir</string>
+    <string name="no_expense_permission">Giderleri yönetme izniniz yok</string>
+    <string name="invalid_transaction_type">Geçersiz işlem türü</string>
+    <string name="no_bank_permission">Banka hesabına erişim izniniz yok</string>
+    <string name="admin_users_only">Yalnızca yöneticiler kullanıcıları yönetebilir</string>
+    <string name="no_treasury_permission">Hazineyi görüntüleme izniniz yok</string>
+
+    <!-- CATEGORIES -->
+    <string name="category_service">Hizmetler</string>
+    <string name="category_goods">Mallar</string>
+    <string name="category_other">Diğer</string>
+    <string name="category_material">Malzemeler</string>
+    <string name="category_transport">Ulaşım</string>
+    <string name="category_meals">Yemekler</string>
+    <string name="category_taxes">Vergiler</string>
+    <string name="category_subscription">Abonelikler</string>
+    <string name="built_in_categories">Yerleşik kategoriler</string>
+    <string name="custom_categories">Özel kategoriler</string>
+    <string name="new_category">Yeni kategori</string>
+
+    <!-- ERRORS -->
+    <string name="label_required">Etiket gereklidir</string>
+    <string name="symbol_required">Sembol gereklidir</string>
+    <string name="decimals_range">Ondalık basamaklar 0 ile 4 arasında olmalıdır</string>
+    <string name="session_expired">Oturum süresi doldu. Lütfen tekrar giriş yapın</string>
+    <string name="invoice_not_found">Fatura bulunamadı</string>
+    <string name="no_payment_permission">Ödeme kaydetme izniniz yok</string>
+    <string name="category_builtin_tag">Yerleşik</string>
+    <string name="category_required">Lütfen bir kategori seçin</string>
+    <string name="category_exists">Bu kategori zaten mevcut</string>
+    <string name="add_category_in_settings">İşlem kaydetmeden önce Ayarlar\'dan kategori ekleyin.</string>
+    <string name="edit_category">Kategoriyi düzenle</string>
+    <string name="delete_category_confirm">\"%1$s\" kategorisi silinsin mi?</string>
+    <string name="no_custom_categories">Henüz özel kategori yok</string>
+    <string name="category_custom_tag">Özel</string>
+
+    <!-- TREASURY SCREEN -->
+    <string name="treasury_year_title">Hazine %1$d</string>
+    <string name="treasury_year_range">Ocak → Aralık</string>
+    <string name="treasury_month_end_balance">Ay sonu bakiyesi</string>
+    <string name="treasury_cumulative_formula">Kümülatif: önceki bakiye + gelirler − giderler</string>
+    <string name="treasury_december_end">Aralık sonu: %1$s</string>
+    <string name="treasury_upcoming_part">%1$s yaklaşan dahil</string>
+    <string name="treasury_december_subtitle">31 Aralık itibarıyla</string>
+    <string name="export_csv">CSV dışa aktar</string>
+    <string name="bank_reconciliation_cd">Banka mutabakatı</string>
+
+    <!-- AUTH -->
+    <string name="login_subtitle">Hazine alanınıza giriş yapın</string>
+    <string name="login_reinstall_hint">Uygulama yeniden yüklendikten sonra yerel hesaplar silinir: hesabı yeniden oluşturun veya Admin yedeğini geri yükleyin.</string>
+    <string name="signup_admin_title">Yönetici kaydı</string>
+    <string name="signup_admin_subtitle">Şirketinizin yöneticisi olmak için hesabınızı oluşturun</string>
+    <string name="signup_create_button">Hesabımı oluştur</string>
+    <string name="signup_admin_note">Otomatik olarak yönetici olarak atanacaksınız</string>
+    <string name="your_name">Adınız</string>
+    <string name="company_name_placeholder">Şirket adınız</string>
+    <string name="email_placeholder">ornek@email.com</string>
+    <string name="phone_placeholder">+216 XX XXX XXX</string>
+    <string name="password_placeholder_min">En az 6 karakter</string>
+    <string name="repeat_password">Şifrenizi tekrarlayın</string>
+    <string name="splash_tagline">Hazine yönetimi</string>
+
+    <!-- ONBOARDING -->
+    <string name="onboarding_welcome">Hoş geldiniz, Yönetici!</string>
+    <string name="onboarding_desc">Şirketin kurucusu olarak hazineyi yönetmek için özel erişiminiz var.</string>
+    <string name="onboarding_first_admin">Şirketin ilk yöneticisisiniz</string>
+    <string name="onboarding_start">Başla</string>
+
+    <!-- FORM -->
+    <string name="label">Etiket</string>
+    <string name="amount">Tutar</string>
+    <string name="frequency">Sıklık</string>
+    <string name="invoice_number">Fatura No.</string>
+    <string name="client">Müşteri</string>
+    <string name="supplier">Tedarikçi</string>
+    <string name="total_amount">Toplam tutar</string>
+    <string name="address">Adres</string>
+    <string name="role">Rol</string>
+    <string name="initial_password">Başlangıç şifresi</string>
+    <string name="permissions">İzinler</string>
+    <string name="only_initial_admin">Yalnızca ilk hesap yönetici olabilir</string>
+    <string name="name">Ad</string>
+    <string name="date">Tarih</string>
+    <string name="end_date">Bitiş tarihi</string>
+    <string name="amount_placeholder">0.000</string>
+    <string name="income_category">Gelir kategorisi</string>
+    <string name="expense_category">Gider kategorisi</string>
+    <string name="note_optional">Not (isteğe bağlı)</string>
+    <string name="note_placeholder">ör. pazartesi ekip kahvesi</string>
+    <string name="client_placeholder">ör. Müşteri X</string>
+    <string name="supplier_placeholder">ör. Carrefour</string>
+    <string name="recurrence_end">Tekrarlama sonu</string>
+    <string name="payment_method">Ödeme yöntemi</string>
+
+    <!-- EXPENSES -->
+    <string name="new_expense">Yeni gider</string>
+    <string name="edit_expense">Gideri düzenle</string>
+    <string name="save_expense">Gideri kaydet</string>
+    <string name="recurring_expense">Tekrarlayan gider</string>
+    <string name="expense_label_placeholder">ör. Ofis kirası</string>
+    <string name="no_expenses_month">Bu ay gider yok</string>
+    <string name="delete_expense_question">Gider silinsin mi?</string>
+    <string name="delete_selection_question">Seçim silinsin mi?</string>
+    <string name="upcoming_badge">Yaklaşan</string>
+    <string name="expenses_month_title">Giderler — %1$s</string>
+    <string name="stop_recurrence_on">Tekrarlama %1$s tarihinde durduruldu</string>
+    <string name="recurrence_end_short">Bitiş %1$s</string>
+    <string name="stop_after_month">Bu aydan sonra durdur</string>
+    <string name="add_expense">Gider ekle</string>
+    <string name="recurring_badge">Tekrarlayan</string>
+    <string name="delete_expense_item_confirm">\"%1$s\" (%2$s) silinsin mi?</string>
+    <string name="already_paid_expense">Zaten ödendi</string>
+    <string name="upcoming_forecast">Yaklaşan (tahmin)</string>
+    <string name="end_date_after_expense">Bitiş tarihi gider tarihinden sonra olmalıdır</string>
+    <string name="forecast_expense">Tahmini gider</string>
+
+    <!-- INCOME -->
+    <string name="new_invoice">Yeni gelir</string>
+    <string name="save_invoice">Geliri kaydet</string>
+    <string name="fully_collected">Tamamen tahsil edildi</string>
+    <string name="mark_settled_on_save">Kaydederken kapatıldı olarak işaretle</string>
+    <string name="fully_collected_settled">Tamamen tahsil edildi (kapatıldı)</string>
+    <string name="due_date_display">Vade tarihine göre göster</string>
+    <string name="search_placeholder">Müşteri veya fatura no.</string>
+    <string name="no_collections_month">%1$s içinde vadesi gelen tahsilat yok</string>
+    <string name="mark_as_settled">Kapatıldı olarak işaretle</string>
+    <string name="validate_expense">Gideri doğrula</string>
+    <string name="collected_amount_label">Tahsil edilen tutar</string>
+    <string name="delete_invoice_question">Gelir silinsin mi?</string>
+    <string name="new_collection">Yeni gelir</string>
+    <string name="invoice_due_meta">%1$s · vade %2$s</string>
+    <string name="invoice_total_meta">Toplam %1$s</string>
+    <string name="invoice_paid_remaining">Tahsil %1$s · Kalan %2$s</string>
+    <string name="client_remaining">%1$s · Kalan %2$s</string>
+    <string name="expense_amount_meta">%1$s · %2$s</string>
+    <string name="already_collected">Zaten tahsil edildi</string>
+    <string name="forecast_income">Tahmini gelir</string>
+    <string name="no_income_permission">Gelirleri yönetme izniniz yok</string>
+
+    <!-- PAYMENTS -->
+    <string name="record_payment">Ödeme kaydet</string>
+    <string name="payment_total">Toplam tutar</string>
+    <string name="already_paid">Zaten ödendi</string>
+    <string name="remaining_to_collect">Tahsil edilecek kalan</string>
+    <string name="new_payment">Yeni ödeme</string>
+    <string name="advance_amount">Avans tutarı</string>
+    <string name="payment_date">Ödeme tarihi</string>
+    <string name="save_payment">Ödemeyi kaydet</string>
+    <string name="payment_history">Ödeme geçmişi</string>
+    <string name="choose_date">Tarih seç</string>
+
+    <!-- IMPORT -->
+    <string name="import_invoices_title">Gelirleri içe aktar</string>
+    <string name="file_structure">Dosya yapısı</string>
+    <string name="import_columns">Kabul edilen sütunlar: Fatura No., Müşteri, Tutar, Vade tarihi</string>
+    <string name="import_columns_en">(veya İngilizce: invoiceNumber, clientName, totalAmount, dueDate)</string>
+    <string name="import_due_date_note">Vade tarihi her faturanın görüntüleme ayını belirler.</string>
+    <string name="import_formats">CSV (virgül, noktalı virgül veya sekme) veya Excel .xlsx</string>
+    <string name="android_file_picker">Android dosya seçici</string>
+    <string name="android_file_picker_note">Bu uygulama değil: Android dosya yöneticisini açar.</string>
+    <string name="empty_file_list_hint">Liste boş mu? Menü ☰ → İndirilenler. \"Large files\" filtrelerini devre dışı bırakın.</string>
+    <string name="choose_file">Dosya seç</string>
+
+    <!-- BANK -->
+    <string name="bank_reconciliation_how">Nasıl çalışır?</string>
+    <string name="bank_reconciliation_steps">• Banka ekstrenizdeki bakiyeyi girin\n• Hesaplanan hazine ile karşılaştırın\n• Gerekirse hizalayın</string>
+    <string name="align_treasury">Hazineyi hizala</string>
+    <string name="gap_label">Fark: %1$s</string>
+    <string name="bank_reconciliation_intro">Gerçek hesap bakiyenizi uygulamanın hesapladığı hazine ile karşılaştırın (%1$d).</string>
+
+    <!-- SETTINGS EXTRA -->
+    <string name="restore_backup_question">Yedek geri yüklensin mi?</string>
+    <string name="change_password">Şifreyi değiştir</string>
+    <string name="reset_password">Şifreyi sıfırla</string>
+    <string name="current_password">Mevcut şifre</string>
+    <string name="new_password">Yeni şifre</string>
+    <string name="set_pin">PIN kodu ayarla</string>
+    <string name="pin_code">PIN kodu</string>
+    <string name="fingerprint_lock">Parmak izi kilidi</string>
+    <string name="pin_lock">PIN kilidi</string>
+    <string name="change_pin">PIN değiştir</string>
+    <string name="enable_notifications">Bildirimleri etkinleştir</string>
+    <string name="add_custom_currency">Özel para birimi ekle</string>
+    <string name="new_currency">Yeni para birimi</string>
+    <string name="currency_label_placeholder">ör. Cezayir dinarı</string>
+    <string name="currency_symbol_placeholder">ör. DZD</string>
+    <string name="decimal_places">Ondalık basamak sayısı</string>
+    <string name="decimal_places_placeholder">0 ile 4</string>
+    <string name="no_users_added">Kullanıcı eklenmedi</string>
+    <string name="save_user">Kullanıcıyı kaydet</string>
+    <string name="new_user">Yeni kullanıcı</string>
+    <string name="add_user">Kullanıcı ekle</string>
+    <string name="my_account">Hesabım</string>
+    <string name="change_your_password">Şifrenizi değiştirin</string>
+    <string name="backup_restore">Yedekleme ve geri yükleme</string>
+    <string name="export_action">Dışa aktar</string>
+    <string name="restore_action">Geri yükle</string>
+    <string name="profile_saved">Profil kaydedildi</string>
+    <string name="company_saved">Şirket kaydedildi</string>
+    <string name="pwd_short">PWD</string>
+
+    <!-- APP LOCK / RECEIPT -->
+    <string name="take_photo">Fotoğraf çek</string>
+    <string name="choose_from_gallery">Galeriden seç</string>
+    <string name="use_pin">PIN kullan</string>
+    <string name="unlock">Kilidi aç</string>
+    <string name="fingerprint">Parmak izi</string>
+    <string name="app_locked">Uygulama kilitli</string>
+    <string name="scan_receipt">Fiş tara</string>
+    <string name="reading_receipt">Fiş okunuyor…</string>
+    <string name="take_receipt_photo">Fişin fotoğrafını çek</string>
+    <string name="receipt_auto_fill">Tutar ve tarih otomatik doldurulur</string>
+
+    <!-- MISC UI -->
+    <string name="new_transaction">Yeni işlem</string>
+    <string name="import_action">İçe aktar</string>
+    <string name="search">Ara</string>
+    <string name="clear">Temizle</string>
+    <string name="actions">İşlemler</string>
+    <string name="delete_count">Sil (%1$d)</string>
+    <string name="select_all">Tümünü seç</string>
+    <string name="deselect_all">Tümünün seçimini kaldır</string>
+
+    <!-- PAYMENT METHODS -->
+    <string name="payment_check">Çek</string>
+    <string name="payment_transfer">Havale</string>
+    <string name="payment_cash">Nakit</string>
+    <string name="payment_bill">Senet</string>
+
+    <!-- RECURRENCE -->
+    <string name="recurrence_weekly">Haftalık</string>
+    <string name="recurrence_monthly">Aylık</string>
+    <string name="recurrence_every_2_months">Her 2 ayda bir</string>
+    <string name="recurrence_every_3_months">Her 3 ayda bir</string>
+    <string name="recurrence_every_4_months">Her 4 ayda bir</string>
+    <string name="recurrence_every_6_months">Her 6 ayda bir</string>
+    <string name="recurrence_annual">Yıllık</string>
+
+    <!-- PERMISSIONS LABELS -->
+    <string name="permission_view_invoices">Faturaları görüntüle</string>
+    <string name="permission_add_payments">Ödeme ekle</string>
+    <string name="permission_manage_expenses">Giderleri yönet</string>
+    <string name="permission_view_treasury">Hazineyi görüntüle</string>
+    <string name="permission_manage_users">Kullanıcıları yönet</string>
+
+    <!-- INVOICE FILTERS & STATUS -->
+    <string name="filter_all">Tümü</string>
+    <string name="filter_due">Vadesi gelen</string>
+    <string name="filter_partial">Kısmi</string>
+    <string name="filter_paid">Ödenen</string>
+    <string name="status_paid">Ödendi</string>
+    <string name="status_partial">Kısmi</string>
+    <string name="status_due">Vadesi geldi</string>
+    <string name="symbol">Sembol</string>
+    <string name="scan_success">✓ %1$s</string>
+    <string name="onboarding_privilege_expenses_title">Gider yönetimi</string>
+    <string name="onboarding_privilege_expenses_desc">Tüm şirket giderlerini, tekrarlayan veya tek seferlik olarak kaydedin ve takip edin.</string>
+    <string name="onboarding_privilege_treasury_title">Nakit akışı takibi</string>
+    <string name="onboarding_privilege_treasury_desc">Aylık bakiye, tahsilatlar ve finansal öngörüleri görüntüleyin.</string>
+    <string name="onboarding_privilege_collection_title">Tahsilat</string>
+    <string name="onboarding_privilege_collection_desc">Müşteri faturalarını yönetin ve ödemeleri gerçek zamanlı takip edin.</string>
+</resources>

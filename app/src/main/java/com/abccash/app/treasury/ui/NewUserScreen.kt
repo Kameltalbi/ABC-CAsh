@@ -15,11 +15,13 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 
@@ -41,10 +43,10 @@ fun NewUserScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nouvel utilisateur") },
+                title = { Text(stringResource(R.string.new_user)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -67,7 +69,7 @@ fun NewUserScreen(
                 value = name,
                 onValueChange = { name = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nom") },
+                label = { Text(stringResource(R.string.name)) },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 singleLine = true
             )
@@ -76,7 +78,7 @@ fun NewUserScreen(
                 value = email,
                 onValueChange = { email = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.email)) },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                 singleLine = true
@@ -86,7 +88,7 @@ fun NewUserScreen(
                 value = phone,
                 onValueChange = { phone = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Téléphone") },
+                label = { Text(stringResource(R.string.phone)) },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                 singleLine = true
@@ -96,7 +98,7 @@ fun NewUserScreen(
                 value = password,
                 onValueChange = { password = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Mot de passe initial") },
+                label = { Text(stringResource(R.string.initial_password)) },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true
             )
@@ -105,9 +107,9 @@ fun NewUserScreen(
                 value = "STAFF",
                 onValueChange = {},
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Rôle") },
+                label = { Text(stringResource(R.string.role)) },
                 readOnly = true,
-                supportingText = { Text("Seul le compte initial peut être administrateur") }
+                supportingText = { Text(stringResource(R.string.only_initial_admin)) }
             )
 
             saveError?.let { error ->
@@ -115,7 +117,7 @@ fun NewUserScreen(
             }
 
             Text(
-                text = "Permissions",
+                text = stringResource(R.string.permissions),
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -135,7 +137,7 @@ fun NewUserScreen(
                             }
                         }
                     )
-                    Text(permission.label, fontSize = 13.sp)
+                    Text(permission.localizedLabel(), fontSize = 13.sp)
                 }
             }
 
@@ -161,7 +163,7 @@ fun NewUserScreen(
                     password.length >= 6,
                 shape = RoundedCornerShape(8.dp)
             ) {
-                Text("Enregistrer l'utilisateur")
+                Text(stringResource(R.string.save_user))
             }
         }
     }

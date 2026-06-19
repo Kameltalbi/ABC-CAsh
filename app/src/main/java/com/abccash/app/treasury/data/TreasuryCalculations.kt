@@ -28,12 +28,32 @@ object TreasuryCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         month: YearMonth
+    ): Double = monthlyTreasuryNet(invoices, expenses, month)
+
+    fun monthlyEncaissements(invoices: List<Invoice>, month: YearMonth): Double =
+        monthlyCollections(invoices, month) + pendingInvoiceAmount(invoices, month)
+
+    fun monthlyDepenses(expenses: List<Expense>, month: YearMonth): Double =
+        monthlyPaidExpenses(expenses, month) + monthlyUnpaidExpenses(expenses, month)
+
+    fun monthlyTreasuryNet(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        month: YearMonth
+    ): Double = monthlyEncaissements(invoices, month) - monthlyDepenses(expenses, month)
+
+    fun openingBalanceAtYearStart(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int
     ): Double {
-        val collections = monthlyCollections(invoices, month)
-        val paidExpenses = monthlyPaidExpenses(expenses, month)
-        val unpaidExpenses = monthlyUnpaidExpenses(expenses, month)
-        val pendingInvoices = pendingInvoiceAmount(invoices, month)
-        return monthlyBalance(collections, paidExpenses) + pendingInvoices - unpaidExpenses
+        val collectedBefore = invoices.flatMap { it.payments }
+            .filter { it.date.year < year }
+            .sumOf { it.amount }
+        val paidBefore = expenses
+            .filter { it.isPaid && it.date.year < year }
+            .sumOf { it.amount }
+        return collectedBefore - paidBefore
     }
 
     fun yearlyCollections(invoices: List<Invoice>, year: Int): Double =
@@ -78,13 +98,15 @@ object TreasuryCalculations {
         val totalExpenses: Double get() = expenses + pendingExpenses
     }
 
-    fun yearlyRows(invoices: List<Invoice>, expenses: List<Expense>, year: Int): List<MonthlyTreasuryRow> =
-        (1..12).map { monthNumber ->
+    fun yearlyRows(invoices: List<Invoice>, expenses: List<Expense>, year: Int): List<MonthlyTreasuryRow> {
+        var cumulativeBalance = openingBalanceAtYearStart(invoices, expenses, year)
+        return (1..12).map { monthNumber ->
             val month = YearMonth.of(year, monthNumber)
             val collected = monthlyCollections(invoices, month)
             val pendingIncome = pendingInvoiceAmount(invoices, month)
             val paidExpenses = monthlyPaidExpenses(expenses, month)
             val pendingExpenses = monthlyUnpaidExpenses(expenses, month)
+            cumulativeBalance += (collected + pendingIncome) - (paidExpenses + pendingExpenses)
             MonthlyTreasuryRow(
                 month = month,
                 collected = collected,
@@ -92,7 +114,8 @@ object TreasuryCalculations {
                 expenses = paidExpenses,
                 pendingExpenses = pendingExpenses,
                 balance = monthlyBalance(collected, paidExpenses),
-                forecastBalance = forecastedBalance(invoices, expenses, month)
+                forecastBalance = cumulativeBalance
             )
         }
+    }
 }

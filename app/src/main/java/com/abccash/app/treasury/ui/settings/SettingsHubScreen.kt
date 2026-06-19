@@ -11,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.hasPermission
@@ -28,6 +30,7 @@ object SettingsRoutes {
     const val OPTIONS_CURRENCY = "settings/options/currency"
     const val OPTIONS_NOTIFICATIONS = "settings/options/notifications"
     const val OPTIONS_SECURITY = "settings/options/security"
+    const val OPTIONS_LANGUAGE = "settings/options/language"
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -60,13 +63,13 @@ fun SettingsHubScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Text(
-                text = "Paramètres",
+                text = stringResource(R.string.settings),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
             )
             TextButton(onClick = onLogout) {
-                Text("Déconnexion", color = Color(0xFFF44336))
+                Text(stringResource(R.string.logout), color = Color(0xFFF44336))
             }
         }
 
@@ -79,7 +82,7 @@ fun SettingsHubScreen(
                 Tab(
                     selected = selectedTab == index,
                     onClick = { selectedTab = index },
-                    text = { Text(section.title, fontSize = 13.sp) }
+                    text = { Text(stringResource(section.titleRes), fontSize = 13.sp) }
                 )
             }
         }
@@ -87,58 +90,64 @@ fun SettingsHubScreen(
         val entries = when (tabs.getOrNull(selectedTab)) {
             SettingsSection.MANAGEMENT -> listOf(
                 SettingsMenuEntry(
-                    title = "Utilisateurs",
-                    subtitle = "Liste, ajout, mots de passe, sauvegarde",
+                    title = stringResource(R.string.settings_users),
+                    subtitle = stringResource(R.string.settings_users_sub),
                     icon = Icons.Default.People,
                     route = SettingsRoutes.USERS
                 )
             )
             SettingsSection.PROFILE -> listOf(
                 SettingsMenuEntry(
-                    title = "Mon profil",
-                    subtitle = "Nom, email, téléphone",
+                    title = stringResource(R.string.settings_my_profile),
+                    subtitle = stringResource(R.string.settings_my_profile_sub),
                     icon = Icons.Default.Person,
                     route = SettingsRoutes.PROFILE_USER
                 ),
                 SettingsMenuEntry(
-                    title = "Entreprise",
-                    subtitle = "Informations de l'entreprise",
+                    title = stringResource(R.string.settings_company),
+                    subtitle = stringResource(R.string.settings_company_sub),
                     icon = Icons.Default.Business,
                     route = SettingsRoutes.PROFILE_COMPANY
                 )
             )
             SettingsSection.CATEGORIES -> listOf(
                 SettingsMenuEntry(
-                    title = "Catégories d'encaissement",
-                    subtitle = "Catégories personnalisées de revenus",
+                    title = stringResource(R.string.settings_income_categories),
+                    subtitle = stringResource(R.string.settings_income_categories_sub),
                     icon = Icons.Default.TrendingUp,
                     route = SettingsRoutes.CATEGORIES_INCOME
                 ),
                 SettingsMenuEntry(
-                    title = "Catégories de dépense",
-                    subtitle = "Catégories personnalisées de charges",
+                    title = stringResource(R.string.settings_expense_categories),
+                    subtitle = stringResource(R.string.settings_expense_categories_sub),
                     icon = Icons.Default.ShoppingCart,
                     route = SettingsRoutes.CATEGORIES_EXPENSE
                 )
             )
             SettingsSection.OPTIONS -> listOf(
                 SettingsMenuEntry(
-                    title = "Devise par défaut",
-                    subtitle = "Intégrées et personnalisées",
+                    title = stringResource(R.string.settings_currency),
+                    subtitle = stringResource(R.string.settings_currency_sub),
                     icon = Icons.Default.AttachMoney,
                     route = SettingsRoutes.OPTIONS_CURRENCY
                 ),
                 SettingsMenuEntry(
-                    title = "Notifications",
-                    subtitle = "Rappels et alertes",
+                    title = stringResource(R.string.settings_notifications),
+                    subtitle = stringResource(R.string.settings_notifications_sub),
                     icon = Icons.Default.Notifications,
                     route = SettingsRoutes.OPTIONS_NOTIFICATIONS
                 ),
                 SettingsMenuEntry(
-                    title = "Sécurité",
-                    subtitle = "Empreinte digitale et code PIN",
+                    title = stringResource(R.string.settings_security),
+                    subtitle = stringResource(R.string.settings_security_sub),
                     icon = Icons.Default.Fingerprint,
                     route = SettingsRoutes.OPTIONS_SECURITY
+                ),
+                SettingsMenuEntry(
+                    title = stringResource(R.string.settings_language),
+                    subtitle = stringResource(R.string.settings_language_sub),
+                    icon = Icons.Default.Language,
+                    route = SettingsRoutes.OPTIONS_LANGUAGE
                 )
             )
             null -> emptyList()

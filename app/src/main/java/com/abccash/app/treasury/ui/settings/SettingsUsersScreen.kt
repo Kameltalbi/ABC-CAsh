@@ -18,11 +18,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.net.Uri
+import com.abccash.app.R
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
@@ -47,9 +49,9 @@ fun SettingsUsersScreen(
     onClearBackupFeedback: () -> Unit = {}
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.MANAGE_USERS)) {
-        SettingsDetailScaffold(title = "Utilisateurs", onBack = onBack) {
+        SettingsDetailScaffold(title = stringResource(R.string.settings_users), onBack = onBack) {
             Box(Modifier.fillMaxSize().padding(it), contentAlignment = Alignment.Center) {
-                Text("Accès refusé", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+                Text(stringResource(R.string.access_denied), color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
             }
         }
         return
@@ -105,7 +107,7 @@ fun SettingsUsersScreen(
                 showRestoreConfirm = false
                 pendingRestoreJson = null
             },
-            title = { Text("Restaurer la sauvegarde ?") },
+            title = { Text(stringResource(R.string.restore_backup_question)) },
             text = {
                 Text(
                     "Les données existantes seront fusionnées avec le fichier importé. " +
@@ -123,7 +125,7 @@ fun SettingsUsersScreen(
                         }
                     }
                 ) {
-                    Text("Restaurer", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.restore_action), color = Color(0xFFF44336))
                 }
             },
             dismissButton = {
@@ -131,7 +133,7 @@ fun SettingsUsersScreen(
                     showRestoreConfirm = false
                     pendingRestoreJson = null
                 }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -178,7 +180,7 @@ fun SettingsUsersScreen(
         )
     }
 
-    SettingsDetailScaffold(title = "Utilisateurs", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_users), onBack = onBack) { padding ->
         Scaffold(
             modifier = Modifier.padding(padding),
             floatingActionButton = {
@@ -187,7 +189,7 @@ fun SettingsUsersScreen(
                         onClick = onNavigateToAddUser,
                         containerColor = MaterialTheme.colorScheme.primary
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = "Ajouter utilisateur", tint = Color.White)
+                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_user), tint = Color.White)
                     }
                 }
             }
@@ -213,8 +215,8 @@ fun SettingsUsersScreen(
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
-                                Text("Mon compte", fontWeight = FontWeight.Bold)
-                                Text("Changer votre mot de passe", fontSize = 12.sp, color = Color.Gray)
+                                Text(stringResource(R.string.my_account), fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.change_your_password), fontSize = 12.sp, color = Color.Gray)
                                 passwordMessage?.let {
                                     Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
                                 }
@@ -222,7 +224,7 @@ fun SettingsUsersScreen(
                             OutlinedButton(onClick = { showChangePasswordDialog = true }) {
                                 Icon(Icons.Default.Lock, contentDescription = null, modifier = Modifier.size(16.dp))
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text("Modifier")
+                                Text(stringResource(R.string.edit))
                             }
                         }
                     }
@@ -239,7 +241,7 @@ fun SettingsUsersScreen(
                                 modifier = Modifier.padding(14.dp),
                                 verticalArrangement = Arrangement.spacedBy(10.dp)
                             ) {
-                                Text("Sauvegarde & restauration", fontWeight = FontWeight.Bold)
+                                Text(stringResource(R.string.backup_restore), fontWeight = FontWeight.Bold)
                                 Text(
                                     "Exportez toutes les données de l'entreprise en JSON, ou restaurez depuis un fichier.",
                                     fontSize = 12.sp,
@@ -267,7 +269,7 @@ fun SettingsUsersScreen(
                                     ) {
                                         Icon(Icons.Default.Backup, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Exporter", fontSize = 12.sp)
+                                        Text(stringResource(R.string.export_action), fontSize = 12.sp)
                                     }
                                     OutlinedButton(
                                         onClick = { importLauncher.launch(arrayOf("application/json", "text/*")) },
@@ -275,7 +277,7 @@ fun SettingsUsersScreen(
                                     ) {
                                         Icon(Icons.Default.Restore, contentDescription = null, modifier = Modifier.size(16.dp))
                                         Spacer(modifier = Modifier.width(6.dp))
-                                        Text("Restaurer", fontSize = 12.sp)
+                                        Text(stringResource(R.string.restore_action), fontSize = 12.sp)
                                     }
                                 }
                             }
@@ -285,7 +287,7 @@ fun SettingsUsersScreen(
 
                 item {
                     Text(
-                        text = "Utilisateurs (${users.size})",
+                        text = "${stringResource(R.string.settings_users)} (${users.size})",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -294,7 +296,7 @@ fun SettingsUsersScreen(
                 if (users.isEmpty()) {
                     item {
                         Text(
-                            text = "Aucun utilisateur ajouté",
+                            text = stringResource(R.string.no_users_added),
                             color = Color.Gray,
                             modifier = Modifier.padding(vertical = 16.dp)
                         )
@@ -327,13 +329,13 @@ private fun ChangePasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Changer le mot de passe") },
+        title = { Text(stringResource(R.string.change_password)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = currentPassword,
                     onValueChange = { currentPassword = it },
-                    label = { Text("Mot de passe actuel") },
+                    label = { Text(stringResource(R.string.current_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -341,7 +343,7 @@ private fun ChangePasswordDialog(
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("Nouveau mot de passe") },
+                    label = { Text(stringResource(R.string.new_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -349,7 +351,7 @@ private fun ChangePasswordDialog(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirmer") },
+                    label = { Text(stringResource(R.string.confirm_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     isError = confirmPassword.isNotBlank() && !passwordsMatch,
@@ -365,11 +367,11 @@ private fun ChangePasswordDialog(
                 onClick = { onConfirm(currentPassword, newPassword) },
                 enabled = currentPassword.isNotBlank() && newPassword.length >= 6 && passwordsMatch
             ) {
-                Text("Enregistrer")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuler") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -387,14 +389,14 @@ private fun ResetPasswordDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Réinitialiser le mot de passe") },
+        title = { Text(stringResource(R.string.reset_password)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Nouveau mot de passe pour $userName")
                 OutlinedTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = { Text("Nouveau mot de passe") },
+                    label = { Text(stringResource(R.string.new_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -402,7 +404,7 @@ private fun ResetPasswordDialog(
                 OutlinedTextField(
                     value = confirmPassword,
                     onValueChange = { confirmPassword = it },
-                    label = { Text("Confirmer") },
+                    label = { Text(stringResource(R.string.confirm_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     singleLine = true,
                     isError = confirmPassword.isNotBlank() && !passwordsMatch,
@@ -418,11 +420,11 @@ private fun ResetPasswordDialog(
                 onClick = { onConfirm(newPassword) },
                 enabled = newPassword.length >= 6 && passwordsMatch
             ) {
-                Text("Réinitialiser")
+                Text(stringResource(R.string.reset_password))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuler") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -471,10 +473,10 @@ private fun UserAdminCard(
             }
             if (canManage && user.role != UserRole.ADMIN) {
                 TextButton(onClick = onResetPassword) {
-                    Text("MDP", fontSize = 12.sp)
+                    Text(stringResource(R.string.pwd_short), fontSize = 12.sp)
                 }
                 IconButton(onClick = onDelete) {
-                    Icon(Icons.Default.Delete, contentDescription = "Supprimer", tint = Color.Gray)
+                    Icon(Icons.Default.Delete, contentDescription = stringResource(R.string.delete), tint = Color.Gray)
                 }
             }
         }

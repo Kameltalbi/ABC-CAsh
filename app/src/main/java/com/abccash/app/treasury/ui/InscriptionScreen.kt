@@ -14,7 +14,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.abccash.app.R
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -45,12 +47,12 @@ fun InscriptionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Créer un compte") },
+                title = { Text(stringResource(R.string.create_account)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Retour"
+                            contentDescription = stringResource(R.string.back)
                         )
                     }
                 },
@@ -73,7 +75,7 @@ fun InscriptionScreen(
         ) {
             // En-tête
             Text(
-                text = "Inscription Admin",
+                text = stringResource(R.string.signup_admin_title),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)
@@ -82,7 +84,7 @@ fun InscriptionScreen(
             Spacer(modifier = Modifier.height(8.dp))
             
             Text(
-                text = "Créez votre compte pour devenir administrateur de votre entreprise",
+                text = stringResource(R.string.signup_admin_subtitle),
                 fontSize = 14.sp,
                 color = Color.Gray,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -96,8 +98,8 @@ fun InscriptionScreen(
                 value = uiState.nom,
                 onValueChange = { viewModel.updateNom(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nom complet *") },
-                placeholder = { Text("Votre nom") },
+                label = { Text("${stringResource(R.string.full_name)} *") },
+                placeholder = { Text(stringResource(R.string.your_name)) },
                 leadingIcon = { Icon(Icons.Default.Person, contentDescription = null) },
                 isError = uiState.nomError != null,
                 supportingText = if (uiState.nomError != null) {
@@ -118,8 +120,8 @@ fun InscriptionScreen(
                 value = uiState.nomEntreprise,
                 onValueChange = { viewModel.updateNomEntreprise(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Nom de l'entreprise *") },
-                placeholder = { Text("Nom de votre entreprise") },
+                label = { Text("${stringResource(R.string.company_name)} *") },
+                placeholder = { Text(stringResource(R.string.company_name_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Business, contentDescription = null) },
                 isError = uiState.nomEntrepriseError != null,
                 supportingText = if (uiState.nomEntrepriseError != null) {
@@ -143,8 +145,8 @@ fun InscriptionScreen(
                     // Vérification en temps réel après un délai
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email *") },
-                placeholder = { Text("exemple@email.com") },
+                label = { Text("${stringResource(R.string.email)} *") },
+                placeholder = { Text(stringResource(R.string.email_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 isError = uiState.emailError != null,
                 supportingText = if (uiState.emailError != null) {
@@ -167,8 +169,8 @@ fun InscriptionScreen(
                     viewModel.updateTelephone(it)
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Téléphone *") },
-                placeholder = { Text("+216 XX XXX XXX") },
+                label = { Text("${stringResource(R.string.phone)} *") },
+                placeholder = { Text(stringResource(R.string.phone_placeholder)) },
                 leadingIcon = { Icon(Icons.Default.Phone, contentDescription = null) },
                 isError = uiState.telephoneError != null,
                 supportingText = if (uiState.telephoneError != null) {
@@ -190,14 +192,16 @@ fun InscriptionScreen(
                 value = uiState.password,
                 onValueChange = { viewModel.updatePassword(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Mot de passe *") },
-                placeholder = { Text("Minimum 6 caractères") },
+                label = { Text("${stringResource(R.string.password)} *") },
+                placeholder = { Text(stringResource(R.string.password_placeholder_min)) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(
                             imageVector = if (passwordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (passwordVisible) "Masquer" else "Afficher"
+                            contentDescription = stringResource(
+                                if (passwordVisible) R.string.hide_password else R.string.show_password
+                            )
                         )
                     }
                 },
@@ -222,14 +226,16 @@ fun InscriptionScreen(
                 value = uiState.confirmPassword,
                 onValueChange = { viewModel.updateConfirmPassword(it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Confirmer le mot de passe *") },
-                placeholder = { Text("Répétez votre mot de passe") },
+                label = { Text("${stringResource(R.string.confirm_password)} *") },
+                placeholder = { Text(stringResource(R.string.repeat_password)) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(
                             imageVector = if (confirmPasswordVisible) Icons.Default.Visibility else Icons.Default.VisibilityOff,
-                            contentDescription = if (confirmPasswordVisible) "Masquer" else "Afficher"
+                            contentDescription = stringResource(
+                                if (confirmPasswordVisible) R.string.hide_password else R.string.show_password
+                            )
                         )
                     }
                 },
@@ -295,7 +301,7 @@ fun InscriptionScreen(
                     )
                 } else {
                     Text(
-                        text = "Créer mon compte",
+                        text = stringResource(R.string.signup_create_button),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -317,7 +323,7 @@ fun InscriptionScreen(
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "Vous serez automatiquement désigné comme administrateur",
+                    text = stringResource(R.string.signup_admin_note),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )

@@ -15,7 +15,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.abccash.app.R
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -24,7 +26,6 @@ import com.abccash.app.treasury.data.Payment
 import com.abccash.app.treasury.data.PaymentMethod
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -36,7 +37,6 @@ fun PaymentEntryScreen(
     var paymentAmount by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
-    var showMethodMenu by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     var paymentError by remember { mutableStateOf<String?>(null) }
     val datePickerState = rememberDatePickerState(
@@ -47,14 +47,17 @@ fun PaymentEntryScreen(
     )
     
     val formatAmount = rememberFormatMoney()
+    val invalidAmountError = stringResource(R.string.invalid_amount)
+    val paymentSaveFailedError = stringResource(R.string.payment_save_failed)
+    val context = androidx.compose.ui.platform.LocalContext.current
     
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Enregistrer un paiement") },
+                title = { Text(stringResource(R.string.record_payment)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -104,7 +107,7 @@ fun PaymentEntryScreen(
                         ) {
                             Column {
                                 Text(
-                                    text = "Montant total",
+                                    text = stringResource(R.string.payment_total),
                                     fontSize = 12.sp,
                                     color = Color.Gray
                                 )
@@ -117,7 +120,7 @@ fun PaymentEntryScreen(
                             
                             Column(horizontalAlignment = Alignment.End) {
                                 Text(
-                                    text = "Déjà payé",
+                                    text = stringResource(R.string.already_paid),
                                     fontSize = 12.sp,
                                     color = Color.Gray
                                 )
@@ -142,7 +145,7 @@ fun PaymentEntryScreen(
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                                 Text(
-                                    text = "Reste à recouvrer",
+                                    text = stringResource(R.string.remaining_to_collect),
                                     fontSize = 14.sp,
                                     color = Color.Gray
                                 )
@@ -160,7 +163,7 @@ fun PaymentEntryScreen(
             
             item {
                 Text(
-                    text = "Nouveau paiement",
+                    text = stringResource(R.string.new_payment),
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold
                 )
@@ -171,8 +174,8 @@ fun PaymentEntryScreen(
                     value = paymentAmount,
                     onValueChange = { paymentAmount = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Montant de l'avance") },
-                    placeholder = { Text("0.000") },
+                    label = { Text(stringResource(R.string.advance_amount)) },
+                    placeholder = { Text(stringResource(R.string.amount_placeholder)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     suffix = { CurrencySuffix() }
@@ -185,49 +188,21 @@ fun PaymentEntryScreen(
                     onValueChange = {},
                     modifier = Modifier
                         .fillMaxWidth(),
-                    label = { Text("Date de paiement") },
+                    label = { Text(stringResource(R.string.payment_date)) },
                     readOnly = true,
                     trailingIcon = {
                         IconButton(onClick = { showDatePicker = true }) {
-                            Icon(Icons.Default.CalendarToday, contentDescription = "Choisir date")
+                            Icon(Icons.Default.CalendarToday, contentDescription = stringResource(R.string.choose_date))
                         }
                     }
                 )
             }
             
             item {
-                ExposedDropdownMenuBox(
-                    expanded = showMethodMenu,
-                    onExpandedChange = { showMethodMenu = it }
-                ) {
-                    OutlinedTextField(
-                        value = selectedMethod.label,
-                        onValueChange = {},
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(),
-                        label = { Text("Mode de règlement") },
-                        readOnly = true,
-                        trailingIcon = {
-                            Icon(Icons.Default.KeyboardArrowDown, contentDescription = null)
-                        }
-                    )
-                    
-                    ExposedDropdownMenu(
-                        expanded = showMethodMenu,
-                        onDismissRequest = { showMethodMenu = false }
-                    ) {
-                        PaymentMethod.values().forEach { method ->
-                            DropdownMenuItem(
-                                text = { Text(method.label) },
-                                onClick = {
-                                    selectedMethod = method
-                                    showMethodMenu = false
-                                }
-                            )
-                        }
-                    }
-                }
+                TreasuryPaymentMethodField(
+                    selectedMethod = selectedMethod,
+                    onMethodChange = { selectedMethod = it }
+                )
             }
             
             item {
@@ -242,17 +217,20 @@ fun PaymentEntryScreen(
                         val amount = paymentAmount.replace(",", ".").toDoubleOrNull()
                         when {
                             amount == null || amount <= 0 -> {
-                                paymentError = "Montant invalide"
+                                paymentError = invalidAmountError
                             }
                             amount > invoice.remainingAmount -> {
-                                paymentError = "Maximum : ${formatAmount(invoice.remainingAmount)}"
+                                paymentError = context.getString(
+                                    R.string.payment_max,
+                                    formatAmount(invoice.remainingAmount)
+                                )
                             }
                             else -> {
                                 val saved = onSavePayment(amount, selectedDate, selectedMethod)
                                 if (saved) {
                                     paymentError = null
                                 } else {
-                                    paymentError = "Impossible d'enregistrer le paiement"
+                                    paymentError = paymentSaveFailedError
                                 }
                             }
                         }
@@ -264,7 +242,7 @@ fun PaymentEntryScreen(
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
-                        text = "Enregistrer le paiement",
+                        text = stringResource(R.string.save_payment),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -274,7 +252,7 @@ fun PaymentEntryScreen(
             if (invoice.payments.isNotEmpty()) {
                 item {
                     Text(
-                        text = "Historique des versements",
+                        text = stringResource(R.string.payment_history),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
                     )
@@ -301,12 +279,12 @@ fun PaymentEntryScreen(
                         showDatePicker = false
                     }
                 ) {
-                    Text("OK")
+                    Text(stringResource(R.string.ok))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDatePicker = false }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         ) {
@@ -340,7 +318,7 @@ fun PaymentHistoryItem(payment: Payment) {
                     color = Color(0xFF4CAF50)
                 )
                 Text(
-                    text = payment.method.label,
+                    text = payment.method.localizedLabel(),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )

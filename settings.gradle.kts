@@ -17,3 +17,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "ABCCash"
 include(":app")
+include(":server")

@@ -67,6 +67,12 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
     }
 }
 
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `expenses` ADD COLUMN `paymentMethod` TEXT")
+    }
+}
+
 private fun resolveDefaultEntrepriseId(db: SupportSQLiteDatabase): String? {
     db.query("SELECT id FROM entreprises LIMIT 1").use { cursor ->
         if (cursor.moveToFirst()) {

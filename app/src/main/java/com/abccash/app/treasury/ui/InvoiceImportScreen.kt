@@ -16,9 +16,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.importer.InvoiceImportParser
 import com.abccash.app.treasury.importer.InvoiceImportResult
@@ -78,10 +80,10 @@ fun InvoiceImportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Importer des encaissements") },
+                title = { Text(stringResource(R.string.import_invoices_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -109,28 +111,28 @@ fun InvoiceImportScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Text(
-                        text = "Structure du fichier",
+                        text = stringResource(R.string.file_structure),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A1A1A)
                     )
                     Text(
-                        text = "Colonnes acceptées : N° facture, Client, Montant, Date échéance",
+                        text = stringResource(R.string.import_columns),
                         fontSize = 13.sp,
                         color = Color.Gray
                     )
                     Text(
-                        text = "(ou en anglais : invoiceNumber, clientName, totalAmount, dueDate)",
+                        text = stringResource(R.string.import_columns_en),
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
                     Text(
-                        text = "La date d'échéance détermine le mois d'affichage de chaque facture.",
+                        text = stringResource(R.string.import_due_date_note),
                         fontSize = 12.sp,
                         color = Color(0xFF2563EB)
                     )
                     Text(
-                        text = "CSV (virgule, point-virgule ou tabulation) ou Excel .xlsx",
+                        text = stringResource(R.string.import_formats),
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -154,19 +156,18 @@ fun InvoiceImportScreen(
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(
-                            text = "Sélecteur de fichiers Android",
+                            text = stringResource(R.string.android_file_picker),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Bold,
                             color = Color(0xFF1A1A1A)
                         )
                         Text(
-                            text = "Ce n'est pas l'app : Android ouvre son gestionnaire de fichiers. " +
-                                "Retour = bouton ← de l'émulateur ou glissement depuis le bord gauche.",
+                            text = stringResource(R.string.android_file_picker_note),
                             fontSize = 12.sp,
                             color = Color(0xFF64748B)
                         )
                         Text(
-                            text = "Liste vide ? Menu ☰ → Téléchargements. Désactivez les filtres « Large files ».",
+                            text = stringResource(R.string.empty_file_list_hint),
                             fontSize = 12.sp,
                             color = Color(0xFF64748B)
                         )
@@ -183,7 +184,7 @@ fun InvoiceImportScreen(
             ) {
                 Icon(Icons.Default.FileUpload, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Choisir le fichier")
+                Text(stringResource(R.string.choose_file))
             }
 
             statusMessage?.let { message ->
@@ -203,7 +204,7 @@ fun InvoiceImportScreen(
                     .height(48.dp),
                 shape = RoundedCornerShape(10.dp)
             ) {
-                Text("Annuler")
+                Text(stringResource(R.string.cancel))
             }
         }
     }

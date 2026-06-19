@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
@@ -73,12 +74,12 @@ fun SplashDecisionScreen(
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_abc_cash_logo),
-                contentDescription = "ABC Cash",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier.fillMaxWidth(0.72f),
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = "Gestion de trésorerie", fontSize = 16.sp, color = Color.Gray)
+            Text(text = stringResource(R.string.splash_tagline), fontSize = 16.sp, color = Color.Gray)
             Spacer(modifier = Modifier.height(48.dp))
             CircularProgressIndicator(
                 modifier = Modifier.size(48.dp),

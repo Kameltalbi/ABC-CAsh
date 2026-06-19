@@ -140,4 +140,44 @@ class TreasuryCalculationsTest {
         assertEquals(400.0, april.totalIncome, 0.001)
         assertEquals(100.0, april.totalExpenses, 0.001)
     }
+
+    @Test
+    fun `yearly rows accumulate month by month balance`() {
+        val year = 2026
+        val invoices = listOf(
+            sampleInvoiceWithPayment(500.0, LocalDate.of(2026, 1, 10)),
+            sampleInvoiceWithPayment(200.0, LocalDate.of(2026, 2, 5))
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Charge",
+                amount = 150.0,
+                date = LocalDate.of(2026, 2, 20),
+                isPaid = true
+            )
+        )
+
+        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, year)
+
+        assertEquals(500.0, rows[0].forecastBalance, 0.001)
+        assertEquals(550.0, rows[1].forecastBalance, 0.001)
+        assertEquals(550.0, rows[11].forecastBalance, 0.001)
+    }
+
+    private fun sampleInvoiceWithPayment(amount: Double, date: LocalDate): Invoice =
+        Invoice(
+            invoiceNumber = "F1",
+            clientName = "Client",
+            totalAmount = amount,
+            paidAmount = amount,
+            dueDate = date,
+            payments = listOf(
+                Payment(
+                    invoiceId = "inv",
+                    amount = amount,
+                    date = date,
+                    method = PaymentMethod.CASH
+                )
+            )
+        )
 }

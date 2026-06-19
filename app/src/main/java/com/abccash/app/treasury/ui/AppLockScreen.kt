@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -17,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
+import com.abccash.app.R
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
 import kotlinx.coroutines.launch
@@ -52,8 +54,13 @@ private fun AppLockScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val pinIncorrectError = stringResource(R.string.pin_incorrect)
     var pin by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+
+    val unlockTitle = stringResource(R.string.unlock)
+    val usePinLabel = stringResource(R.string.use_pin)
+    val fingerprintLabel = stringResource(R.string.fingerprint)
 
     val activity = context as? FragmentActivity
     val biometricAvailable = remember {
@@ -80,9 +87,9 @@ private fun AppLockScreen(
             }
         )
         val info = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Déverrouiller ABC Cash")
-            .setSubtitle("Utilisez votre empreinte digitale")
-            .setNegativeButtonText("Utiliser le PIN")
+            .setTitle(unlockTitle)
+            .setSubtitle(fingerprintLabel)
+            .setNegativeButtonText(usePinLabel)
             .build()
         prompt.authenticate(info)
     }
@@ -101,9 +108,9 @@ private fun AppLockScreen(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            Text("ABC Cash", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.app_name), fontSize = 24.sp, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
-            Text("Application verrouillée", textAlign = TextAlign.Center)
+            Text(stringResource(R.string.app_locked), textAlign = TextAlign.Center)
             Spacer(modifier = Modifier.height(24.dp))
 
             if (settings.pinEnabled && settings.hasPin) {
@@ -112,7 +119,7 @@ private fun AppLockScreen(
                     onValueChange = {
                         if (it.length <= 8 && it.all { c -> c.isDigit() }) pin = it
                     },
-                    label = { Text("Code PIN") },
+                    label = { Text(stringResource(R.string.pin_code)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     singleLine = true,
@@ -125,7 +132,7 @@ private fun AppLockScreen(
                             if (appSettings.verifyPin(pin)) {
                                 onUnlocked()
                             } else {
-                                error = "Code PIN incorrect"
+                                error = pinIncorrectError
                                 pin = ""
                             }
                         }
@@ -133,7 +140,7 @@ private fun AppLockScreen(
                     enabled = pin.length >= 4,
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Déverrouiller")
+                    Text(stringResource(R.string.unlock))
                 }
             }
 
@@ -143,7 +150,7 @@ private fun AppLockScreen(
                     onClick = { showBiometricPrompt() },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Empreinte digitale")
+                    Text(stringResource(R.string.fingerprint))
                 }
             }
 

@@ -10,7 +10,10 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
@@ -22,8 +25,6 @@ import java.io.File
 import com.abccash.app.treasury.data.AppCurrency
 import com.abccash.app.treasury.data.AppCurrencyFormatter
 import com.abccash.app.treasury.data.LocalAppCurrency
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 data class ReceiptScanUiState(
     val isScanning: Boolean = false,
@@ -43,20 +44,26 @@ fun rememberReceiptScan(
 
     val currency = LocalAppCurrency.current
 
+    val receiptNoData = stringResource(R.string.receipt_no_data)
+    val receiptReadFailed = stringResource(R.string.receipt_read_failed)
+    val cameraDenied = stringResource(R.string.camera_permission_denied)
+
     fun processImage(uri: Uri) {
         scope.launch {
             uiState = uiState.copy(isScanning = true, successMessage = null)
             runCatching { ReceiptOcrProcessor.scanReceipt(context, uri) }
                 .onSuccess { result ->
                     if (result.amount == null && result.date == null && result.merchantHint == null) {
-                        snackbarHostState.showSnackbar("Aucun montant ni date détectés sur le reçu")
+                        snackbarHostState.showSnackbar(receiptNoData)
                     } else {
                         onParsed(result)
-                        uiState = uiState.copy(successMessage = buildReceiptSuccessMessage(result, currency))
+                        uiState = uiState.copy(
+                            successMessage = buildReceiptSuccessMessage(result, currency, context)
+                        )
                     }
                 }
                 .onFailure {
-                    snackbarHostState.showSnackbar("Échec de lecture du reçu")
+                    snackbarHostState.showSnackbar(receiptReadFailed)
                 }
             uiState = uiState.copy(isScanning = false)
         }
@@ -79,7 +86,7 @@ fun rememberReceiptScan(
             pendingCameraUri = uri
             takePictureLauncher.launch(uri)
         } else {
-            scope.launch { snackbarHostState.showSnackbar("Permission caméra refusée") }
+            scope.launch { snackbarHostState.showSnackbar(cameraDenied) }
         }
     }
 
@@ -133,12 +140,12 @@ fun ReceiptSourcePickerSheet(
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text("Scanner un reçu", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.scan_receipt), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             OutlinedButton(onClick = onTakePhoto, modifier = Modifier.fillMaxWidth()) {
-                Text("Prendre une photo")
+                Text(stringResource(R.string.take_photo))
             }
             OutlinedButton(onClick = onPickGallery, modifier = Modifier.fillMaxWidth()) {
-                Text("Choisir depuis la galerie")
+                Text(stringResource(R.string.choose_from_gallery))
             }
         }
     }
@@ -152,7 +159,7 @@ fun ReceiptScanSuccessBanner(message: String) {
         color = androidx.compose.ui.graphics.Color(0xFFE8F5E9)
     ) {
         Text(
-            text = "✓ $message",
+            text = stringResource(R.string.scan_success, message),
             modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
             fontSize = 13.sp,
             color = androidx.compose.ui.graphics.Color(0xFF2E7D32)
@@ -165,11 +172,18 @@ private fun createReceiptPhotoUri(context: Context): Uri {
     return FileProvider.getUriForFile(context, "${context.packageName}.fileprovider", file)
 }
 
-private fun buildReceiptSuccessMessage(result: ReceiptParseResult, currency: AppCurrency): String {
-    val dateFormatter = DateTimeFormatter.ofPattern("d MMMM", Locale.FRENCH)
+private fun buildReceiptSuccessMessage(
+    result: ReceiptParseResult,
+    currency: AppCurrency,
+    context: Context
+): String {
     val parts = buildList {
-        result.amount?.let { add("montant ${AppCurrencyFormatter.format(it, currency)}") }
-        result.date?.let { add("date ${it.format(dateFormatter)}") }
+        result.amount?.let { add(AppCurrencyFormatter.format(it, currency)) }
+        result.date?.let { add(AppLocale.dayMonth(it)) }
     }
-    return if (parts.isEmpty()) "Reçu lu" else "Reçu lu — ${parts.joinToString(", ")} détectés"
+    return if (parts.isEmpty()) {
+        context.getString(R.string.receipt_read_ok)
+    } else {
+        context.getString(R.string.receipt_read_detected, parts.joinToString(", "))
+    }
 }

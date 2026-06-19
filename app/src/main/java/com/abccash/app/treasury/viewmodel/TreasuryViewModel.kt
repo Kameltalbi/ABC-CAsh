@@ -117,6 +117,7 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         dueDate: LocalDate,
         category: RevenueCategory = RevenueCategory.OTHER,
         markAsCollected: Boolean = false,
+        paymentMethod: PaymentMethod = PaymentMethod.CASH,
         onResult: (String?) -> Unit = {}
     ) {
         val entrepriseId = requireEntrepriseId()
@@ -144,7 +145,7 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                         invoiceId = invoice.id,
                         amount = totalAmount,
                         date = dueDate,
-                        method = PaymentMethod.CASH
+                        method = paymentMethod
                     )
                 )
             }
@@ -159,6 +160,7 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         category: RevenueCategory,
         categoryLabel: String = "",
         markAsCollected: Boolean,
+        paymentMethod: PaymentMethod = PaymentMethod.CASH,
         onResult: (String?) -> Unit
     ) {
         val entrepriseId = requireEntrepriseId()
@@ -185,7 +187,7 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                         invoiceId = invoice.id,
                         amount = amount,
                         date = date,
-                        method = PaymentMethod.CASH
+                        method = paymentMethod
                     )
                 )
             }
@@ -199,6 +201,11 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         date: LocalDate,
         category: ExpenseCategory,
         categoryLabel: String = "",
+        isRecurring: Boolean = false,
+        recurrence: ExpenseRecurrence? = null,
+        recurrenceEndDate: LocalDate? = null,
+        isPaid: Boolean = true,
+        paymentMethod: PaymentMethod = PaymentMethod.CASH,
         onResult: (String?) -> Unit
     ) {
         val entrepriseId = requireEntrepriseId()
@@ -212,7 +219,11 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                     label = label,
                     amount = amount,
                     date = date,
-                    isPaid = true,
+                    isRecurring = isRecurring,
+                    recurrence = if (isRecurring) recurrence else null,
+                    recurrenceEndDate = if (isRecurring) recurrenceEndDate else null,
+                    isPaid = isPaid,
+                    paymentMethod = if (isPaid) paymentMethod else null,
                     entrepriseId = entrepriseId,
                     category = category,
                     categoryLabel = categoryLabel
@@ -398,6 +409,29 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
         }
     }
 
+    fun validateForecastExpense(
+        expenseId: String,
+        paymentDate: LocalDate,
+        paymentMethod: PaymentMethod,
+        onResult: (String?) -> Unit = {}
+    ) {
+        val existing = _uiState.value.expenses.find { it.id == expenseId }
+        if (existing == null) {
+            onResult("Dépense introuvable")
+            return
+        }
+        viewModelScope.launch {
+            repository.updateExpense(
+                existing.copy(
+                    isPaid = true,
+                    paymentMethod = paymentMethod,
+                    date = if (existing.isRecurring) existing.date else paymentDate
+                )
+            )
+            onResult(null)
+        }
+    }
+
     fun updateExpense(
         expenseId: String,
         label: String,
@@ -418,7 +452,11 @@ class TreasuryViewModel(private val repository: TreasuryRepository) : ViewModel(
                     isRecurring = isRecurring,
                     recurrence = if (isRecurring) recurrence else null,
                     recurrenceEndDate = if (isRecurring) recurrenceEndDate else null,
-                    isPaid = isPaid
+                    isPaid = isPaid,
+                    paymentMethod = when {
+                        isPaid -> existing.paymentMethod ?: PaymentMethod.CASH
+                        else -> null
+                    }
                 )
             )
         }

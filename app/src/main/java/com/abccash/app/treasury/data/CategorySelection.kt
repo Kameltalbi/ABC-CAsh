@@ -7,47 +7,61 @@ data class CategorySelection(
 ) {
     val displayLabel: String
         get() = customLabel?.takeIf { it.isNotBlank() }
-            ?: revenueCategory?.label
-            ?: expenseCategory?.label
+            ?: revenueCategory?.name
+            ?: expenseCategory?.name
             ?: ""
 
     companion object {
-        fun resolveIncome(label: String, customLabels: List<String>): CategorySelection {
-            RevenueCategory.entries.find { it.label == label }?.let {
-                return CategorySelection(revenueCategory = it)
+        fun resolveIncome(
+            label: String,
+            customLabels: List<String>
+        ): CategorySelection {
+            val trimmed = label.trim()
+            if (trimmed.isBlank()) {
+                return CategorySelection(revenueCategory = RevenueCategory.OTHER)
             }
-            if (customLabels.any { it.equals(label, ignoreCase = true) }) {
-                return CategorySelection(
-                    revenueCategory = RevenueCategory.OTHER,
-                    customLabel = label
-                )
-            }
-            return CategorySelection(revenueCategory = RevenueCategory.OTHER)
+            return CategorySelection(
+                revenueCategory = RevenueCategory.OTHER,
+                customLabel = trimmed
+            )
         }
 
-        fun resolveExpense(label: String, customLabels: List<String>): CategorySelection {
-            ExpenseCategory.entries.find { it.label == label }?.let {
-                return CategorySelection(expenseCategory = it)
+        fun resolveExpense(
+            label: String,
+            customLabels: List<String>
+        ): CategorySelection {
+            val trimmed = label.trim()
+            if (trimmed.isBlank()) {
+                return CategorySelection(expenseCategory = ExpenseCategory.OTHER)
             }
-            if (customLabels.any { it.equals(label, ignoreCase = true) }) {
-                return CategorySelection(
-                    expenseCategory = ExpenseCategory.OTHER,
-                    customLabel = label
-                )
-            }
-            return CategorySelection(expenseCategory = ExpenseCategory.OTHER)
+            return CategorySelection(
+                expenseCategory = ExpenseCategory.OTHER,
+                customLabel = trimmed
+            )
         }
 
-        fun incomeOptions(customLabels: List<String>): List<String> =
-            RevenueCategory.entries.map { it.label } + customLabels
+        fun incomeOptions(customLabels: List<String>): List<String> = customLabels
 
-        fun expenseOptions(customLabels: List<String>): List<String> =
-            ExpenseCategory.entries.map { it.label } + customLabels
+        fun expenseOptions(customLabels: List<String>): List<String> = customLabels
 
-        fun displayIncome(category: RevenueCategory, customLabel: String?): String =
-            customLabel?.takeIf { it.isNotBlank() } ?: category.label
+        fun displayIncome(category: RevenueCategory, customLabel: String?): CategorySliceKey =
+            if (customLabel.isNullOrBlank()) {
+                CategorySliceKey(revenueCategory = category)
+            } else {
+                CategorySliceKey(label = customLabel)
+            }
 
-        fun displayExpense(category: ExpenseCategory, customLabel: String?): String =
-            customLabel?.takeIf { it.isNotBlank() } ?: category.label
+        fun displayExpense(category: ExpenseCategory, customLabel: String?): CategorySliceKey =
+            if (customLabel.isNullOrBlank()) {
+                CategorySliceKey(expenseCategory = category)
+            } else {
+                CategorySliceKey(label = customLabel)
+            }
     }
 }
+
+data class CategorySliceKey(
+    val label: String = "",
+    val revenueCategory: RevenueCategory? = null,
+    val expenseCategory: ExpenseCategory? = null
+)

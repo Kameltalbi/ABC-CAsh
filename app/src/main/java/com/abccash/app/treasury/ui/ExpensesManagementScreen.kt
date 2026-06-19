@@ -8,8 +8,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -29,7 +34,6 @@ import com.abccash.app.treasury.data.occurrenceDateIn
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,14 +71,14 @@ fun ExpensesManagementScreen(
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     Text(
-                        text = "Accès refusé",
+                        text = stringResource(R.string.access_denied),
                         fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFFF44336)
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        text = "Vous n'avez pas la permission de gérer les dépenses",
+                        text = stringResource(R.string.no_expense_permission),
                         fontSize = 14.sp,
                         color = Color.Gray
                     )
@@ -99,10 +103,7 @@ fun ExpensesManagementScreen(
         selectedExpenseIds = emptySet()
     }
 
-    val monthLabel = remember(selectedMonth) {
-        selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))
-            .replaceFirstChar { it.uppercase() }
-    }
+    val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
 
     Scaffold(
         floatingActionButton = {
@@ -111,7 +112,7 @@ fun ExpensesManagementScreen(
                     onClick = onNavigateToAddExpense,
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Ajouter une dépense", tint = Color.White)
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_expense), tint = Color.White)
                 }
             }
         }
@@ -130,7 +131,7 @@ fun ExpensesManagementScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "Dépenses — $monthLabel",
+                text = stringResource(R.string.expenses_month_title, monthLabel),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
@@ -161,7 +162,7 @@ fun ExpensesManagementScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = "Aucune dépense pour ce mois",
+                        text = stringResource(R.string.no_expenses_month),
                         color = Color.Gray,
                         modifier = Modifier.padding(32.dp)
                     )
@@ -184,6 +185,7 @@ fun ExpensesManagementScreen(
                                     selectedExpenseIds - expense.id
                                 }
                             },
+                            isAdmin = userRole == UserRole.ADMIN,
                             canManage = true,
                             onEdit = { expenseToEdit = expense },
                             onDelete = { expenseToDelete = expense }
@@ -213,8 +215,16 @@ fun ExpensesManagementScreen(
     expenseToDelete?.let { expense ->
         AlertDialog(
             onDismissRequest = { expenseToDelete = null },
-            title = { Text("Supprimer la dépense ?") },
-            text = { Text("Supprimer « ${expense.label} » (${formatMoney(expense.amount)}) ?") },
+            title = { Text(stringResource(R.string.delete_expense_question)) },
+            text = {
+                Text(
+                    stringResource(
+                        R.string.delete_expense_item_confirm,
+                        expense.label,
+                        formatMoney(expense.amount)
+                    )
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -222,12 +232,12 @@ fun ExpensesManagementScreen(
                         expenseToDelete = null
                     }
                 ) {
-                    Text("Supprimer", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { expenseToDelete = null }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -236,8 +246,8 @@ fun ExpensesManagementScreen(
     if (showBulkDeleteConfirm) {
         AlertDialog(
             onDismissRequest = { showBulkDeleteConfirm = false },
-            title = { Text("Supprimer la sélection ?") },
-            text = { Text("Supprimer ${selectedExpenseIds.size} dépense(s) ?") },
+            title = { Text(stringResource(R.string.delete_selection_question)) },
+            text = { Text(stringResource(R.string.delete_count, selectedExpenseIds.size)) },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -246,12 +256,12 @@ fun ExpensesManagementScreen(
                         showBulkDeleteConfirm = false
                     }
                 ) {
-                    Text("Supprimer", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showBulkDeleteConfirm = false }) {
-                    Text("Annuler")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -285,29 +295,31 @@ internal fun ExpenseFormDialog(
     }
     var isPaid by remember(initialExpense) { mutableStateOf(initialExpense.isPaid) }
     val parsedAmount = expenseAmount.replace(",", ".").toDoubleOrNull()
+    val dateLabel = stringResource(R.string.date)
+    val recurrenceEndLabel = stringResource(R.string.recurrence_end)
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Modifier la dépense") },
+        title = { Text(stringResource(R.string.edit_expense)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 OutlinedTextField(
                     value = expenseLabel,
                     onValueChange = { expenseLabel = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Libellé") },
+                    label = { Text(stringResource(R.string.label)) },
                     singleLine = true
                 )
                 OutlinedTextField(
                     value = expenseAmount,
                     onValueChange = { expenseAmount = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Montant") },
+                    label = { Text(stringResource(R.string.amount)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     suffix = { CurrencySuffix() }
                 )
                 TreasuryDateField(
-                    label = "Date",
+                    label = dateLabel,
                     date = expenseDate,
                     onDateChange = { expenseDate = it }
                 )
@@ -316,7 +328,7 @@ internal fun ExpenseFormDialog(
                         checked = isRecurring,
                         onCheckedChange = { isRecurring = it }
                     )
-                    Text("Dépense récurrente", fontSize = 14.sp)
+                    Text(stringResource(R.string.recurring_expense), fontSize = 14.sp)
                 }
                 if (isRecurring) {
                     ExposedDropdownMenuBox(
@@ -324,12 +336,12 @@ internal fun ExpenseFormDialog(
                         onExpandedChange = { showRecurrenceMenu = it }
                     ) {
                         OutlinedTextField(
-                            value = selectedRecurrence.label,
+                            value = selectedRecurrence.localizedLabel(),
                             onValueChange = {},
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .menuAnchor(),
-                            label = { Text("Fréquence") },
+                            label = { Text(stringResource(R.string.frequency)) },
                             readOnly = true,
                             trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showRecurrenceMenu) }
                         )
@@ -339,7 +351,7 @@ internal fun ExpenseFormDialog(
                         ) {
                             ExpenseRecurrence.entries.forEach { recurrence ->
                                 DropdownMenuItem(
-                                    text = { Text(recurrence.label) },
+                                    text = { Text(recurrence.localizedLabel()) },
                                     onClick = {
                                         selectedRecurrence = recurrence
                                         showRecurrenceMenu = false
@@ -357,11 +369,14 @@ internal fun ExpenseFormDialog(
                                 onStopRecurrence(endDate)
                             }
                         ) {
-                            Text("Arrêter après ce mois", color = Color(0xFFF44336))
+                            Text(stringResource(R.string.stop_after_month), color = Color(0xFFF44336))
                         }
                     } else {
                         Text(
-                            text = "Récurrence arrêtée le ${initialExpense.recurrenceEndDate!!.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))}",
+                            text = stringResource(
+                                R.string.stop_recurrence_on,
+                                initialExpense.recurrenceEndDate!!.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                            ),
                             fontSize = 12.sp,
                             color = Color.Gray
                         )
@@ -372,12 +387,12 @@ internal fun ExpenseFormDialog(
                             checked = hasRecurrenceEnd,
                             onCheckedChange = { hasRecurrenceEnd = it }
                         )
-                        Text("Date de fin", fontSize = 14.sp)
+                        Text(stringResource(R.string.end_date), fontSize = 14.sp)
                     }
 
                     if (hasRecurrenceEnd) {
                         TreasuryDateField(
-                            label = "Fin de récurrence",
+                            label = recurrenceEndLabel,
                             date = recurrenceEndDate,
                             onDateChange = { recurrenceEndDate = it }
                         )
@@ -389,7 +404,11 @@ internal fun ExpenseFormDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = if (isPaid) "Déjà payée" else "À venir",
+                        text = if (isPaid) {
+                            stringResource(R.string.already_paid_expense)
+                        } else {
+                            stringResource(R.string.upcoming_badge)
+                        },
                         fontSize = 14.sp
                     )
                     Switch(checked = isPaid, onCheckedChange = { isPaid = it })
@@ -415,12 +434,12 @@ internal fun ExpenseFormDialog(
                     (parsedAmount?.let { it > 0 } == true) &&
                     !(isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate))
             ) {
-                Text("Enregistrer")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("Annuler")
+                Text(stringResource(R.string.cancel))
             }
         }
     )
@@ -433,27 +452,31 @@ fun ExpenseItem(
     showSelection: Boolean = false,
     isSelected: Boolean = false,
     onSelectionChange: (Boolean) -> Unit = {},
+    isAdmin: Boolean = false,
     canManage: Boolean = true,
     onEdit: () -> Unit = {},
+    onValidate: () -> Unit = {},
     onDelete: () -> Unit = {}
 ) {
     val formatAmount = rememberFormatMoney()
+    val recurringBadge = stringResource(R.string.recurring_badge)
+    val upcomingBadge = stringResource(R.string.upcoming_badge)
     val displayDate = displayMonth?.let { expense.occurrenceDateIn(it) } ?: expense.date
+    var menuExpanded by remember { mutableStateOf(false) }
+    val accent = Color(0xFFEF4444)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFFFEBEE)
-        ),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 10.dp, vertical = 8.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             if (showSelection) {
                 Checkbox(
@@ -461,10 +484,24 @@ fun ExpenseItem(
                     onCheckedChange = onSelectionChange
                 )
             }
+            Box(
+                modifier = Modifier
+                    .size(36.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = 0.12f)),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ArrowDownward,
+                    contentDescription = null,
+                    tint = accent,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = expense.label,
-                    fontSize = 14.sp,
+                    fontSize = 15.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF1A1A1A),
                     maxLines = 1
@@ -475,83 +512,126 @@ fun ExpenseItem(
                 ) {
                     Text(
                         text = displayDate.format(DateTimeFormatter.ofPattern("dd/MM/yy")),
-                        fontSize = 11.sp,
-                        color = Color.Gray
+                        fontSize = 12.sp,
+                        color = Color(0xFF9E9E9E)
                     )
                     if (expense.isRecurring) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFF2196F3).copy(alpha = 0.1f)
-                        ) {
-                            Text(
-                                text = expense.recurrence?.label ?: "Récurrent",
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                fontSize = 9.sp,
-                                color = Color(0xFF2196F3),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        ExpenseMetaBadge(
+                            text = expense.recurrence?.localizedLabel() ?: recurringBadge,
+                            color = Color(0xFF2196F3)
+                        )
                     }
                     if (expense.isRecurring && expense.recurrenceEndDate != null) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFF9E9E9E).copy(alpha = 0.15f)
-                        ) {
-                            Text(
-                                text = "Fin ${expense.recurrenceEndDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))}",
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                fontSize = 9.sp,
-                                color = Color(0xFF757575),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        ExpenseMetaBadge(
+                            text = stringResource(
+                                R.string.recurrence_end_short,
+                                expense.recurrenceEndDate.format(DateTimeFormatter.ofPattern("dd/MM/yy"))
+                            ),
+                            color = Color(0xFF757575)
+                        )
                     }
                     if (!expense.isPaid) {
-                        Surface(
-                            shape = RoundedCornerShape(4.dp),
-                            color = Color(0xFFFF9800).copy(alpha = 0.1f)
-                        ) {
-                            Text(
-                                text = "À venir",
-                                modifier = Modifier.padding(horizontal = 5.dp, vertical = 1.dp),
-                                fontSize = 9.sp,
-                                color = Color(0xFFFF9800),
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                        ExpenseMetaBadge(text = upcomingBadge, color = Color(0xFFFF9800))
                     }
                 }
             }
-
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(2.dp)
-            ) {
-                Text(
-                    text = formatAmount(expense.amount),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFF44336)
-                )
-                if (canManage) {
-                    IconButton(onClick = onEdit, modifier = Modifier.size(32.dp)) {
+            Text(
+                text = formatAmount(expense.amount),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = accent
+            )
+            if (isAdmin) {
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Modifier",
-                            modifier = Modifier.size(16.dp),
-                            tint = Color.Gray
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = Color(0xFF9E9E9E)
                         )
                     }
-                    IconButton(onClick = onDelete, modifier = Modifier.size(32.dp)) {
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            }
+                        )
+                        if (!expense.isPaid) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.action_validate)) },
+                                onClick = {
+                                    menuExpanded = false
+                                    onValidate()
+                                }
+                            )
+                        }
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
+                        )
+                    }
+                }
+            } else if (canManage) {
+                Box {
+                    IconButton(
+                        onClick = { menuExpanded = true },
+                        modifier = Modifier.size(36.dp)
+                    ) {
                         Icon(
-                            Icons.Default.Delete,
-                            contentDescription = "Supprimer",
-                            modifier = Modifier.size(16.dp),
-                            tint = Color(0xFFBDBDBD)
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = null,
+                            tint = Color(0xFF9E9E9E)
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = menuExpanded,
+                        onDismissRequest = { menuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.edit)) },
+                            onClick = {
+                                menuExpanded = false
+                                onEdit()
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
+                            onClick = {
+                                menuExpanded = false
+                                onDelete()
+                            }
                         )
                     }
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun ExpenseMetaBadge(text: String, color: Color) {
+    Surface(
+        shape = RoundedCornerShape(4.dp),
+        color = color.copy(alpha = 0.12f)
+    ) {
+        Text(
+            text = text,
+            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+            fontSize = 10.sp,
+            color = color,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
     }
 }

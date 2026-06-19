@@ -19,14 +19,17 @@ import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
-import com.abccash.app.treasury.data.forMonth
+import com.abccash.app.treasury.data.appearsInTransactions
+import com.abccash.app.treasury.data.displayTransactionDate
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.data.occurrenceDateIn
+import com.abccash.app.treasury.data.transactionDateIn
+import androidx.compose.ui.res.stringResource
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import kotlinx.coroutines.delay
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 private data class TransactionRow(
     val date: LocalDate,
@@ -55,7 +58,8 @@ fun TransactionsScreen(
     onDeleteInvoice: (String) -> Unit,
     onUpdateExpense: (String, String, Double, LocalDate, Boolean, com.abccash.app.treasury.data.ExpenseRecurrence?, LocalDate?, Boolean) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
-    onDeleteExpense: (String) -> Unit
+    onDeleteExpense: (String) -> Unit,
+    onValidateExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit = { _, _, _, onResult -> onResult(null) }
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpense = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
@@ -65,7 +69,7 @@ fun TransactionsScreen(
 
     if (!canViewIncome && !canManageExpense) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Accès refusé", color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
+            Text(stringResource(R.string.access_denied), color = Color(0xFFF44336), fontWeight = FontWeight.Bold)
         }
         return
     }
@@ -77,6 +81,7 @@ fun TransactionsScreen(
     var invoiceToMarkPaid by remember { mutableStateOf<Invoice?>(null) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
+    var expenseToValidate by remember { mutableStateOf<Expense?>(null) }
     var paymentError by remember { mutableStateOf<String?>(null) }
     var editError by remember { mutableStateOf<String?>(null) }
 
@@ -87,23 +92,25 @@ fun TransactionsScreen(
         }
     }
 
-    val monthLabel = remember(selectedMonth) {
-        selectedMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH))
-            .replaceFirstChar { it.uppercase() }
-    }
+    val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
 
     val rows = remember(invoices, expenses, selectedMonth, canViewIncome, canManageExpense) {
         val incomeRows = if (canViewIncome) {
-            invoices.filter { YearMonth.from(it.dueDate) == selectedMonth }
-                .map { TransactionRow(date = it.dueDate, invoice = it) }
+            invoices
+                .filter { it.transactionDateIn(selectedMonth) }
+                .map { invoice ->
+                    TransactionRow(date = invoice.displayTransactionDate(), invoice = invoice)
+                }
         } else emptyList()
         val expenseRows = if (canManageExpense) {
-            expenses.forMonth(selectedMonth).map { expense ->
-                TransactionRow(
-                    date = expense.occurrenceDateIn(selectedMonth) ?: expense.date,
-                    expense = expense
-                )
-            }
+            expenses
+                .filter { it.appearsInTransactions(selectedMonth) }
+                .map { expense ->
+                    TransactionRow(
+                        date = expense.occurrenceDateIn(selectedMonth) ?: expense.date,
+                        expense = expense
+                    )
+                }
         } else emptyList()
         (incomeRows + expenseRows).sortedByDescending { it.date }
     }
@@ -115,7 +122,7 @@ fun TransactionsScreen(
                     onClick = { showTypeSheet = true },
                     containerColor = MaterialTheme.colorScheme.primary
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = "Nouvelle transaction", tint = Color.White)
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_transaction), tint = Color.White)
                 }
             }
         }
@@ -133,12 +140,12 @@ fun TransactionsScreen(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
-                    Text("Transactions", fontSize = 22.sp, fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.transactions), fontSize = 22.sp, fontWeight = FontWeight.Bold)
                     Text(monthLabel, fontSize = 13.sp, color = Color.Gray)
                 }
                 if (isAdmin) {
                     IconButton(onClick = onNavigateToImport) {
-                        Icon(Icons.Default.FileUpload, contentDescription = "Importer")
+                        Icon(Icons.Default.FileUpload, contentDescription = stringResource(R.string.import_action))
                     }
                 }
             }
@@ -159,7 +166,7 @@ fun TransactionsScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Aucune transaction ce mois-ci", color = Color.Gray, fontSize = 14.sp)
+                    Text(stringResource(R.string.no_transactions_month), color = Color.Gray, fontSize = 14.sp)
                 }
             } else {
                 LazyColumn(
@@ -190,8 +197,10 @@ fun TransactionsScreen(
                             row.expense != null -> ExpenseItem(
                                 expense = row.expense,
                                 displayMonth = selectedMonth,
+                                isAdmin = isAdmin,
                                 canManage = canManageExpense,
                                 onEdit = { expenseToEdit = row.expense },
+                                onValidate = { expenseToValidate = row.expense },
                                 onDelete = { expenseToDelete = row.expense }
                             )
                         }
@@ -218,24 +227,18 @@ fun TransactionsScreen(
     }
 
     invoiceToMarkPaid?.let { invoice ->
-        AlertDialog(
-            onDismissRequest = { invoiceToMarkPaid = null },
-            title = { Text("Marquer comme soldé") },
-            text = { Text("Enregistrer le paiement total de ${formatMoney(invoice.remainingAmount)} ?") },
-            confirmButton = {
-                TextButton(onClick = {
-                    onRecordPayment(
-                        invoice.id,
-                        invoice.remainingAmount,
-                        LocalDate.now(),
-                        PaymentMethod.CASH
-                    ) { error ->
-                        if (error == null) invoiceToMarkPaid = null else paymentError = error
-                    }
-                }) { Text("Confirmer") }
-            },
-            dismissButton = {
-                TextButton(onClick = { invoiceToMarkPaid = null }) { Text("Annuler") }
+        FullPaymentConfirmDialog(
+            invoice = invoice,
+            onDismiss = { invoiceToMarkPaid = null },
+            onConfirm = { date, method ->
+                onRecordPayment(
+                    invoice.id,
+                    invoice.remainingAmount,
+                    date,
+                    method
+                ) { error ->
+                    if (error == null) invoiceToMarkPaid = null else paymentError = error
+                }
             }
         )
     }
@@ -263,13 +266,13 @@ fun TransactionsScreen(
 
     invoiceToEdit?.let { invoice ->
         InvoiceFormDialog(
-            title = "Modifier encaissement",
+            title = stringResource(R.string.edit),
             initialInvoice = invoice,
             onDismiss = {
                 invoiceToEdit = null
                 editError = null
             },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _ ->
+            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _, _ ->
                 onUpdateInvoice(invoice.id, invoiceNumber, clientName, totalAmount, dueDate) { error ->
                     if (error == null) {
                         invoiceToEdit = null
@@ -286,16 +289,16 @@ fun TransactionsScreen(
     invoiceToDelete?.let { invoice ->
         AlertDialog(
             onDismissRequest = { invoiceToDelete = null },
-            title = { Text("Supprimer l'encaissement") },
-            text = { Text("Supprimer ${invoice.clientName} ?") },
+            title = { Text(stringResource(R.string.delete_invoice)) },
+            text = { Text(stringResource(R.string.delete_invoice_confirm, invoice.clientName)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDeleteInvoice(invoice.id)
                     invoiceToDelete = null
-                }) { Text("Supprimer", color = Color(0xFFF44336)) }
+                }) { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) }
             },
             dismissButton = {
-                TextButton(onClick = { invoiceToDelete = null }) { Text("Annuler") }
+                TextButton(onClick = { invoiceToDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }
@@ -316,19 +319,32 @@ fun TransactionsScreen(
         )
     }
 
+    expenseToValidate?.let { expense ->
+        ExpensePaymentConfirmDialog(
+            expense = expense,
+            dueDate = expense.occurrenceDateIn(selectedMonth) ?: expense.date,
+            onDismiss = { expenseToValidate = null },
+            onConfirm = { paymentDate, method ->
+                onValidateExpense(expense.id, paymentDate, method) { error ->
+                    if (error == null) expenseToValidate = null
+                }
+            }
+        )
+    }
+
     expenseToDelete?.let { expense ->
         AlertDialog(
             onDismissRequest = { expenseToDelete = null },
-            title = { Text("Supprimer la dépense") },
-            text = { Text("Supprimer ${expense.label} ?") },
+            title = { Text(stringResource(R.string.delete_expense)) },
+            text = { Text(stringResource(R.string.delete_expense_confirm, expense.label)) },
             confirmButton = {
                 TextButton(onClick = {
                     onDeleteExpense(expense.id)
                     expenseToDelete = null
-                }) { Text("Supprimer", color = Color(0xFFF44336)) }
+                }) { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) }
             },
             dismissButton = {
-                TextButton(onClick = { expenseToDelete = null }) { Text("Annuler") }
+                TextButton(onClick = { expenseToDelete = null }) { Text(stringResource(R.string.cancel)) }
             }
         )
     }

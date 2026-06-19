@@ -1,5 +1,6 @@
 package com.abccash.app.treasury.ui.settings
 
+import androidx.annotation.StringRes
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,15 +13,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 
-enum class SettingsSection(val title: String) {
-    MANAGEMENT("Gestion"),
-    PROFILE("Profil"),
-    CATEGORIES("Catégories"),
-    OPTIONS("Options")
+enum class SettingsSection(@StringRes val titleRes: Int) {
+    MANAGEMENT(R.string.settings_management),
+    PROFILE(R.string.settings_profile),
+    CATEGORIES(R.string.settings_categories),
+    OPTIONS(R.string.settings_options)
 }
 
 data class SettingsMenuEntry(
@@ -43,7 +46,10 @@ fun SettingsDetailScaffold(
                 title = { Text(title) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Retour")
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 }
             )

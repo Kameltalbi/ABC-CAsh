@@ -102,6 +102,7 @@ data class ExpenseEntity(
     val recurrence: ExpenseRecurrence?,
     val recurrenceEndDate: LocalDate?,
     val isPaid: Boolean,
+    val paymentMethod: PaymentMethod? = null,
     val createdDate: LocalDate,
     @ColumnInfo(defaultValue = "''")
     val entrepriseId: String,

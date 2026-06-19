@@ -19,6 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -50,7 +51,7 @@ fun LoginScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Connexion") },
+                title = { Text(stringResource(R.string.login)) },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.primary,
                     titleContentColor = Color.White
@@ -68,7 +69,7 @@ fun LoginScreen(
         ) {
             Image(
                 painter = painterResource(R.drawable.ic_abc_cash_logo),
-                contentDescription = "ABC Cash",
+                contentDescription = stringResource(R.string.app_name),
                 modifier = Modifier
                     .fillMaxWidth(0.55f)
                     .padding(top = 8.dp),
@@ -76,7 +77,7 @@ fun LoginScreen(
             )
             Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "Connectez-vous à votre espace trésorerie",
+                text = stringResource(R.string.login_subtitle),
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -86,7 +87,7 @@ fun LoginScreen(
                 value = uiState.email,
                 onValueChange = viewModel::updateEmail,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.email)) },
                 leadingIcon = { Icon(Icons.Default.Email, contentDescription = null) },
                 singleLine = true,
                 isError = uiState.emailError != null,
@@ -104,7 +105,7 @@ fun LoginScreen(
                 value = uiState.password,
                 onValueChange = viewModel::updatePassword,
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Mot de passe") },
+                label = { Text(stringResource(R.string.password)) },
                 leadingIcon = { Icon(Icons.Default.Lock, contentDescription = null) },
                 trailingIcon = {
                     IconButton(onClick = { showPassword = !showPassword }) {
@@ -130,7 +131,7 @@ fun LoginScreen(
                 Text(text = error, color = MaterialTheme.colorScheme.error, fontSize = 14.sp)
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
-                    text = "Après réinstallation de l'app, les comptes locaux sont effacés : recréez un compte ou restaurez une sauvegarde Admin.",
+                    text = stringResource(R.string.login_reinstall_hint),
                     fontSize = 12.sp,
                     color = Color.Gray
                 )
@@ -153,7 +154,7 @@ fun LoginScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Se connecter")
+                    Text(stringResource(R.string.sign_in))
                 }
             }
 

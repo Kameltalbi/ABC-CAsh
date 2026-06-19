@@ -13,9 +13,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.res.stringResource
+import com.abccash.app.R
+import com.abccash.app.locale.AppLocale
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 @Composable
 fun MonthSelectorRow(
@@ -36,17 +37,15 @@ fun MonthSelectorRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { onMonthChange(selectedMonth.minusMonths(1)) }) {
-                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = "Mois précédent")
+                Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_month))
             }
             Text(
-                text = selectedMonth.format(
-                    DateTimeFormatter.ofPattern("MMMM yyyy", Locale.FRENCH)
-                ).replaceFirstChar { it.uppercase() },
+                text = AppLocale.monthYear(selectedMonth),
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             IconButton(onClick = { onMonthChange(selectedMonth.plusMonths(1)) }) {
-                Icon(Icons.Default.KeyboardArrowRight, contentDescription = "Mois suivant")
+                Icon(Icons.Default.KeyboardArrowRight, contentDescription = stringResource(R.string.next_month))
             }
         }
     }

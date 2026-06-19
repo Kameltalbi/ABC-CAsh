@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ABC Cash</string>
+
+    <!-- NAV -->
+    <string name="nav_home">Start</string>
+    <string name="nav_home_short">Start</string>
+    <string name="nav_transactions">Transaktionen</string>
+    <string name="nav_transactions_short">Trans.</string>
+    <string name="nav_treasury">Liquidität</string>
+    <string name="nav_treasury_short">Liquid.</string>
+    <string name="nav_settings">Einstellungen</string>
+    <string name="nav_settings_short">Einst.</string>
+    <string name="nav_plus">Mehr</string>
+    <string name="nav_forecasts">Prognosen</string>
+
+    <!-- COMMON -->
+    <string name="ok">OK</string>
+    <string name="cancel">Abbrechen</string>
+    <string name="confirm">Bestätigen</string>
+    <string name="save">Speichern</string>
+    <string name="delete">Löschen</string>
+    <string name="edit">Bearbeiten</string>
+    <string name="action_validate">Bestätigen</string>
+    <string name="partial_payment">Teilzahlung</string>
+    <string name="add">Hinzufügen</string>
+    <string name="back">Zurück</string>
+    <string name="access_denied">Zugriff verweigert</string>
+    <string name="logout">Abmelden</string>
+    <string name="loading">Wird geladen…</string>
+
+    <!-- AUTH -->
+    <string name="login">Anmelden</string>
+    <string name="sign_in">Einloggen</string>
+    <string name="email">E-Mail</string>
+    <string name="password">Passwort</string>
+    <string name="create_account">Konto erstellen</string>
+    <string name="full_name">Vollständiger Name</string>
+    <string name="company_name">Firmenname</string>
+    <string name="phone">Telefon</string>
+    <string name="confirm_password">Passwort bestätigen</string>
+    <string name="password_min_chars">Das Passwort muss mindestens 6 Zeichen haben</string>
+
+    <!-- DASHBOARD -->
+    <string name="hello_name">Hallo %1$s</string>
+    <string name="your_treasury">Ihre Liquidität</string>
+    <string name="company_fallback">Ihr Unternehmen</string>
+    <string name="account_up_to_date">Konto auf dem neuesten Stand</string>
+    <string name="balance_evolution">Saldoentwicklung</string>
+    <string name="last_30_days">Letzte 30 Tage</string>
+    <string name="not_enough_data">Nicht genügend Daten</string>
+    <string name="income_title">Einnahmen</string>
+    <string name="expense_title">Ausgaben</string>
+    <string name="forecasts_upcoming">Anstehende Prognosen</string>
+    <string name="forecasts_30_days">Nächste 30 Tage</string>
+    <string name="expected_income">Erwartete Einnahmen</string>
+    <string name="expected_expenses">Erwartete Ausgaben</string>
+    <string name="healthy_treasury">Gesunde Liquidität</string>
+    <string name="end_of_month_estimate">Schätzung Monatsende</string>
+    <string name="quick_entry">Schnellerfassung</string>
+    <string name="income_breakdown">Einnahmenaufteilung</string>
+    <string name="dashboard_planned_outflows">Geplante Ausgaben</string>
+    <string name="dashboard_income_breakdown">Einnahmen nach Kategorie</string>
+    <string name="dashboard_expense_breakdown">Ausgaben nach Kategorie</string>
+    <string name="dashboard_treasury_forecasts">Liquiditätsprognosen</string>
+    <string name="dashboard_today">Heute</string>
+    <string name="dashboard_plus_days">+%1$d Tage</string>
+    <string name="dashboard_trend_week">%1$s diese Woche</string>
+    <string name="dashboard_trend_30d">%1$s in 30 Tagen</string>
+    <string name="dashboard_notifications">Benachrichtigungen</string>
+    <string name="dashboard_monthly_bars_title">Einnahmen vs. Ausgaben</string>
+    <string name="dashboard_monthly_bars_subtitle_12m">Letzte 12 Monate</string>
+    <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
+    <string name="dashboard_period_year">Jahr</string>
+    <string name="dashboard_period_month">Monat</string>
+    <string name="previous_year">Vorheriges Jahr</string>
+    <string name="next_year">Nächstes Jahr</string>
+    <string name="collected_month">Eingegangen · %1$s</string>
+    <string name="collected_year">Eingegangen · %1$s</string>
+    <string name="expense_paid_pending_year">Bezahlt %1$s · Anstehend %2$s · %3$s</string>
+    <string name="expense_paid_year">Bezahlt %1$s · %2$s</string>
+    <string name="expense_structure">Kostenstruktur</string>
+    <string name="expense_paid_pending_month">Bezahlt %1$s · Anstehend %2$s · %3$s</string>
+    <string name="expense_paid_month">Bezahlt %1$s · %2$s</string>
+    <string name="bank_balance_month">Bankguthaben · %1$s</string>
+    <string name="calculated_balance_month">Berechneter Saldo · %1$s</string>
+    <string name="forecasts_due_dates">Prognosen &amp; Fälligkeiten</string>
+    <string name="forecasts_real_data">Nächste 30 Tage · echte Daten</string>
+    <string name="no_income_month">Keine Einnahmen in diesem Monat</string>
+    <string name="no_expense_month">Keine Ausgaben in diesem Monat</string>
+    <string name="no_data">Keine Daten</string>
+    <string name="user_fallback">Benutzer</string>
+    <string name="plus_settings_sub_full">Profil, Kategorien, Währung, Sicherheit</string>
+    <string name="balance_evolution_30d">Saldoentwicklung (30 Tage)</string>
+    <string name="balance_range">D-30 %1$s · Heute %2$s</string>
+    <string name="displayed_month">Angezeigter Monat: %1$s</string>
+    <string name="previous_month">Vorheriger Monat</string>
+    <string name="next_month">Nächster Monat</string>
+
+    <!-- SETTINGS -->
+    <string name="settings">Einstellungen</string>
+    <string name="settings_management">Verwaltung</string>
+    <string name="settings_profile">Profil</string>
+    <string name="settings_categories">Kategorien</string>
+    <string name="settings_options">Optionen</string>
+    <string name="settings_users">Benutzer</string>
+    <string name="settings_users_sub">Liste, Hinzufügen, Passwörter, Sicherung</string>
+    <string name="settings_my_profile">Mein Profil</string>
+    <string name="settings_my_profile_sub">Name, E-Mail, Telefon</string>
+    <string name="settings_company">Unternehmen</string>
+    <string name="settings_company_sub">Unternehmensinformationen</string>
+    <string name="settings_income_categories">Einnahmenkategorien</string>
+    <string name="settings_income_categories_sub">Benutzerdefinierte Einnahmenkategorien</string>
+    <string name="settings_expense_categories">Ausgabenkategorien</string>
+    <string name="settings_expense_categories_sub">Benutzerdefinierte Ausgabenkategorien</string>
+    <string name="settings_currency">Standardwährung</string>
+    <string name="settings_currency_sub">Integrierte und benutzerdefinierte Währungen</string>
+    <string name="settings_notifications">Benachrichtigungen</string>
+    <string name="settings_notifications_sub">Erinnerungen und Warnungen</string>
+    <string name="settings_security">Sicherheit</string>
+    <string name="settings_security_sub">Fingerabdruck und PIN-Code</string>
+    <string name="settings_language">Sprache</string>
+    <string name="settings_language_sub">Anzeigesprache der App</string>
+    <string name="language_title">Sprache</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="language_en">English</string>
+    <string name="language_fr">Français</string>
+    <string name="language_es">Español</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_pt">Português</string>
+    <string name="language_it">Italiano</string>
+    <string name="language_sv">Svenska</string>
+    <string name="language_nb">Norsk</string>
+    <string name="language_da">Dansk</string>
+    <string name="language_tr">Türkçe</string>
+
+    <!-- TRANSACTIONS -->
+    <string name="transactions">Transaktionen</string>
+    <string name="no_transactions_month">Keine Transaktionen in diesem Monat</string>
+    <string name="mark_paid">Als bezahlt markieren</string>
+    <string name="mark_paid_confirm">%1$s als bezahlt markieren?</string>
+    <string name="delete_invoice">Einnahme löschen</string>
+    <string name="delete_invoice_confirm">Einnahme %1$s löschen?</string>
+    <string name="delete_expense">Ausgabe löschen</string>
+    <string name="delete_expense_confirm">Ausgabe %1$s löschen?</string>
+
+    <!-- TREASURY -->
+    <string name="treasury">Liquidität</string>
+    <string name="collections">Einnahmen</string>
+    <string name="expenses">Ausgaben</string>
+    <string name="forecast_balance">Prognostizierter Saldo</string>
+    <string name="bank_account">Bankkonto</string>
+    <string name="bank_balance">Aktuelles Bankguthaben</string>
+    <string name="calculated_treasury">Berechnete Liquidität</string>
+    <string name="last_saved_balance">Zuletzt gespeicherter Saldo</string>
+    <string name="invalid_amount">Ungültiger Betrag</string>
+    <string name="clear_saved_balance">Gespeicherten Saldo löschen</string>
+
+    <!-- FORECASTS -->
+    <string name="forecasts">Prognosen</string>
+    <string name="no_forecasts">Keine anstehenden Prognosen</string>
+    <string name="delete_forecast">Prognose löschen</string>
+    <string name="delete_forecast_confirm">Prognose %1$s löschen?</string>
+
+    <!-- PLUS -->
+    <string name="plus">Mehr</string>
+    <string name="plus_forecasts">Prognosen</string>
+    <string name="plus_forecasts_sub">Anstehende Einnahmen und Ausgaben</string>
+    <string name="plus_settings">Einstellungen</string>
+    <string name="plus_settings_sub">Profil, Kategorien, Sicherheit</string>
+    <string name="plus_import">Rechnungen importieren</string>
+    <string name="plus_import_sub">Daten aus einer CSV-Datei importieren</string>
+    <string name="plus_bank_reconciliation">Bankabstimmung</string>
+    <string name="plus_bank_reconciliation_sub">Bankguthaben anpassen</string>
+
+    <!-- PERMISSIONS -->
+    <string name="admin_import_only">Nur Administratoren können Daten importieren</string>
+    <string name="admin_income_only">Nur Administratoren können Einnahmen verwalten</string>
+    <string name="no_expense_permission">Sie haben keine Berechtigung, Ausgaben zu verwalten</string>
+    <string name="invalid_transaction_type">Ungültiger Transaktionstyp</string>
+    <string name="no_bank_permission">Sie haben keine Berechtigung, auf das Bankkonto zuzugreifen</string>
+    <string name="admin_users_only">Nur Administratoren können Benutzer verwalten</string>
+    <string name="no_treasury_permission">Sie haben keine Berechtigung, die Liquidität einzusehen</string>
+
+    <!-- CATEGORIES -->
+    <string name="category_service">Dienstleistungen</string>
+    <string name="category_goods">Waren</string>
+    <string name="category_other">Sonstiges</string>
+    <string name="category_material">Materialien</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_meals">Mahlzeiten</string>
+    <string name="category_taxes">Steuern</string>
+    <string name="category_subscription">Abonnements</string>
+    <string name="built_in_categories">Integrierte Kategorien</string>
+    <string name="custom_categories">Benutzerdefinierte Kategorien</string>
+    <string name="new_category">Neue Kategorie</string>
+
+    <!-- ERRORS -->
+    <string name="label_required">Bezeichnung ist erforderlich</string>
+    <string name="symbol_required">Symbol ist erforderlich</string>
+    <string name="decimals_range">Dezimalstellen müssen zwischen 0 und 4 liegen</string>
+    <string name="session_expired">Sitzung abgelaufen. Bitte melden Sie sich erneut an</string>
+    <string name="invoice_not_found">Rechnung nicht gefunden</string>
+    <string name="no_payment_permission">Sie haben keine Berechtigung, eine Zahlung zu erfassen</string>
+    <string name="category_builtin_tag">Integriert</string>
+    <string name="category_required">Bitte wählen Sie eine Kategorie</string>
+    <string name="category_exists">Diese Kategorie existiert bereits</string>
+    <string name="add_category_in_settings">Fügen Sie Kategorien in den Einstellungen hinzu, bevor Sie eine Transaktion erfassen.</string>
+    <string name="edit_category">Kategorie bearbeiten</string>
+    <string name="delete_category_confirm">Kategorie \"%1$s\" löschen?</string>
+    <string name="no_custom_categories">Noch keine benutzerdefinierten Kategorien</string>
+    <string name="category_custom_tag">Benutzerdefiniert</string>
+
+    <!-- TREASURY SCREEN -->
+    <string name="treasury_year_title">Liquidität %1$d</string>
+    <string name="treasury_year_range">Januar → Dezember</string>
+    <string name="treasury_month_end_balance">Saldo am Monatsende</string>
+    <string name="treasury_cumulative_formula">Kumuliert: vorheriger Saldo + Einnahmen − Ausgaben</string>
+    <string name="treasury_december_end">Ende Dezember: %1$s</string>
+    <string name="treasury_upcoming_part">Davon %1$s anstehend</string>
+    <string name="treasury_december_subtitle">Stand 31. Dezember</string>
+    <string name="export_csv">CSV exportieren</string>
+    <string name="bank_reconciliation_cd">Bankabstimmung</string>
+
+    <!-- AUTH -->
+    <string name="login_subtitle">Melden Sie sich in Ihrem Liquiditätsbereich an</string>
+    <string name="login_reinstall_hint">Nach einer Neuinstallation der App werden lokale Konten gelöscht: Erstellen Sie ein Konto neu oder stellen Sie eine Admin-Sicherung wieder her.</string>
+    <string name="signup_admin_title">Admin-Registrierung</string>
+    <string name="signup_admin_subtitle">Erstellen Sie Ihr Konto, um Administrator Ihres Unternehmens zu werden</string>
+    <string name="signup_create_button">Mein Konto erstellen</string>
+    <string name="signup_admin_note">Sie werden automatisch als Administrator festgelegt</string>
+    <string name="your_name">Ihr Name</string>
+    <string name="company_name_placeholder">Name Ihres Unternehmens</string>
+    <string name="email_placeholder">beispiel@email.com</string>
+    <string name="phone_placeholder">+216 XX XXX XXX</string>
+    <string name="password_placeholder_min">Mindestens 6 Zeichen</string>
+    <string name="repeat_password">Passwort wiederholen</string>
+    <string name="splash_tagline">Liquiditätsverwaltung</string>
+
+    <!-- ONBOARDING -->
+    <string name="onboarding_welcome">Willkommen, Administrator!</string>
+    <string name="onboarding_desc">Als Ersteller des Unternehmens haben Sie exklusiven Zugang zur Liquiditätsverwaltung.</string>
+    <string name="onboarding_first_admin">Sie sind der erste Administrator des Unternehmens</string>
+    <string name="onboarding_start">Loslegen</string>
+
+    <!-- FORM -->
+    <string name="label">Bezeichnung</string>
+    <string name="amount">Betrag</string>
+    <string name="frequency">Häufigkeit</string>
+    <string name="invoice_number">Rechnungs-Nr.</string>
+    <string name="client">Kunde</string>
+    <string name="supplier">Lieferant</string>
+    <string name="total_amount">Gesamtbetrag</string>
+    <string name="address">Adresse</string>
+    <string name="role">Rolle</string>
+    <string name="initial_password">Anfangspasswort</string>
+    <string name="permissions">Berechtigungen</string>
+    <string name="only_initial_admin">Nur das erste Konto kann Administrator sein</string>
+    <string name="name">Name</string>
+    <string name="date">Datum</string>
+    <string name="end_date">Enddatum</string>
+    <string name="amount_placeholder">0.000</string>
+    <string name="income_category">Einnahmenkategorie</string>
+    <string name="expense_category">Ausgabenkategorie</string>
+    <string name="note_optional">Notiz (optional)</string>
+    <string name="note_placeholder">z. B. Teamkaffee Montag</string>
+    <string name="client_placeholder">z. B. Kunde X</string>
+    <string name="supplier_placeholder">z. B. Carrefour</string>
+    <string name="recurrence_end">Ende der Wiederholung</string>
+    <string name="payment_method">Zahlungsmethode</string>
+
+    <!-- EXPENSES -->
+    <string name="new_expense">Neue Ausgabe</string>
+    <string name="edit_expense">Ausgabe bearbeiten</string>
+    <string name="save_expense">Ausgabe speichern</string>
+    <string name="recurring_expense">Wiederkehrende Ausgabe</string>
+    <string name="expense_label_placeholder">z. B. Büromiete</string>
+    <string name="no_expenses_month">Keine Ausgaben in diesem Monat</string>
+    <string name="delete_expense_question">Ausgabe löschen?</string>
+    <string name="delete_selection_question">Auswahl löschen?</string>
+    <string name="upcoming_badge">Anstehend</string>
+    <string name="expenses_month_title">Ausgaben — %1$s</string>
+    <string name="stop_recurrence_on">Wiederholung gestoppt am %1$s</string>
+    <string name="recurrence_end_short">Ende %1$s</string>
+    <string name="stop_after_month">Nach diesem Monat stoppen</string>
+    <string name="add_expense">Ausgabe hinzufügen</string>
+    <string name="recurring_badge">Wiederkehrend</string>
+    <string name="delete_expense_item_confirm">\"%1$s\" (%2$s) löschen?</string>
+    <string name="already_paid_expense">Bereits bezahlt</string>
+    <string name="upcoming_forecast">Anstehend (Prognose)</string>
+    <string name="end_date_after_expense">Enddatum muss nach dem Ausgabedatum liegen</string>
+    <string name="forecast_expense">Prognostizierte Ausgabe</string>
+
+    <!-- INCOME -->
+    <string name="new_invoice">Neue Einnahme</string>
+    <string name="save_invoice">Einnahme speichern</string>
+    <string name="fully_collected">Vollständig eingegangen</string>
+    <string name="mark_settled_on_save">Beim Speichern als ausgeglichen markieren</string>
+    <string name="fully_collected_settled">Vollständig eingegangen (ausgeglichen)</string>
+    <string name="due_date_display">Anzeige nach Fälligkeitsdatum</string>
+    <string name="search_placeholder">Kunde oder Rechnungs-Nr.</string>
+    <string name="no_collections_month">Keine fälligen Einnahmen in %1$s</string>
+    <string name="mark_as_settled">Als ausgeglichen markieren</string>
+    <string name="validate_expense">Ausgabe bestätigen</string>
+    <string name="collected_amount_label">Eingegangener Betrag</string>
+    <string name="delete_invoice_question">Einnahme löschen?</string>
+    <string name="new_collection">Neue Einnahme</string>
+    <string name="invoice_due_meta">%1$s · fällig %2$s</string>
+    <string name="invoice_total_meta">Gesamt %1$s</string>
+    <string name="invoice_paid_remaining">Eingegangen %1$s · Rest %2$s</string>
+    <string name="client_remaining">%1$s · Rest %2$s</string>
+    <string name="expense_amount_meta">%1$s · %2$s</string>
+    <string name="already_collected">Bereits eingegangen</string>
+    <string name="forecast_income">Prognostizierte Einnahme</string>
+    <string name="no_income_permission">Sie haben keine Berechtigung, Einnahmen zu verwalten</string>
+
+    <!-- PAYMENTS -->
+    <string name="record_payment">Zahlung erfassen</string>
+    <string name="payment_total">Gesamtbetrag</string>
+    <string name="already_paid">Bereits bezahlt</string>
+    <string name="remaining_to_collect">Noch einzuziehen</string>
+    <string name="new_payment">Neue Zahlung</string>
+    <string name="advance_amount">Vorauszahlungsbetrag</string>
+    <string name="payment_date">Zahlungsdatum</string>
+    <string name="save_payment">Zahlung speichern</string>
+    <string name="payment_history">Zahlungshistorie</string>
+    <string name="choose_date">Datum wählen</string>
+
+    <!-- IMPORT -->
+    <string name="import_invoices_title">Einnahmen importieren</string>
+    <string name="file_structure">Dateistruktur</string>
+    <string name="import_columns">Akzeptierte Spalten: Rechnungs-Nr., Kunde, Betrag, Fälligkeitsdatum</string>
+    <string name="import_columns_en">(oder auf Englisch: invoiceNumber, clientName, totalAmount, dueDate)</string>
+    <string name="import_due_date_note">Das Fälligkeitsdatum bestimmt den Anzeigemonat jeder Rechnung.</string>
+    <string name="import_formats">CSV (Komma, Semikolon oder Tabulator) oder Excel .xlsx</string>
+    <string name="android_file_picker">Android-Dateiauswahl</string>
+    <string name="android_file_picker_note">Das ist nicht die App: Android öffnet seinen Dateimanager.</string>
+    <string name="empty_file_list_hint">Leere Liste? Menü ☰ → Downloads. Deaktivieren Sie „Large files“-Filter.</string>
+    <string name="choose_file">Datei wählen</string>
+
+    <!-- BANK -->
+    <string name="bank_reconciliation_how">Wie funktioniert es?</string>
+    <string name="bank_reconciliation_steps">• Geben Sie den Saldo Ihres Kontoauszugs ein\n• Vergleichen Sie mit der berechneten Liquidität\n• Bei Bedarf angleichen</string>
+    <string name="align_treasury">Liquidität angleichen</string>
+    <string name="gap_label">Differenz: %1$s</string>
+    <string name="bank_reconciliation_intro">Vergleichen Sie Ihren tatsächlichen Kontosaldo mit der von der App berechneten Liquidität (%1$d).</string>
+
+    <!-- SETTINGS EXTRA -->
+    <string name="restore_backup_question">Sicherung wiederherstellen?</string>
+    <string name="change_password">Passwort ändern</string>
+    <string name="reset_password">Passwort zurücksetzen</string>
+    <string name="current_password">Aktuelles Passwort</string>
+    <string name="new_password">Neues Passwort</string>
+    <string name="set_pin">PIN-Code festlegen</string>
+    <string name="pin_code">PIN-Code</string>
+    <string name="fingerprint_lock">Fingerabdrucksperre</string>
+    <string name="pin_lock">PIN-Sperre</string>
+    <string name="change_pin">PIN ändern</string>
+    <string name="enable_notifications">Benachrichtigungen aktivieren</string>
+    <string name="add_custom_currency">Benutzerdefinierte Währung hinzufügen</string>
+    <string name="new_currency">Neue Währung</string>
+    <string name="currency_label_placeholder">z. B. Algerischer Dinar</string>
+    <string name="currency_symbol_placeholder">z. B. DZD</string>
+    <string name="decimal_places">Anzahl der Dezimalstellen</string>
+    <string name="decimal_places_placeholder">0 bis 4</string>
+    <string name="no_users_added">Keine Benutzer hinzugefügt</string>
+    <string name="save_user">Benutzer speichern</string>
+    <string name="new_user">Neuer Benutzer</string>
+    <string name="add_user">Benutzer hinzufügen</string>
+    <string name="my_account">Mein Konto</string>
+    <string name="change_your_password">Ihr Passwort ändern</string>
+    <string name="backup_restore">Sicherung &amp; Wiederherstellung</string>
+    <string name="export_action">Exportieren</string>
+    <string name="restore_action">Wiederherstellen</string>
+    <string name="profile_saved">Profil gespeichert</string>
+    <string name="company_saved">Unternehmen gespeichert</string>
+    <string name="pwd_short">PWD</string>
+
+    <!-- APP LOCK / RECEIPT -->
+    <string name="take_photo">Foto aufnehmen</string>
+    <string name="choose_from_gallery">Aus Galerie wählen</string>
+    <string name="use_pin">PIN verwenden</string>
+    <string name="unlock">Entsperren</string>
+    <string name="fingerprint">Fingerabdruck</string>
+    <string name="app_locked">App gesperrt</string>
+    <string name="scan_receipt">Beleg scannen</string>
+    <string name="reading_receipt">Beleg wird gelesen…</string>
+    <string name="take_receipt_photo">Foto des Belegs aufnehmen</string>
+    <string name="receipt_auto_fill">Betrag und Datum automatisch ausgefüllt</string>
+
+    <!-- MISC UI -->
+    <string name="new_transaction">Neue Transaktion</string>
+    <string name="import_action">Importieren</string>
+    <string name="search">Suchen</string>
+    <string name="clear">Löschen</string>
+    <string name="actions">Aktionen</string>
+    <string name="delete_count">Löschen (%1$d)</string>
+    <string name="select_all">Alle auswählen</string>
+    <string name="deselect_all">Alle abwählen</string>
+
+    <!-- PAYMENT METHODS -->
+    <string name="payment_check">Scheck</string>
+    <string name="payment_transfer">Überweisung</string>
+    <string name="payment_cash">Bargeld</string>
+    <string name="payment_bill">Wechsel</string>
+
+    <!-- RECURRENCE -->
+    <string name="recurrence_weekly">Wöchentlich</string>
+    <string name="recurrence_monthly">Monatlich</string>
+    <string name="recurrence_every_2_months">Alle 2 Monate</string>
+    <string name="recurrence_every_3_months">Alle 3 Monate</string>
+    <string name="recurrence_every_4_months">Alle 4 Monate</string>
+    <string name="recurrence_every_6_months">Alle 6 Monate</string>
+    <string name="recurrence_annual">Jährlich</string>
+
+    <!-- PERMISSIONS LABELS -->
+    <string name="permission_view_invoices">Rechnungen anzeigen</string>
+    <string name="permission_add_payments">Zahlungen hinzufügen</string>
+    <string name="permission_manage_expenses">Ausgaben verwalten</string>
+    <string name="permission_view_treasury">Liquidität anzeigen</string>
+    <string name="permission_manage_users">Benutzer verwalten</string>
+
+    <!-- INVOICE FILTERS & STATUS -->
+    <string name="filter_all">Alle</string>
+    <string name="filter_due">Fällig</string>
+    <string name="filter_partial">Teilweise</string>
+    <string name="filter_paid">Bezahlt</string>
+    <string name="status_paid">Bezahlt</string>
+    <string name="status_partial">Teilweise</string>
+    <string name="status_due">Fällig</string>
+    <string name="symbol">Symbol</string>
+    <string name="scan_success">✓ %1$s</string>
+    <string name="onboarding_privilege_expenses_title">Ausgabenverwaltung</string>
+    <string name="onboarding_privilege_expenses_desc">Erfassen und verfolgen Sie alle Unternehmensausgaben, wiederkehrend oder einmalig.</string>
+    <string name="onboarding_privilege_treasury_title">Liquiditätsverfolgung</string>
+    <string name="onboarding_privilege_treasury_desc">Monatssaldo, Einnahmen und Finanzprognosen einsehen.</string>
+    <string name="onboarding_privilege_collection_title">Forderungseinzug</string>
+    <string name="onboarding_privilege_collection_desc">Kundenrechnungen verwalten und Zahlungen in Echtzeit verfolgen.</string>
+</resources>

@@ -1,9 +1,16 @@
 package com.abccash.app.treasury.data
 
+import com.abccash.app.locale.AppLocale
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+
+data class MonthlyBarPoint(
+    val month: YearMonth,
+    val income: Double,
+    val expenses: Double
+)
 
 data class DashboardBalancePoint(
     val date: LocalDate,
@@ -12,20 +19,32 @@ data class DashboardBalancePoint(
 )
 
 data class CategorySlice(
-    val label: String,
-    val amount: Double
+    val label: String = "",
+    val amount: Double,
+    val revenueCategory: RevenueCategory? = null,
+    val expenseCategory: ExpenseCategory? = null
 )
 
-data class InnovativeDashboardData(
-    val bankBalance: Double,
+data class DashboardData(
+    val displayBalance: Double,
+    val bankBalance: Double?,
+    val calculatedBalance: Double,
+    val balanceFromBank: Boolean,
+    val monthLabel: String,
     val balanceHistory: List<DashboardBalancePoint>,
     val incomeByCategory: List<CategorySlice>,
     val incomeTotal: Double,
     val expenseByCategory: List<CategorySlice>,
     val expenseTotal: Double,
+    val expensePaidTotal: Double,
+    val expensePendingTotal: Double,
     val forecastIncome: Double,
-    val forecastExpenses: Double
+    val forecastExpenses: Double,
+    val forecastBalance30Days: Double = displayBalance
 )
+
+/** @deprecated use [DashboardData] */
+typealias InnovativeDashboardData = DashboardData
 
 data class DashboardSnapshot(
     val bankBalance: Double,
@@ -45,31 +64,145 @@ object DashboardCalculations {
     private const val FORECAST_DAYS = 30
     private const val FORECAST_HORIZON_DAYS = 30L
 
+    fun buildModernDashboardData(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankBalance: Double?,
+        focusMonth: YearMonth = YearMonth.now(),
+        viewMode: DashboardViewMode = DashboardViewMode.MONTH,
+        today: LocalDate = LocalDate.now()
+    ): DashboardData {
+        val periodData = buildInnovativeDashboard(
+            invoices = invoices,
+            expenses = expenses,
+            bankBalance = bankBalance,
+            focusMonth = focusMonth,
+            viewMode = viewMode,
+            today = today
+        )
+        val balanceHistory = buildBalanceCurve(
+            invoices = invoices,
+            expenses = expenses,
+            anchorBalance = periodData.displayBalance,
+            today = today
+        )
+        val forecastBalance30Days = balanceHistory
+            .lastOrNull { it.isForecast }
+            ?.balance
+            ?: periodData.displayBalance
+
+        return periodData.copy(
+            balanceHistory = balanceHistory,
+            forecastBalance30Days = forecastBalance30Days
+        )
+    }
+
+    fun isCurrentDashboardPeriod(
+        focusMonth: YearMonth,
+        viewMode: DashboardViewMode,
+        today: LocalDate = LocalDate.now()
+    ): Boolean = when (viewMode) {
+        DashboardViewMode.YEAR -> focusMonth.year == today.year
+        DashboardViewMode.MONTH -> focusMonth == YearMonth.from(today)
+    }
+
+    fun buildMonthlyBarChart(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        focusMonth: YearMonth,
+        @Suppress("UNUSED_PARAMETER") viewMode: DashboardViewMode
+    ): List<MonthlyBarPoint> {
+        val months = (1..12).map { month -> YearMonth.of(focusMonth.year, month) }
+        return months.map { month ->
+            MonthlyBarPoint(
+                month = month,
+                income = TreasuryCalculations.monthlyCollections(invoices, month),
+                expenses = TreasuryCalculations.monthlyPaidExpenses(expenses, month)
+            )
+        }
+    }
+
+    fun buildDashboardData(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankBalance: Double?,
+        focusMonth: YearMonth = YearMonth.now(),
+        viewMode: DashboardViewMode = DashboardViewMode.YEAR,
+        today: LocalDate = LocalDate.now()
+    ): DashboardData = buildInnovativeDashboard(
+        invoices = invoices,
+        expenses = expenses,
+        bankBalance = bankBalance,
+        focusMonth = focusMonth,
+        viewMode = viewMode,
+        today = today
+    )
+
     fun buildInnovativeDashboard(
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankBalance: Double?,
+        focusMonth: YearMonth = YearMonth.now(),
+        viewMode: DashboardViewMode = DashboardViewMode.YEAR,
         today: LocalDate = LocalDate.now()
-    ): InnovativeDashboardData {
-        val balance = bankBalance ?: computedBalance(invoices, expenses)
-        val month = YearMonth.from(today)
-        val forecastItems = EcheanceForecast.buildItems(
-            invoices = invoices,
-            expenses = expenses,
-            from = today,
-            to = today.plusDays(FORECAST_HORIZON_DAYS)
-        )
+    ): DashboardData {
+        val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
+        val calculated = computedBalance(invoices, expenses)
+        val displayBalance = bankBalance ?: calculated
 
-        val incomeByCategory = incomeCategoryBreakdown(invoices, month)
-        val expenseByCategory = expenseCategoryBreakdown(expenses, month)
+        val periodLabel = when (viewMode) {
+            DashboardViewMode.YEAR -> focusMonth.year.toString()
+            DashboardViewMode.MONTH -> AppLocale.monthYear(focusMonth)
+        }
 
-        return InnovativeDashboardData(
-            bankBalance = balance,
-            balanceHistory = buildHistoryCurve(invoices, expenses, balance, today),
+        val incomeByCategory: List<CategorySlice>
+        val expenseByCategory: List<CategorySlice>
+        val incomeTotal: Double
+        val expensePaidTotal: Double
+        val expensePendingTotal: Double
+
+        when (viewMode) {
+            DashboardViewMode.YEAR -> {
+                val year = focusMonth.year
+                incomeByCategory = incomeCategoryBreakdownForYear(invoices, year)
+                expenseByCategory = expenseCategoryBreakdownForYear(expenses, year)
+                incomeTotal = TreasuryCalculations.yearlyCollections(invoices, year)
+                expensePaidTotal = TreasuryCalculations.yearlyPaidExpenses(expenses, year)
+                expensePendingTotal = TreasuryCalculations.yearlyPendingExpenses(expenses, year)
+            }
+            DashboardViewMode.MONTH -> {
+                incomeByCategory = incomeCategoryBreakdown(invoices, focusMonth)
+                expenseByCategory = expenseCategoryBreakdown(expenses, focusMonth)
+                incomeTotal = TreasuryCalculations.monthlyCollections(invoices, focusMonth)
+                expensePaidTotal = TreasuryCalculations.monthlyPaidExpenses(expenses, focusMonth)
+                expensePendingTotal = TreasuryCalculations.monthlyUnpaidExpenses(expenses, focusMonth)
+            }
+        }
+
+        val forecastItems = if (referenceDate == today) {
+            EcheanceForecast.buildItems(
+                invoices = invoices,
+                expenses = expenses,
+                from = today,
+                to = today.plusDays(FORECAST_HORIZON_DAYS)
+            )
+        } else {
+            emptyList()
+        }
+
+        return DashboardData(
+            displayBalance = displayBalance,
+            bankBalance = bankBalance,
+            calculatedBalance = calculated,
+            balanceFromBank = bankBalance != null,
+            monthLabel = periodLabel,
+            balanceHistory = buildHistoryCurve(invoices, expenses, displayBalance, referenceDate),
             incomeByCategory = incomeByCategory,
-            incomeTotal = incomeByCategory.sumOf { it.amount },
+            incomeTotal = incomeTotal,
             expenseByCategory = expenseByCategory,
-            expenseTotal = expenseByCategory.sumOf { it.amount },
+            expenseTotal = expensePaidTotal + expensePendingTotal,
+            expensePaidTotal = expensePaidTotal,
+            expensePendingTotal = expensePendingTotal,
             forecastIncome = forecastItems
                 .filter { it.type == EcheanceType.INCOME }
                 .sumOf { it.amount },
@@ -77,6 +210,23 @@ object DashboardCalculations {
                 .filter { it.type == EcheanceType.EXPENSE }
                 .sumOf { it.amount }
         )
+    }
+
+    private fun resolveReferenceDate(
+        focusMonth: YearMonth,
+        viewMode: DashboardViewMode,
+        today: LocalDate
+    ): LocalDate = when (viewMode) {
+        DashboardViewMode.YEAR -> {
+            if (focusMonth.year == today.year) today else LocalDate.of(focusMonth.year, 12, 31)
+        }
+        DashboardViewMode.MONTH -> {
+            when {
+                focusMonth == YearMonth.from(today) -> today
+                focusMonth.isBefore(YearMonth.from(today)) -> focusMonth.atEndOfMonth()
+                else -> focusMonth.atDay(1)
+            }
+        }
     }
 
     fun buildHistoryCurve(
@@ -99,6 +249,53 @@ object DashboardCalculations {
         }
     }
 
+    private fun incomeCategoryBreakdownForYear(
+        invoices: List<Invoice>,
+        year: Int
+    ): List<CategorySlice> =
+        invoices.flatMap { invoice ->
+            invoice.payments
+                .filter { it.date.year == year }
+                .map { payment ->
+                    CategorySelection.displayIncome(invoice.category, invoice.categoryLabel) to payment.amount
+                }
+        }
+            .groupBy({ it.first }, { it.second })
+            .map { (key, amounts) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = amounts.sum(),
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
+            .filter { it.amount > 0 }
+            .sortedByDescending { it.amount }
+
+    private fun expenseCategoryBreakdownForYear(
+        expenses: List<Expense>,
+        year: Int
+    ): List<CategorySlice> =
+        (1..12).flatMap { monthNumber ->
+            val month = YearMonth.of(year, monthNumber)
+            expenses
+                .filter { it.appliesToMonth(month) }
+                .map { expense ->
+                    CategorySelection.displayExpense(expense.category, expense.categoryLabel) to expense.amount
+                }
+        }
+            .groupBy({ it.first }, { it.second })
+            .map { (key, amounts) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = amounts.sum(),
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
+            .filter { it.amount > 0 }
+            .sortedByDescending { it.amount }
+
     private fun incomeCategoryBreakdown(
         invoices: List<Invoice>,
         month: YearMonth
@@ -111,7 +308,14 @@ object DashboardCalculations {
                 }
         }
             .groupBy({ it.first }, { it.second })
-            .map { (label, amounts) -> CategorySlice(label, amounts.sum()) }
+            .map { (key, amounts) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = amounts.sum(),
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
             .filter { it.amount > 0 }
             .sortedByDescending { it.amount }
 
@@ -120,11 +324,71 @@ object DashboardCalculations {
         month: YearMonth
     ): List<CategorySlice> =
         expenses
-            .filter { it.isPaid && it.appliesToMonth(month) }
+            .filter { it.appliesToMonth(month) }
             .groupBy { CategorySelection.displayExpense(it.category, it.categoryLabel) }
-            .map { (label, items) -> CategorySlice(label, items.sumOf { it.amount }) }
+            .map { (key, items) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = items.sumOf { it.amount },
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
             .filter { it.amount > 0 }
             .sortedByDescending { it.amount }
+
+    private fun incomeCategoryBreakdownLast30Days(
+        invoices: List<Invoice>,
+        today: LocalDate
+    ): List<CategorySlice> {
+        val from = today.minusDays(HISTORY_DAYS.toLong())
+        return invoices.flatMap { invoice ->
+            invoice.payments
+                .filter { !it.date.isBefore(from) && !it.date.isAfter(today) }
+                .map { payment ->
+                    CategorySelection.displayIncome(invoice.category, invoice.categoryLabel) to payment.amount
+                }
+        }
+            .groupBy({ it.first }, { it.second })
+            .map { (key, amounts) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = amounts.sum(),
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
+            .filter { it.amount > 0 }
+            .sortedByDescending { it.amount }
+    }
+
+    private fun expenseCategoryBreakdownLast30Days(
+        expenses: List<Expense>,
+        today: LocalDate
+    ): List<CategorySlice> {
+        val from = today.minusDays(HISTORY_DAYS.toLong())
+        val days = generateSequence(from) { prev ->
+            if (prev.isBefore(today)) prev.plusDays(1) else null
+        }.toList() + today
+        return days.flatMap { day ->
+            expenses
+                .filter { it.isPaid && expenseOccursOn(it, day) }
+                .map { expense ->
+                    CategorySelection.displayExpense(expense.category, expense.categoryLabel) to expense.amount
+                }
+        }
+            .groupBy({ it.first }, { it.second })
+            .map { (key, amounts) ->
+                CategorySlice(
+                    label = key.label,
+                    amount = amounts.sum(),
+                    revenueCategory = key.revenueCategory,
+                    expenseCategory = key.expenseCategory
+                )
+            }
+            .filter { it.amount > 0 }
+            .sortedByDescending { it.amount }
+    }
 
     fun buildSnapshot(
         invoices: List<Invoice>,
@@ -169,9 +433,34 @@ object DashboardCalculations {
         return collected - paid
     }
 
+    fun expenseWeekTrendPercent(
+        expenses: List<Expense>,
+        today: LocalDate = LocalDate.now()
+    ): Double? {
+        val last7 = paidExpenseTotalBetween(expenses, today.minusDays(6), today)
+        val prev7 = paidExpenseTotalBetween(expenses, today.minusDays(13), today.minusDays(7))
+        if (prev7 <= 0.0) return null
+        return ((last7 - prev7) / prev7) * 100.0
+    }
+
+    private fun paidExpenseTotalBetween(
+        expenses: List<Expense>,
+        from: LocalDate,
+        to: LocalDate
+    ): Double {
+        val days = generateSequence(from) { prev ->
+            if (prev.isBefore(to)) prev.plusDays(1) else null
+        }.toList() + to
+        return days.sumOf { day ->
+            expenses
+                .filter { it.isPaid && expenseOccursOn(it, day) }
+                .sumOf { it.amount }
+        }
+    }
+
     fun monthLabelsOnCurve(
         points: List<DashboardBalancePoint>,
-        locale: Locale = Locale.FRENCH
+        locale: Locale = AppLocale.current()
     ): List<Pair<Float, String>> {
         if (points.isEmpty()) return emptyList()
         val formatter = DateTimeFormatter.ofPattern("MMM", locale)

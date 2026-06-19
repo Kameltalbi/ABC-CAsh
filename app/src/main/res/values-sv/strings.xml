@@ -1,0 +1,439 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ABC Cash</string>
+
+    <!-- NAV -->
+    <string name="nav_home">Hem</string>
+    <string name="nav_home_short">Hem</string>
+    <string name="nav_transactions">Transaktioner</string>
+    <string name="nav_transactions_short">Trans.</string>
+    <string name="nav_treasury">Kassa</string>
+    <string name="nav_treasury_short">Kassa</string>
+    <string name="nav_settings">Inställningar</string>
+    <string name="nav_settings_short">Inst.</string>
+    <string name="nav_plus">Mer</string>
+    <string name="nav_forecasts">Prognoser</string>
+
+    <!-- COMMON -->
+    <string name="ok">OK</string>
+    <string name="cancel">Avbryt</string>
+    <string name="confirm">Bekräfta</string>
+    <string name="save">Spara</string>
+    <string name="delete">Ta bort</string>
+    <string name="edit">Redigera</string>
+    <string name="action_validate">Validera</string>
+    <string name="partial_payment">Delbetalning</string>
+    <string name="add">Lägg till</string>
+    <string name="back">Tillbaka</string>
+    <string name="access_denied">Åtkomst nekad</string>
+    <string name="logout">Logga ut</string>
+    <string name="loading">Laddar…</string>
+
+    <!-- AUTH -->
+    <string name="login">Logga in</string>
+    <string name="sign_in">Logga in</string>
+    <string name="email">E-post</string>
+    <string name="password">Lösenord</string>
+    <string name="create_account">Skapa konto</string>
+    <string name="full_name">Fullständigt namn</string>
+    <string name="company_name">Företagsnamn</string>
+    <string name="phone">Telefon</string>
+    <string name="confirm_password">Bekräfta lösenord</string>
+    <string name="password_min_chars">Lösenordet måste vara minst 6 tecken</string>
+
+    <!-- DASHBOARD -->
+    <string name="hello_name">Hej %1$s</string>
+    <string name="your_treasury">Din kassa</string>
+    <string name="company_fallback">Ditt företag</string>
+    <string name="account_up_to_date">Kontot är uppdaterat</string>
+    <string name="balance_evolution">Saldoöversikt</string>
+    <string name="last_30_days">Senaste 30 dagarna</string>
+    <string name="not_enough_data">Inte tillräckligt med data</string>
+    <string name="income_title">Intäkter</string>
+    <string name="expense_title">Utgifter</string>
+    <string name="forecasts_upcoming">Kommande prognoser</string>
+    <string name="forecasts_30_days">Nästa 30 dagar</string>
+    <string name="expected_income">Förväntade intäkter</string>
+    <string name="expected_expenses">Förväntade utgifter</string>
+    <string name="healthy_treasury">Frisk kassa</string>
+    <string name="end_of_month_estimate">Uppskattning månadsslut</string>
+    <string name="quick_entry">Snabbregistrering</string>
+    <string name="income_breakdown">Intäktsfördelning</string>
+    <string name="dashboard_planned_outflows">Planerade utgifter</string>
+    <string name="dashboard_income_breakdown">Intäkter per kategori</string>
+    <string name="dashboard_expense_breakdown">Utgifter per kategori</string>
+    <string name="dashboard_treasury_forecasts">Kassaflödesprognoser</string>
+    <string name="dashboard_today">Idag</string>
+    <string name="dashboard_plus_days">+%1$d dagar</string>
+    <string name="dashboard_trend_week">%1$s denna vecka</string>
+    <string name="dashboard_trend_30d">%1$s om 30 dagar</string>
+    <string name="dashboard_notifications">Aviseringar</string>
+    <string name="dashboard_monthly_bars_title">Inbetalningar vs utgifter</string>
+    <string name="dashboard_monthly_bars_subtitle_12m">Senaste 12 månaderna</string>
+    <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
+    <string name="dashboard_period_year">År</string>
+    <string name="dashboard_period_month">Månad</string>
+    <string name="previous_year">Föregående år</string>
+    <string name="next_year">Nästa år</string>
+    <string name="collected_month">Inbetalt · %1$s</string>
+    <string name="collected_year">Inbetalt · %1$s</string>
+    <string name="expense_paid_pending_year">Betalt %1$s · Kommande %2$s · %3$s</string>
+    <string name="expense_paid_year">Betalt %1$s · %2$s</string>
+    <string name="expense_structure">Kostnadsstruktur</string>
+    <string name="expense_paid_pending_month">Betalt %1$s · Kommande %2$s · %3$s</string>
+    <string name="expense_paid_month">Betalt %1$s · %2$s</string>
+    <string name="bank_balance_month">Banksaldo · %1$s</string>
+    <string name="calculated_balance_month">Beräknat saldo · %1$s</string>
+    <string name="forecasts_due_dates">Prognoser och förfallodatum</string>
+    <string name="forecasts_real_data">Nästa 30 dagar · verkliga data</string>
+    <string name="no_income_month">Inga intäkter denna månad</string>
+    <string name="no_expense_month">Inga utgifter denna månad</string>
+    <string name="no_data">Ingen data</string>
+    <string name="user_fallback">Användare</string>
+    <string name="plus_settings_sub_full">Profil, kategorier, valuta, säkerhet</string>
+    <string name="balance_evolution_30d">Saldoöversikt (30 dagar)</string>
+    <string name="balance_range">D-30 %1$s · Idag %2$s</string>
+    <string name="displayed_month">Visad månad: %1$s</string>
+    <string name="previous_month">Föregående månad</string>
+    <string name="next_month">Nästa månad</string>
+
+    <!-- SETTINGS -->
+    <string name="settings">Inställningar</string>
+    <string name="settings_management">Hantering</string>
+    <string name="settings_profile">Profil</string>
+    <string name="settings_categories">Kategorier</string>
+    <string name="settings_options">Alternativ</string>
+    <string name="settings_users">Användare</string>
+    <string name="settings_users_sub">Lista, lägg till, lösenord, säkerhetskopiering</string>
+    <string name="settings_my_profile">Min profil</string>
+    <string name="settings_my_profile_sub">Namn, e-post, telefon</string>
+    <string name="settings_company">Företag</string>
+    <string name="settings_company_sub">Företagsinformation</string>
+    <string name="settings_income_categories">Intäktskategorier</string>
+    <string name="settings_income_categories_sub">Anpassade intäktskategorier</string>
+    <string name="settings_expense_categories">Utgiftskategorier</string>
+    <string name="settings_expense_categories_sub">Anpassade utgiftskategorier</string>
+    <string name="settings_currency">Standardvaluta</string>
+    <string name="settings_currency_sub">Inbyggda och anpassade valutor</string>
+    <string name="settings_notifications">Aviseringar</string>
+    <string name="settings_notifications_sub">Påminnelser och varningar</string>
+    <string name="settings_security">Säkerhet</string>
+    <string name="settings_security_sub">Fingeravtryck och PIN-kod</string>
+    <string name="settings_language">Språk</string>
+    <string name="settings_language_sub">Appens visningsspråk</string>
+    <string name="language_title">Språk</string>
+    <string name="language_system_default">Systemstandard</string>
+    <string name="language_en">English</string>
+    <string name="language_fr">Français</string>
+    <string name="language_es">Español</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_pt">Português</string>
+    <string name="language_it">Italiano</string>
+    <string name="language_sv">Svenska</string>
+    <string name="language_nb">Norsk</string>
+    <string name="language_da">Dansk</string>
+    <string name="language_tr">Türkçe</string>
+
+    <!-- TRANSACTIONS -->
+    <string name="transactions">Transaktioner</string>
+    <string name="no_transactions_month">Inga transaktioner denna månad</string>
+    <string name="mark_paid">Markera som betald</string>
+    <string name="mark_paid_confirm">Markera %1$s som betald?</string>
+    <string name="delete_invoice">Ta bort intäkt</string>
+    <string name="delete_invoice_confirm">Ta bort intäkt %1$s?</string>
+    <string name="delete_expense">Ta bort utgift</string>
+    <string name="delete_expense_confirm">Ta bort utgift %1$s?</string>
+
+    <!-- TREASURY -->
+    <string name="treasury">Kassa</string>
+    <string name="collections">Intäkter</string>
+    <string name="expenses">Utgifter</string>
+    <string name="forecast_balance">Prognostiserat saldo</string>
+    <string name="bank_account">Bankkonto</string>
+    <string name="bank_balance">Aktuellt banksaldo</string>
+    <string name="calculated_treasury">Beräknad kassa</string>
+    <string name="last_saved_balance">Senast sparade saldo</string>
+    <string name="invalid_amount">Ogiltigt belopp</string>
+    <string name="clear_saved_balance">Rensa sparat saldo</string>
+
+    <!-- FORECASTS -->
+    <string name="forecasts">Prognoser</string>
+    <string name="no_forecasts">Inga kommande prognoser</string>
+    <string name="delete_forecast">Ta bort prognos</string>
+    <string name="delete_forecast_confirm">Ta bort prognos %1$s?</string>
+
+    <!-- PLUS -->
+    <string name="plus">Mer</string>
+    <string name="plus_forecasts">Prognoser</string>
+    <string name="plus_forecasts_sub">Kommande intäkter och utgifter</string>
+    <string name="plus_settings">Inställningar</string>
+    <string name="plus_settings_sub">Profil, kategorier, säkerhet</string>
+    <string name="plus_import">Importera fakturor</string>
+    <string name="plus_import_sub">Importera data från en CSV-fil</string>
+    <string name="plus_bank_reconciliation">Bankavstämning</string>
+    <string name="plus_bank_reconciliation_sub">Justera banksaldot</string>
+
+    <!-- PERMISSIONS -->
+    <string name="admin_import_only">Endast administratörer kan importera data</string>
+    <string name="admin_income_only">Endast administratörer kan hantera intäkter</string>
+    <string name="no_expense_permission">Du har inte behörighet att hantera utgifter</string>
+    <string name="invalid_transaction_type">Ogiltig transaktionstyp</string>
+    <string name="no_bank_permission">Du har inte behörighet att komma åt bankkontot</string>
+    <string name="admin_users_only">Endast administratörer kan hantera användare</string>
+    <string name="no_treasury_permission">Du har inte behörighet att visa kassan</string>
+
+    <!-- CATEGORIES -->
+    <string name="category_service">Tjänster</string>
+    <string name="category_goods">Varor</string>
+    <string name="category_other">Övrigt</string>
+    <string name="category_material">Material</string>
+    <string name="category_transport">Transport</string>
+    <string name="category_meals">Måltider</string>
+    <string name="category_taxes">Skatter</string>
+    <string name="category_subscription">Prenumerationer</string>
+    <string name="built_in_categories">Inbyggda kategorier</string>
+    <string name="custom_categories">Anpassade kategorier</string>
+    <string name="new_category">Ny kategori</string>
+
+    <!-- ERRORS -->
+    <string name="label_required">Etikett krävs</string>
+    <string name="symbol_required">Symbol krävs</string>
+    <string name="decimals_range">Decimaler måste vara mellan 0 och 4</string>
+    <string name="session_expired">Sessionen har gått ut. Logga in igen</string>
+    <string name="invoice_not_found">Faktura hittades inte</string>
+    <string name="no_payment_permission">Du har inte behörighet att registrera en betalning</string>
+    <string name="category_builtin_tag">Inbyggd</string>
+    <string name="category_required">Välj en kategori</string>
+    <string name="category_exists">Denna kategori finns redan</string>
+    <string name="add_category_in_settings">Lägg till kategorier i Inställningar innan du registrerar en transaktion.</string>
+    <string name="edit_category">Redigera kategori</string>
+    <string name="delete_category_confirm">Ta bort kategori \"%1$s\"?</string>
+    <string name="no_custom_categories">Inga anpassade kategorier ännu</string>
+    <string name="category_custom_tag">Anpassad</string>
+
+    <!-- TREASURY SCREEN -->
+    <string name="treasury_year_title">Kassa %1$d</string>
+    <string name="treasury_year_range">Januari → December</string>
+    <string name="treasury_month_end_balance">Saldo vid månadsslut</string>
+    <string name="treasury_cumulative_formula">Kumulativt: föregående saldo + intäkter − utgifter</string>
+    <string name="treasury_december_end">Slut december: %1$s</string>
+    <string name="treasury_upcoming_part">Varav %1$s kommande</string>
+    <string name="treasury_december_subtitle">Per 31 december</string>
+    <string name="export_csv">Exportera CSV</string>
+    <string name="bank_reconciliation_cd">Bankavstämning</string>
+
+    <!-- AUTH -->
+    <string name="login_subtitle">Logga in i ditt kassaområde</string>
+    <string name="login_reinstall_hint">Efter ominstallation av appen raderas lokala konton: skapa ett konto på nytt eller återställ en Admin-säkerhetskopia.</string>
+    <string name="signup_admin_title">Adminregistrering</string>
+    <string name="signup_admin_subtitle">Skapa ditt konto för att bli administratör för ditt företag</string>
+    <string name="signup_create_button">Skapa mitt konto</string>
+    <string name="signup_admin_note">Du kommer automatiskt att utses till administratör</string>
+    <string name="your_name">Ditt namn</string>
+    <string name="company_name_placeholder">Ditt företagsnamn</string>
+    <string name="email_placeholder">exempel@email.com</string>
+    <string name="phone_placeholder">+216 XX XXX XXX</string>
+    <string name="password_placeholder_min">Minst 6 tecken</string>
+    <string name="repeat_password">Upprepa ditt lösenord</string>
+    <string name="splash_tagline">Kassahantering</string>
+
+    <!-- ONBOARDING -->
+    <string name="onboarding_welcome">Välkommen, administratör!</string>
+    <string name="onboarding_desc">Som företagets skapare har du exklusiv åtkomst för att hantera kassan.</string>
+    <string name="onboarding_first_admin">Du är företagets första administratör</string>
+    <string name="onboarding_start">Kom igång</string>
+
+    <!-- FORM -->
+    <string name="label">Etikett</string>
+    <string name="amount">Belopp</string>
+    <string name="frequency">Frekvens</string>
+    <string name="invoice_number">Fakturanr</string>
+    <string name="client">Kund</string>
+    <string name="supplier">Leverantör</string>
+    <string name="total_amount">Totalbelopp</string>
+    <string name="address">Adress</string>
+    <string name="role">Roll</string>
+    <string name="initial_password">Initialt lösenord</string>
+    <string name="permissions">Behörigheter</string>
+    <string name="only_initial_admin">Endast det initiala kontot kan vara administratör</string>
+    <string name="name">Namn</string>
+    <string name="date">Datum</string>
+    <string name="end_date">Slutdatum</string>
+    <string name="amount_placeholder">0.000</string>
+    <string name="income_category">Intäktskategori</string>
+    <string name="expense_category">Utgiftskategori</string>
+    <string name="note_optional">Anteckning (valfritt)</string>
+    <string name="note_placeholder">t.ex. teamkaffe måndag</string>
+    <string name="client_placeholder">t.ex. Kund X</string>
+    <string name="supplier_placeholder">t.ex. Carrefour</string>
+    <string name="recurrence_end">Slut på upprepning</string>
+    <string name="payment_method">Betalningsmetod</string>
+
+    <!-- EXPENSES -->
+    <string name="new_expense">Ny utgift</string>
+    <string name="edit_expense">Redigera utgift</string>
+    <string name="save_expense">Spara utgift</string>
+    <string name="recurring_expense">Återkommande utgift</string>
+    <string name="expense_label_placeholder">t.ex. Kontorshyra</string>
+    <string name="no_expenses_month">Inga utgifter denna månad</string>
+    <string name="delete_expense_question">Ta bort utgift?</string>
+    <string name="delete_selection_question">Ta bort markering?</string>
+    <string name="upcoming_badge">Kommande</string>
+    <string name="expenses_month_title">Utgifter — %1$s</string>
+    <string name="stop_recurrence_on">Upprepning stoppad %1$s</string>
+    <string name="recurrence_end_short">Slut %1$s</string>
+    <string name="stop_after_month">Stoppa efter denna månad</string>
+    <string name="add_expense">Lägg till utgift</string>
+    <string name="recurring_badge">Återkommande</string>
+    <string name="delete_expense_item_confirm">Ta bort \"%1$s\" (%2$s)?</string>
+    <string name="already_paid_expense">Redan betald</string>
+    <string name="upcoming_forecast">Kommande (prognos)</string>
+    <string name="end_date_after_expense">Slutdatum måste vara efter utgiftsdatum</string>
+    <string name="forecast_expense">Prognostiserad utgift</string>
+
+    <!-- INCOME -->
+    <string name="new_invoice">Ny intäkt</string>
+    <string name="save_invoice">Spara intäkt</string>
+    <string name="fully_collected">Fullt inbetald</string>
+    <string name="mark_settled_on_save">Markera som avslutad vid sparning</string>
+    <string name="fully_collected_settled">Fullt inbetald (avslutad)</string>
+    <string name="due_date_display">Visa efter förfallodatum</string>
+    <string name="search_placeholder">Kund eller fakturanr</string>
+    <string name="no_collections_month">Inga inbetalningar med förfallodatum i %1$s</string>
+    <string name="mark_as_settled">Markera som avslutad</string>
+    <string name="validate_expense">Validera utgift</string>
+    <string name="collected_amount_label">Inbetalt belopp</string>
+    <string name="delete_invoice_question">Ta bort intäkt?</string>
+    <string name="new_collection">Ny intäkt</string>
+    <string name="invoice_due_meta">%1$s · förf. %2$s</string>
+    <string name="invoice_total_meta">Totalt %1$s</string>
+    <string name="invoice_paid_remaining">Inbetalt %1$s · Kvar %2$s</string>
+    <string name="client_remaining">%1$s · Kvar %2$s</string>
+    <string name="expense_amount_meta">%1$s · %2$s</string>
+    <string name="already_collected">Redan inbetald</string>
+    <string name="forecast_income">Prognostiserad intäkt</string>
+    <string name="no_income_permission">Du har inte behörighet att hantera intäkter</string>
+
+    <!-- PAYMENTS -->
+    <string name="record_payment">Registrera en betalning</string>
+    <string name="payment_total">Totalbelopp</string>
+    <string name="already_paid">Redan betald</string>
+    <string name="remaining_to_collect">Återstår att inkassera</string>
+    <string name="new_payment">Ny betalning</string>
+    <string name="advance_amount">Förskottsbelopp</string>
+    <string name="payment_date">Betalningsdatum</string>
+    <string name="save_payment">Spara betalning</string>
+    <string name="payment_history">Betalningshistorik</string>
+    <string name="choose_date">Välj datum</string>
+
+    <!-- IMPORT -->
+    <string name="import_invoices_title">Importera intäkter</string>
+    <string name="file_structure">Filstruktur</string>
+    <string name="import_columns">Accepterade kolumner: Fakturanr, Kund, Belopp, Förfallodatum</string>
+    <string name="import_columns_en">(eller på engelska: invoiceNumber, clientName, totalAmount, dueDate)</string>
+    <string name="import_due_date_note">Förfallodatumet bestämmer visningsmånaden för varje faktura.</string>
+    <string name="import_formats">CSV (komma, semikolon eller tabb) eller Excel .xlsx</string>
+    <string name="android_file_picker">Android filväljare</string>
+    <string name="android_file_picker_note">Det här är inte appen: Android öppnar sin filhanterare.</string>
+    <string name="empty_file_list_hint">Tom lista? Meny ☰ → Nedladdningar. Inaktivera \"Large files\"-filter.</string>
+    <string name="choose_file">Välj fil</string>
+
+    <!-- BANK -->
+    <string name="bank_reconciliation_how">Hur fungerar det?</string>
+    <string name="bank_reconciliation_steps">• Ange saldot på ditt kontoutdrag\n• Jämför med beräknad kassa\n• Justera vid behov</string>
+    <string name="align_treasury">Justera kassa</string>
+    <string name="gap_label">Avvikelse: %1$s</string>
+    <string name="bank_reconciliation_intro">Jämför ditt verkliga kontosaldo med kassan beräknad av appen (%1$d).</string>
+
+    <!-- SETTINGS EXTRA -->
+    <string name="restore_backup_question">Återställa säkerhetskopia?</string>
+    <string name="change_password">Byt lösenord</string>
+    <string name="reset_password">Återställ lösenord</string>
+    <string name="current_password">Nuvarande lösenord</string>
+    <string name="new_password">Nytt lösenord</string>
+    <string name="set_pin">Ange PIN-kod</string>
+    <string name="pin_code">PIN-kod</string>
+    <string name="fingerprint_lock">Fingeravtryckslås</string>
+    <string name="pin_lock">PIN-lås</string>
+    <string name="change_pin">Byt PIN</string>
+    <string name="enable_notifications">Aktivera aviseringar</string>
+    <string name="add_custom_currency">Lägg till anpassad valuta</string>
+    <string name="new_currency">Ny valuta</string>
+    <string name="currency_label_placeholder">t.ex. Algerisk dinar</string>
+    <string name="currency_symbol_placeholder">t.ex. DZD</string>
+    <string name="decimal_places">Antal decimaler</string>
+    <string name="decimal_places_placeholder">0 till 4</string>
+    <string name="no_users_added">Inga användare tillagda</string>
+    <string name="save_user">Spara användare</string>
+    <string name="new_user">Ny användare</string>
+    <string name="add_user">Lägg till användare</string>
+    <string name="my_account">Mitt konto</string>
+    <string name="change_your_password">Byt ditt lösenord</string>
+    <string name="backup_restore">Säkerhetskopiering och återställning</string>
+    <string name="export_action">Exportera</string>
+    <string name="restore_action">Återställ</string>
+    <string name="profile_saved">Profil sparad</string>
+    <string name="company_saved">Företag sparat</string>
+    <string name="pwd_short">PWD</string>
+
+    <!-- APP LOCK / RECEIPT -->
+    <string name="take_photo">Ta ett foto</string>
+    <string name="choose_from_gallery">Välj från galleriet</string>
+    <string name="use_pin">Använd PIN</string>
+    <string name="unlock">Lås upp</string>
+    <string name="fingerprint">Fingeravtryck</string>
+    <string name="app_locked">Appen är låst</string>
+    <string name="scan_receipt">Skanna ett kvitto</string>
+    <string name="reading_receipt">Läser kvitto…</string>
+    <string name="take_receipt_photo">Ta ett foto av kvittot</string>
+    <string name="receipt_auto_fill">Belopp och datum fylls i automatiskt</string>
+
+    <!-- MISC UI -->
+    <string name="new_transaction">Ny transaktion</string>
+    <string name="import_action">Importera</string>
+    <string name="search">Sök</string>
+    <string name="clear">Rensa</string>
+    <string name="actions">Åtgärder</string>
+    <string name="delete_count">Ta bort (%1$d)</string>
+    <string name="select_all">Markera alla</string>
+    <string name="deselect_all">Avmarkera alla</string>
+
+    <!-- PAYMENT METHODS -->
+    <string name="payment_check">Check</string>
+    <string name="payment_transfer">Överföring</string>
+    <string name="payment_cash">Kontanter</string>
+    <string name="payment_bill">Växel</string>
+
+    <!-- RECURRENCE -->
+    <string name="recurrence_weekly">Veckovis</string>
+    <string name="recurrence_monthly">Månadsvis</string>
+    <string name="recurrence_every_2_months">Varannan månad</string>
+    <string name="recurrence_every_3_months">Var tredje månad</string>
+    <string name="recurrence_every_4_months">Var fjärde månad</string>
+    <string name="recurrence_every_6_months">Var sjätte månad</string>
+    <string name="recurrence_annual">Årligen</string>
+
+    <!-- PERMISSIONS LABELS -->
+    <string name="permission_view_invoices">Visa fakturor</string>
+    <string name="permission_add_payments">Lägg till betalningar</string>
+    <string name="permission_manage_expenses">Hantera utgifter</string>
+    <string name="permission_view_treasury">Visa kassa</string>
+    <string name="permission_manage_users">Hantera användare</string>
+
+    <!-- INVOICE FILTERS & STATUS -->
+    <string name="filter_all">Alla</string>
+    <string name="filter_due">Förfallna</string>
+    <string name="filter_partial">Delvisa</string>
+    <string name="filter_paid">Betalda</string>
+    <string name="status_paid">Betald</string>
+    <string name="status_partial">Delvis</string>
+    <string name="status_due">Förfallen</string>
+    <string name="symbol">Symbol</string>
+    <string name="scan_success">✓ %1$s</string>
+    <string name="onboarding_privilege_expenses_title">Utgiftshantering</string>
+    <string name="onboarding_privilege_expenses_desc">Registrera och följ alla företagsutgifter, återkommande eller engångs.</string>
+    <string name="onboarding_privilege_treasury_title">Likviditetsuppföljning</string>
+    <string name="onboarding_privilege_treasury_desc">Se månadssaldo, inbetalningar och finansiella prognoser.</string>
+    <string name="onboarding_privilege_collection_title">Inkrävning</string>
+    <string name="onboarding_privilege_collection_desc">Hantera kundfakturor och följ betalningar i realtid.</string>
+</resources>

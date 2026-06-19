@@ -47,17 +47,31 @@ data class CurrencyConfig(
 }
 
 object AppCurrencyFormatter {
-    private val numberFormat = NumberFormat.getNumberInstance(Locale.FRENCH)
-
-    fun formatNumber(amount: Double, decimalPlaces: Int): String =
-        synchronized(numberFormat) {
-            numberFormat.minimumFractionDigits = decimalPlaces
-            numberFormat.maximumFractionDigits = decimalPlaces
-            numberFormat.format(amount)
-        }
+    fun formatNumber(amount: Double, decimalPlaces: Int): String {
+        val format = NumberFormat.getNumberInstance(Locale.getDefault())
+        format.minimumFractionDigits = decimalPlaces
+        format.maximumFractionDigits = decimalPlaces
+        return format.format(amount)
+    }
 
     fun format(amount: Double, currency: AppCurrency): String =
         "${formatNumber(amount, currency.decimalPlaces)} ${currency.symbol}"
+
+    fun formatTreasuryChartAmount(amount: Double, currency: AppCurrency): String {
+        val sign = if (amount < 0) "-" else ""
+        val abs = kotlin.math.abs(amount)
+        return when {
+            abs >= 1_000_000 -> "$sign${compactChartValue(abs / 1_000_000)}M"
+            else -> "$sign${compactChartValue(abs / 1_000)}k"
+        }
+    }
+
+    /** Compact chart label without locale thousand separators (avoids "4 740" clipping as "4 74"). */
+    private fun compactChartValue(value: Double): String = when {
+        value >= 100 -> String.format(Locale.US, "%.0f", value)
+        value >= 10 -> String.format(Locale.US, "%.0f", value)
+        else -> String.format(Locale.US, "%.1f", value).trimEnd('0').trimEnd('.')
+    }
 
     fun encodeCustomCurrencies(currencies: List<AppCurrency>): String =
         currencies.joinToString("\u001F") { currency ->

@@ -67,6 +67,7 @@ object TreasuryBackupJson {
                         put("recurrence", expense.recurrence?.name)
                         put("recurrenceEndDate", expense.recurrenceEndDate?.format(dateFormatter))
                         put("isPaid", expense.isPaid)
+                        expense.paymentMethod?.let { put("paymentMethod", it.name) }
                         put("createdDate", expense.createdDate.format(dateFormatter))
                         put("entrepriseId", expense.entrepriseId)
                     })
@@ -142,6 +143,8 @@ object TreasuryBackupJson {
                     recurrenceEndDate = item.optString("recurrenceEndDate").takeIf { it.isNotBlank() }
                         ?.let { LocalDate.parse(it, dateFormatter) },
                     isPaid = item.getBoolean("isPaid"),
+                    paymentMethod = item.optString("paymentMethod").takeIf { it.isNotBlank() }
+                        ?.let { com.abccash.app.treasury.data.PaymentMethod.valueOf(it) },
                     createdDate = LocalDate.parse(item.getString("createdDate"), dateFormatter),
                     entrepriseId = item.getString("entrepriseId")
                 )

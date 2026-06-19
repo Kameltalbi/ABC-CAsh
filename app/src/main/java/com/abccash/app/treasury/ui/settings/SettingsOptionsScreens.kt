@@ -11,9 +11,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.AppCurrency
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
@@ -52,7 +54,7 @@ fun SettingsCurrencyScreen(
         )
     }
 
-    SettingsDetailScaffold(title = "Devise par défaut", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_currency), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -62,7 +64,7 @@ fun SettingsCurrencyScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
-                "Devise active",
+                stringResource(R.string.settings_currency),
                 fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
             )
             config.allCurrencies.forEach { currency ->
@@ -84,14 +86,8 @@ fun SettingsCurrencyScreen(
                 onClick = { showAddDialog = true },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Ajouter une devise personnalisée")
+                Text(stringResource(R.string.add_custom_currency))
             }
-
-            Text(
-                "La devise sélectionnée s'applique à l'affichage de tous les montants dans l'application.",
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
@@ -119,7 +115,7 @@ private fun CurrencySelectionRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(currency.displayName(), fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
                 Text(
-                    "${currency.decimalPlaces} décimale(s) · ${if (currency.isCustom) "Personnalisée" else "Intégrée"}",
+                    "${currency.decimalPlaces} · ${if (currency.isCustom) stringResource(R.string.category_custom_tag) else stringResource(R.string.category_builtin_tag)}",
                     fontSize = MaterialTheme.typography.bodySmall.fontSize,
                     color = Color.Gray
                 )
@@ -128,7 +124,7 @@ private fun CurrencySelectionRow(
                 IconButton(onClick = onDelete) {
                     Icon(
                         Icons.Default.Delete,
-                        contentDescription = "Supprimer",
+                        contentDescription = stringResource(R.string.delete),
                         tint = Color.Gray
                     )
                 }
@@ -149,22 +145,22 @@ private fun AddCustomCurrencyDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Nouvelle devise") },
+        title = { Text(stringResource(R.string.new_currency)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = label,
                     onValueChange = { label = it },
-                    label = { Text("Libellé") },
-                    placeholder = { Text("Ex : Dinar algérien") },
+                    label = { Text(stringResource(R.string.label)) },
+                    placeholder = { Text(stringResource(R.string.currency_label_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
                 OutlinedTextField(
                     value = symbol,
                     onValueChange = { symbol = it },
-                    label = { Text("Symbole") },
-                    placeholder = { Text("Ex : DZD") },
+                    label = { Text(stringResource(R.string.symbol)) },
+                    placeholder = { Text(stringResource(R.string.currency_symbol_placeholder)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
@@ -175,8 +171,8 @@ private fun AddCustomCurrencyDialog(
                             decimalsText = it
                         }
                     },
-                    label = { Text("Nombre de décimales") },
-                    placeholder = { Text("0 à 4") },
+                    label = { Text(stringResource(R.string.decimal_places)) },
+                    placeholder = { Text(stringResource(R.string.decimal_places_placeholder)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth()
@@ -191,11 +187,11 @@ private fun AddCustomCurrencyDialog(
                 },
                 enabled = label.isNotBlank() && symbol.isNotBlank() && decimalsText.isNotBlank()
             ) {
-                Text("Ajouter")
+                Text(stringResource(R.string.add))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuler") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }
@@ -209,7 +205,7 @@ fun SettingsNotificationsScreen(
     val settings by appSettings.settingsFlow.collectAsState(initial = AppSettingsState())
     val scope = rememberCoroutineScope()
 
-    SettingsDetailScaffold(title = "Notifications", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_notifications), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -222,9 +218,9 @@ fun SettingsNotificationsScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Activer les notifications")
+                    Text(stringResource(R.string.enable_notifications))
                     Text(
-                        "Rappels d'échéances et alertes de trésorerie",
+                        stringResource(R.string.settings_notifications_sub),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -268,7 +264,7 @@ fun SettingsSecurityScreen(
         )
     }
 
-    SettingsDetailScaffold(title = "Sécurité", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_security), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -282,9 +278,9 @@ fun SettingsSecurityScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Verrouillage par empreinte")
+                    Text(stringResource(R.string.fingerprint_lock))
                     Text(
-                        "Demander l'empreinte digitale à l'ouverture",
+                        stringResource(R.string.settings_security_sub),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -301,10 +297,10 @@ fun SettingsSecurityScreen(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Verrouillage par code PIN")
+                    Text(stringResource(R.string.pin_lock))
                     Text(
-                        if (settings.hasPin) "PIN configuré (4 chiffres minimum)"
-                        else "Aucun PIN configuré",
+                        if (settings.hasPin) stringResource(R.string.pin_code)
+                        else stringResource(R.string.set_pin),
                         color = Color.Gray,
                         style = MaterialTheme.typography.bodySmall
                     )
@@ -325,14 +321,9 @@ fun SettingsSecurityScreen(
                     onClick = { showPinDialog = true },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Modifier le code PIN")
+                    Text(stringResource(R.string.change_pin))
                 }
             }
-            Text(
-                "Au moins une méthode de verrouillage peut être activée pour protéger l'accès à l'application.",
-                color = Color.Gray,
-                style = MaterialTheme.typography.bodySmall
-            )
         }
     }
 }
@@ -348,13 +339,13 @@ private fun SetPinDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Définir un code PIN") },
+        title = { Text(stringResource(R.string.set_pin)) },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
                     value = pin,
                     onValueChange = { if (it.length <= 8 && it.all { c -> c.isDigit() }) pin = it },
-                    label = { Text("Code PIN") },
+                    label = { Text(stringResource(R.string.pin_code)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     singleLine = true,
@@ -363,7 +354,7 @@ private fun SetPinDialog(
                 OutlinedTextField(
                     value = confirm,
                     onValueChange = { if (it.length <= 8 && it.all { c -> c.isDigit() }) confirm = it },
-                    label = { Text("Confirmer") },
+                    label = { Text(stringResource(R.string.confirm_password)) },
                     visualTransformation = PasswordVisualTransformation(),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                     singleLine = true,
@@ -377,11 +368,11 @@ private fun SetPinDialog(
                 onClick = { onConfirm(pin) },
                 enabled = pin.length >= 4 && pin == confirm
             ) {
-                Text("Enregistrer")
+                Text(stringResource(R.string.save))
             }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Annuler") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
         }
     )
 }

@@ -7,7 +7,9 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.User
 import kotlinx.coroutines.launch
@@ -27,7 +29,7 @@ fun SettingsUserProfileScreen(
     var success by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    SettingsDetailScaffold(title = "Mon profil", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_my_profile), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -39,27 +41,27 @@ fun SettingsUserProfileScreen(
             OutlinedTextField(
                 value = nom,
                 onValueChange = { nom = it },
-                label = { Text("Nom complet") },
+                label = { Text(stringResource(R.string.full_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
             OutlinedTextField(
                 value = email,
                 onValueChange = { email = it },
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.email)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
             OutlinedTextField(
                 value = telephone,
                 onValueChange = { telephone = it },
-                label = { Text("Téléphone") },
+                label = { Text(stringResource(R.string.phone)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (success) {
-                Text("Profil enregistré", color = Color(0xFF4CAF50))
+                Text(stringResource(R.string.profile_saved), color = Color(0xFF4CAF50))
             }
             Button(
                 onClick = {
@@ -73,7 +75,7 @@ fun SettingsUserProfileScreen(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Enregistrer")
+                Text(stringResource(R.string.save))
             }
         }
     }
@@ -94,7 +96,7 @@ fun SettingsCompanyProfileScreen(
     var error by remember { mutableStateOf<String?>(null) }
     var success by remember { mutableStateOf(false) }
 
-    SettingsDetailScaffold(title = "Entreprise", onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.settings_company), onBack = onBack) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -106,7 +108,7 @@ fun SettingsCompanyProfileScreen(
             OutlinedTextField(
                 value = nom,
                 onValueChange = { if (canEdit) nom = it },
-                label = { Text("Nom de l'entreprise") },
+                label = { Text(stringResource(R.string.company_name)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = !canEdit,
                 singleLine = true
@@ -114,7 +116,7 @@ fun SettingsCompanyProfileScreen(
             OutlinedTextField(
                 value = email,
                 onValueChange = { if (canEdit) email = it },
-                label = { Text("Email") },
+                label = { Text(stringResource(R.string.email)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = !canEdit,
                 singleLine = true
@@ -122,7 +124,7 @@ fun SettingsCompanyProfileScreen(
             OutlinedTextField(
                 value = telephone,
                 onValueChange = { if (canEdit) telephone = it },
-                label = { Text("Téléphone") },
+                label = { Text(stringResource(R.string.phone)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = !canEdit,
                 singleLine = true
@@ -130,7 +132,7 @@ fun SettingsCompanyProfileScreen(
             OutlinedTextField(
                 value = adresse,
                 onValueChange = { if (canEdit) adresse = it },
-                label = { Text("Adresse") },
+                label = { Text(stringResource(R.string.address)) },
                 modifier = Modifier.fillMaxWidth(),
                 readOnly = !canEdit,
                 minLines = 2
@@ -144,7 +146,7 @@ fun SettingsCompanyProfileScreen(
             }
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
             if (success) {
-                Text("Entreprise enregistrée", color = Color(0xFF4CAF50))
+                Text(stringResource(R.string.company_saved), color = Color(0xFF4CAF50))
             }
             if (canEdit) {
                 Button(
@@ -156,7 +158,7 @@ fun SettingsCompanyProfileScreen(
                     },
                     modifier = Modifier.fillMaxWidth()
                 ) {
-                    Text("Enregistrer")
+                    Text(stringResource(R.string.save))
                 }
             }
         }

@@ -13,11 +13,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.abccash.app.R
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.TreasuryCalculations
@@ -25,7 +27,6 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.datastore.UserPreferences
 import kotlinx.coroutines.launch
 import java.time.YearMonth
-import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -51,6 +52,9 @@ fun BankReconciliationScreen(
         .collectAsStateWithLifecycle(initialValue = null)
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
+    val invalidAmountError = stringResource(R.string.invalid_amount)
+    val savedMessage = stringResource(R.string.save)
+    val clearedMessage = stringResource(R.string.clear_saved_balance)
 
     val formatAmount = rememberFormatMoney()
 
@@ -71,10 +75,10 @@ fun BankReconciliationScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Compte bancaire") },
+                title = { Text(stringResource(R.string.bank_account)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -95,7 +99,7 @@ fun BankReconciliationScreen(
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
             Text(
-                text = "Comparez le solde réel de votre compte avec la trésorerie calculée par l'application ($displayYear).",
+                text = stringResource(R.string.bank_reconciliation_intro, displayYear),
                 fontSize = 14.sp,
                 color = Color(0xFF64748B),
                 lineHeight = 20.sp
@@ -111,15 +115,12 @@ fun BankReconciliationScreen(
                     verticalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     Text(
-                        text = "Comment ça marche ?",
+                        text = stringResource(R.string.bank_reconciliation_how),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "• Saisissez le solde affiché sur votre relevé bancaire\n" +
-                            "• Si un écart existe, l'app peut créer un ajustement automatique\n" +
-                            "• Banque plus élevée → encaissement d'ajustement\n" +
-                            "• Banque plus basse → dépense d'ajustement",
+                        text = stringResource(R.string.bank_reconciliation_steps),
                         fontSize = 12.sp,
                         color = Color(0xFF64748B),
                         lineHeight = 18.sp
@@ -132,13 +133,13 @@ fun BankReconciliationScreen(
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 SummaryChip(
-                    label = "Trésorerie calculée",
+                    label = stringResource(R.string.calculated_treasury),
                     value = formatAmount(calculatedBalance),
                     modifier = Modifier.weight(1f)
                 )
                 bankBalance?.let { saved ->
                     SummaryChip(
-                        label = "Dernier solde saisi",
+                        label = stringResource(R.string.last_saved_balance),
                         value = formatAmount(saved),
                         modifier = Modifier.weight(1f)
                     )
@@ -152,13 +153,13 @@ fun BankReconciliationScreen(
                     saveError = null
                 },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Solde bancaire actuel") },
+                label = { Text(stringResource(R.string.bank_balance)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 suffix = { CurrencySuffix() },
                 isError = amountText.isNotBlank() && parsedAmount == null,
                 supportingText = if (amountText.isNotBlank() && parsedAmount == null) {
-                    { Text("Montant invalide") }
+                    { Text(invalidAmountError) }
                 } else {
                     null
                 }
@@ -166,7 +167,7 @@ fun BankReconciliationScreen(
 
             if (hasGap) {
                 Text(
-                    text = "Écart : ${formatAmount(gap!!)}",
+                    text = stringResource(R.string.gap_label, formatAmount(gap!!)),
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFFF57C00)
@@ -176,22 +177,11 @@ fun BankReconciliationScreen(
                         checked = createAdjustments,
                         onCheckedChange = { createAdjustments = it }
                     )
-                    Column {
-                        Text(
-                            text = "Aligner la trésorerie",
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Text(
-                            text = if (gap > 0) {
-                                "Créer un encaissement d'ajustement"
-                            } else {
-                                "Créer une dépense d'ajustement"
-                            },
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
+                    Text(
+                        text = stringResource(R.string.align_treasury),
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
                 }
             }
 
@@ -203,7 +193,7 @@ fun BankReconciliationScreen(
                 onClick = {
                     val amount = parsedAmount
                     when {
-                        amount == null -> saveError = "Montant invalide"
+                        amount == null -> saveError = invalidAmountError
                         else -> {
                             isSaving = true
                             saveError = null
@@ -220,14 +210,7 @@ fun BankReconciliationScreen(
                                         return@launch
                                     }
                                     userPreferences.saveBankBalance(entrepriseId, displayYear, amount)
-                                    val message = when {
-                                        createAdjustments && hasGap ->
-                                            "Trésorerie alignée sur le compte bancaire"
-                                        hasGap ->
-                                            "Solde bancaire enregistré"
-                                        else -> "Solde conforme à la trésorerie"
-                                    }
-                                    snackbarHostState.showSnackbar(message)
+                                    snackbarHostState.showSnackbar(savedMessage)
                                     onBack()
                                 }
                             }
@@ -247,7 +230,13 @@ fun BankReconciliationScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text(if (hasGap && createAdjustments) "Aligner la trésorerie" else "Enregistrer le solde")
+                    Text(
+                        if (hasGap && createAdjustments) {
+                            stringResource(R.string.align_treasury)
+                        } else {
+                            stringResource(R.string.save)
+                        }
+                    )
                 }
             }
 
@@ -257,12 +246,12 @@ fun BankReconciliationScreen(
                         scope.launch {
                             userPreferences.saveBankBalance(entrepriseId, displayYear, null)
                             amountText = ""
-                            snackbarHostState.showSnackbar("Solde bancaire effacé")
+                            snackbarHostState.showSnackbar(clearedMessage)
                         }
                     },
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 ) {
-                    Text("Effacer le solde enregistré", color = Color(0xFFF44336))
+                    Text(stringResource(R.string.clear_saved_balance), color = Color(0xFFF44336))
                 }
             }
         }

@@ -9,8 +9,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 
 @Composable
 fun AdminBulkSelectionBar(
@@ -39,7 +41,11 @@ fun AdminBulkSelectionBar(
                 onCheckedChange = { onToggleSelectAll() }
             )
             Text(
-                text = if (allSelected) "Tout désélectionner" else "Tout sélectionner",
+                text = if (allSelected) {
+                    stringResource(R.string.deselect_all)
+                } else {
+                    stringResource(R.string.select_all)
+                },
                 fontSize = 14.sp
             )
         }
@@ -54,7 +60,7 @@ fun AdminBulkSelectionBar(
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
-                    text = "Supprimer ($selectedCount)",
+                    text = stringResource(R.string.delete_count, selectedCount),
                     color = Color(0xFFF44336),
                     fontSize = 14.sp
                 )

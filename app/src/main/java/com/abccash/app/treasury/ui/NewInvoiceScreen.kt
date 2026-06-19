@@ -12,10 +12,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.abccash.app.R
 import com.abccash.app.treasury.data.defaultDateForMonth
 import java.time.LocalDate
 import java.time.YearMonth
@@ -44,13 +46,17 @@ fun NewInvoiceScreen(
     var saveError by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
 
+    val labelRequiredError = stringResource(R.string.label_required)
+    val invalidAmountError = stringResource(R.string.invalid_amount)
+    val dueDateLabel = stringResource(R.string.date)
+
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nouvel encaissement") },
+                title = { Text(stringResource(R.string.new_collection)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Retour")
+                        Icon(Icons.Default.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -75,7 +81,7 @@ fun NewInvoiceScreen(
                 value = invoiceNumber,
                 onValueChange = { invoiceNumber = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("N° facture") },
+                label = { Text(stringResource(R.string.invoice_number)) },
                 singleLine = true
             )
 
@@ -83,7 +89,7 @@ fun NewInvoiceScreen(
                 value = clientName,
                 onValueChange = { clientName = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Client") },
+                label = { Text(stringResource(R.string.client)) },
                 singleLine = true
             )
 
@@ -91,15 +97,15 @@ fun NewInvoiceScreen(
                 value = totalAmount,
                 onValueChange = { totalAmount = it },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("Montant total") },
-                placeholder = { Text("0.000") },
+                label = { Text(stringResource(R.string.total_amount)) },
+                placeholder = { Text(stringResource(R.string.amount_placeholder)) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 suffix = { CurrencySuffix() }
             )
 
             TreasuryDateField(
-                label = "Date d'échéance",
+                label = dueDateLabel,
                 date = dueDate,
                 onDateChange = { dueDate = it }
             )
@@ -114,12 +120,12 @@ fun NewInvoiceScreen(
                 )
                 Column {
                     Text(
-                        text = "Encaissé intégralement",
+                        text = stringResource(R.string.fully_collected),
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Marquer comme soldé dès l'enregistrement",
+                        text = stringResource(R.string.mark_settled_on_save),
                         fontSize = 12.sp,
                         color = Color.Gray
                     )
@@ -136,9 +142,8 @@ fun NewInvoiceScreen(
                 onClick = {
                     val amount = totalAmount.replace(" ", "").replace(",", ".").toDoubleOrNull()
                     when {
-                        invoiceNumber.isBlank() -> saveError = "Le numéro de facture est obligatoire"
-                        clientName.isBlank() -> saveError = "Le client est obligatoire"
-                        amount == null || amount <= 0 -> saveError = "Montant invalide"
+                        invoiceNumber.isBlank() || clientName.isBlank() -> saveError = labelRequiredError
+                        amount == null || amount <= 0 -> saveError = invalidAmountError
                         else -> {
                             saveError = null
                             isSaving = true
@@ -166,7 +171,7 @@ fun NewInvoiceScreen(
                         strokeWidth = 2.dp
                     )
                 } else {
-                    Text("Enregistrer l'encaissement")
+                    Text(stringResource(R.string.save_invoice))
                 }
             }
         }

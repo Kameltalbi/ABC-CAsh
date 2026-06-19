@@ -1,0 +1,39 @@
+services:
+  abc-cash-db:
+    image: postgres:16-alpine
+    container_name: abc-cash-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-abc_cash}
+      POSTGRES_USER: ${POSTGRES_USER:-abc_cash}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}
+    volumes:
+      - abc_cash_pgdata:/var/lib/postgresql/data
+    networks:
+      - abc-cash-internal
+    # Postgres non exposé sur Internet — uniquement réseau Docker interne
+
+  abc-cash-api:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    container_name: abc-cash-api
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      PORT: "8081"
+      HOST: "0.0.0.0"
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      - abc-cash-db
+    networks:
+      - abc-cash-internal
+
+volumes:
+  abc_cash_pgdata:
+
+networks:
+  abc-cash-internal:
+    driver: bridge

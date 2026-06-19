@@ -20,6 +20,26 @@ fun rememberFormatMoney(): (Double) -> String {
 }
 
 @Composable
+fun rememberFormatMoneyWhole(): (Double) -> String {
+    val currency = LocalAppCurrency.current
+    return remember(currency) {
+        { amount ->
+            "${AppCurrencyFormatter.formatNumber(amount, 0)} ${currency.symbol}"
+        }
+    }
+}
+
+@Composable
+fun rememberFormatTreasuryChartAmount(): (Double) -> String {
+    val currency = LocalAppCurrency.current
+    return remember(currency) {
+        { amount ->
+            AppCurrencyFormatter.formatTreasuryChartAmount(amount, currency)
+        }
+    }
+}
+
+@Composable
 fun CurrencySuffix() {
     Text(appCurrencySymbol())
 }
