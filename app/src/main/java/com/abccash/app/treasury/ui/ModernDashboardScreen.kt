@@ -7,9 +7,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AccountCircle
-import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material.icons.filled.TrendingDown
@@ -26,7 +24,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -44,7 +42,7 @@ import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.datastore.UserPreferences
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
-import com.abccash.app.ui.theme.AppColors
+import androidx.compose.ui.graphics.drawscope.Stroke
 import com.abccash.app.treasury.data.DashboardViewMode
 import com.abccash.app.treasury.data.MonthlyBarPoint
 import com.abccash.app.locale.AppLocale
@@ -55,19 +53,21 @@ import kotlin.math.abs
 import kotlin.math.max
 
 private object ModernDashboardTheme {
-    val Background = Color(0xFFF8F9FA)
-    val Primary = Color(0xFF1E293B)
-    val Positive = Color(0xFF10B981)
+    val Background = Color(0xFFF5F7FA)
+    val Primary = Color(0xFF1A1A1A)
+    val Positive = Color(0xFF22C55E)
+    val AccentGreen = Color(0xFF5EE371)
     val Negative = Color(0xFFEF4444)
-    val Muted = Color(0xFF64748B)
+    val Muted = Color(0xFF94A3B8)
     val Card = Color.White
-    val ChartFill = Color(0xFF10B981).copy(alpha = 0.12f)
+    val ChartFill = Color(0xFF22C55E).copy(alpha = 0.10f)
+    val SectionLabel = Color(0xFF9CA3AF)
 
     val IncomeColors = listOf(
-        Color(0xFF10B981),
-        Color(0xFF059669),
-        Color(0xFF34D399),
-        Color(0xFF0EA5E9)
+        Color(0xFF2D5150),
+        Color(0xFF4A90E2),
+        Color(0xFFF5C344),
+        Color(0xFF22C55E)
     )
     val ExpenseColors = listOf(
         Color(0xFF882244),
@@ -116,14 +116,6 @@ fun ModernDashboardScreen(
             focusMonth = selectedMonth,
             viewMode = viewMode
         )
-    }
-
-    val outflowsKpi = remember(data, isCurrentPeriod) {
-        when {
-            !isCurrentPeriod -> data.expensePaidTotal
-            data.expensePendingTotal > 0 -> data.expensePendingTotal
-            else -> data.forecastExpenses
-        }
     }
 
     val balanceKpi = if (isCurrentPeriod) data.forecastBalance30Days else data.displayBalance
@@ -190,38 +182,26 @@ fun ModernDashboardScreen(
     }
 
     Scaffold(
-        containerColor = ModernDashboardTheme.Background,
-        floatingActionButton = {
-            // Prêt à déclencher l'ouverture du formulaire de saisie rapide.
-            if (canAddIncome || canAddExpense) {
-                FloatingActionButton(
-                    onClick = { showTypeSheet = true },
-                    containerColor = ModernDashboardTheme.Primary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.quick_entry))
-                }
-            }
-        }
+        containerColor = ModernDashboardTheme.Background
     ) { padding ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 12.dp, bottom = 96.dp)
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+            contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp)
         ) {
             item {
-                Box(Modifier.padding(horizontal = 16.dp)) {
-                    DashboardHeaderBar(
+                Box(Modifier.padding(horizontal = 20.dp)) {
+                    ModernWelcomeHeader(
                         displayName = displayName,
+                        companyName = companyName.ifBlank { stringResource(R.string.company_fallback) },
                         notificationCount = notificationCount
                     )
                 }
             }
             item {
-                Box(Modifier.padding(horizontal = 16.dp)) {
+                Box(Modifier.padding(horizontal = 20.dp)) {
                     DashboardPeriodSelector(
                         viewMode = viewMode,
                         onViewModeChange = { viewMode = it },
@@ -234,73 +214,107 @@ fun ModernDashboardScreen(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 20.dp),
                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
-                    KpiSummaryCard(
-                        modifier = Modifier.weight(1f),
-                        title = stringResource(R.string.dashboard_planned_outflows),
-                        amount = formatAmount(outflowsKpi),
-                        trendPercent = expenseWeekTrend,
-                        trendLabel = expenseWeekTrend?.let {
-                            stringResource(
-                                R.string.dashboard_trend_week,
-                                formatTrendPercent(it)
-                            )
-                        },
-                        iconTint = ModernDashboardTheme.Positive,
-                        waveColor = ModernDashboardTheme.Positive.copy(alpha = 0.08f),
-                        icon = { Icon(Icons.Default.TrendingUp, contentDescription = null, tint = Color.White) }
-                    )
-                    KpiSummaryCard(
+                    if (canViewIncome || userRole == UserRole.ADMIN) {
+                        WalletMetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = stringResource(R.string.income_title),
+                            amount = formatAmount(data.incomeTotal),
+                            meta = data.monthLabel,
+                            shareLabel = if (data.incomeTotal > 0 && data.expenseTotal > 0) {
+                                val pct = (data.incomeTotal / (data.incomeTotal + data.expenseTotal) * 100).toInt()
+                                "$pct%"
+                            } else null,
+                            accentColor = ModernDashboardTheme.Positive,
+                            icon = Icons.Default.TrendingUp
+                        )
+                    } else if (canManageExpense || userRole == UserRole.ADMIN) {
+                        WalletMetricCard(
+                            modifier = Modifier.weight(1f),
+                            title = stringResource(R.string.expense_title),
+                            amount = formatAmount(data.expenseTotal),
+                            meta = data.monthLabel,
+                            shareLabel = expenseWeekTrend?.let { formatTrendPercent(it) },
+                            accentColor = ModernDashboardTheme.ExpenseColors[2],
+                            icon = Icons.Default.TrendingDown
+                        )
+                    }
+                    WalletMetricCard(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.forecast_balance),
                         amount = formatAmount(balanceKpi),
-                        trendPercent = balance30Trend,
-                        trendLabel = balance30Trend?.let {
-                            stringResource(
-                                R.string.dashboard_trend_30d,
-                                formatTrendPercent(it)
-                            )
+                        meta = if (isCurrentPeriod) {
+                            stringResource(R.string.forecasts_30_days)
+                        } else {
+                            data.monthLabel
                         },
-                        iconTint = Color(0xFF2563EB),
-                        waveColor = Color(0xFF2563EB).copy(alpha = 0.08f),
-                        icon = { Icon(Icons.Default.ShowChart, contentDescription = null, tint = Color.White) }
+                        shareLabel = balance30Trend?.let { formatTrendPercent(it) },
+                        accentColor = Color(0xFF4A90E2),
+                        icon = Icons.Default.ShowChart
                     )
                 }
             }
-            item {
-                Box(Modifier.padding(horizontal = 16.dp)) {
-                    TreasuryForecastCard(
-                        points = data.balanceHistory,
-                        formatAmount = formatAmount
-                    )
+            if (canAddIncome || canAddExpense) {
+                item {
+                    Button(
+                        onClick = { showTypeSheet = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .height(52.dp),
+                        shape = RoundedCornerShape(18.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = ModernDashboardTheme.AccentGreen,
+                            contentColor = ModernDashboardTheme.Primary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                    ) {
+                        Text(
+                            text = stringResource(R.string.quick_entry),
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 16.sp
+                        )
+                    }
                 }
             }
             if (canManageExpense || userRole == UserRole.ADMIN) {
                 item {
-                    Box(Modifier.padding(horizontal = 16.dp)) {
-                        CategoryBreakdownCard(
-                            title = stringResource(R.string.dashboard_expense_breakdown),
+                    Box(Modifier.padding(horizontal = 20.dp)) {
+                        SemiDonutBreakdownCard(
+                            sectionTitle = stringResource(R.string.dashboard_expense_breakdown),
                             subtitle = data.monthLabel,
                             slices = data.expenseByCategory,
                             total = data.expenseTotal,
                             sliceColors = ModernDashboardTheme.ExpenseColors,
+                            centerLabel = stringResource(R.string.expense_title),
                             emptyLabel = stringResource(R.string.no_expense_month),
                             formatAmount = formatAmount
                         )
                     }
                 }
             }
+            item {
+                Box(Modifier.padding(horizontal = 20.dp)) {
+                    TreasuryTrendCard(
+                        points = data.balanceHistory,
+                        expenseTotal = data.expenseTotal,
+                        monthLabel = data.monthLabel,
+                        formatAmount = formatAmount
+                    )
+                }
+            }
             if (canViewIncome || userRole == UserRole.ADMIN) {
                 item {
-                    Box(Modifier.padding(horizontal = 16.dp)) {
-                        CategoryBreakdownCard(
-                            title = stringResource(R.string.dashboard_income_breakdown),
+                    Box(Modifier.padding(horizontal = 20.dp)) {
+                        SemiDonutBreakdownCard(
+                            sectionTitle = stringResource(R.string.dashboard_income_breakdown),
                             subtitle = data.monthLabel,
                             slices = data.incomeByCategory,
                             total = data.incomeTotal,
                             sliceColors = ModernDashboardTheme.IncomeColors,
+                            centerLabel = stringResource(R.string.income_title),
                             emptyLabel = stringResource(R.string.no_income_month),
                             formatAmount = formatAmount
                         )
@@ -309,7 +323,7 @@ fun ModernDashboardScreen(
             }
             if (canViewIncome || canManageExpense || userRole == UserRole.ADMIN) {
                 item {
-                    Box(Modifier.padding(horizontal = 16.dp)) {
+                    Box(Modifier.padding(horizontal = 20.dp)) {
                         MonthlyComparisonBarCard(
                             bars = monthlyBars,
                             subtitle = barChartSubtitle,
@@ -330,145 +344,364 @@ private fun DashboardCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(22.dp),
         colors = CardDefaults.cardColors(containerColor = ModernDashboardTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
             content = content
         )
     }
 }
 
 @Composable
-private fun DashboardHeaderBar(
+private fun SectionTitle(text: String) {
+    Text(
+        text = text.uppercase(),
+        fontSize = 11.sp,
+        fontWeight = FontWeight.SemiBold,
+        letterSpacing = 1.sp,
+        color = ModernDashboardTheme.SectionLabel
+    )
+}
+
+@Composable
+private fun ModernWelcomeHeader(
     displayName: String,
+    companyName: String,
     notificationCount: Int
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.End,
+        horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BadgedBox(
-            badge = {
-                if (notificationCount > 0) {
-                    Badge(containerColor = ModernDashboardTheme.Positive) {
-                        Text(
-                            text = notificationCount.coerceAtMost(99).toString(),
-                            fontSize = 10.sp
-                        )
-                    }
-                }
-            }
-        ) {
-            Icon(
-                imageVector = Icons.Default.Notifications,
-                contentDescription = stringResource(R.string.dashboard_notifications),
-                tint = ModernDashboardTheme.Primary,
-                modifier = Modifier.size(24.dp)
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.dashboard_welcome_back),
+                fontSize = 13.sp,
+                color = ModernDashboardTheme.Muted
+            )
+            Text(
+                text = displayName,
+                fontSize = 26.sp,
+                fontWeight = FontWeight.Bold,
+                color = ModernDashboardTheme.Primary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = companyName,
+                fontSize = 12.sp,
+                color = ModernDashboardTheme.Muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(Modifier.width(16.dp))
-        Icon(
-            imageVector = Icons.Default.AccountCircle,
-            contentDescription = null,
-            tint = ModernDashboardTheme.Primary,
-            modifier = Modifier.size(32.dp)
-        )
-        Spacer(Modifier.width(8.dp))
-        Text(
-            text = displayName,
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.SemiBold,
-            color = ModernDashboardTheme.Primary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Icon(
-            imageVector = Icons.Default.KeyboardArrowDown,
-            contentDescription = null,
-            tint = ModernDashboardTheme.Muted
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            BadgedBox(
+                badge = {
+                    if (notificationCount > 0) {
+                        Badge(containerColor = ModernDashboardTheme.Negative) {
+                            Text(
+                                text = notificationCount.coerceAtMost(99).toString(),
+                                fontSize = 9.sp
+                            )
+                        }
+                    }
+                }
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Notifications,
+                    contentDescription = stringResource(R.string.dashboard_notifications),
+                    tint = ModernDashboardTheme.Primary,
+                    modifier = Modifier.size(22.dp)
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .background(ModernDashboardTheme.AccentGreen.copy(alpha = 0.35f), CircleShape),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccountCircle,
+                    contentDescription = null,
+                    tint = ModernDashboardTheme.Primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            }
+        }
     }
 }
 
 @Composable
-private fun KpiSummaryCard(
+private fun WalletMetricCard(
     modifier: Modifier = Modifier,
     title: String,
     amount: String,
-    trendPercent: Double?,
-    trendLabel: String?,
-    iconTint: Color,
-    waveColor: Color,
-    icon: @Composable () -> Unit
+    meta: String,
+    shareLabel: String?,
+    accentColor: Color,
+    icon: ImageVector
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = ModernDashboardTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Box {
-            Box(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(48.dp)
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(Color.Transparent, waveColor)
-                        )
-                    )
-            )
-            Column(
-                modifier = Modifier.padding(14.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Box(
-                    modifier = Modifier
-                        .size(36.dp)
-                        .background(iconTint, RoundedCornerShape(10.dp)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    icon()
-                }
                 Text(
                     text = title,
-                    style = MaterialTheme.typography.labelMedium,
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = ModernDashboardTheme.Muted,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .background(accentColor.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = accentColor,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Text(
+                text = meta,
+                fontSize = 10.sp,
+                color = ModernDashboardTheme.Muted,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = amount,
+                fontSize = 17.sp,
+                fontWeight = FontWeight.Bold,
+                color = ModernDashboardTheme.Primary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+            shareLabel?.let { label ->
+                Text(
+                    text = label,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = ModernDashboardTheme.Positive
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun SemiDonutBreakdownCard(
+    sectionTitle: String,
+    subtitle: String,
+    slices: List<CategorySlice>,
+    total: Double,
+    sliceColors: List<Color>,
+    centerLabel: String,
+    emptyLabel: String,
+    formatAmount: (Double) -> String
+) {
+    DashboardCard {
+        SectionTitle(sectionTitle)
+        Text(
+            text = subtitle,
+            fontSize = 12.sp,
+            color = ModernDashboardTheme.Muted
+        )
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(150.dp),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            val hasData = slices.isNotEmpty() && slices.any { it.amount > 0 }
+            SemiDonutChart(
+                slices = if (hasData) slices else emptyList(),
+                colors = sliceColors,
+                modifier = Modifier
+                    .fillMaxWidth(0.82f)
+                    .height(120.dp),
+                emptyRing = !hasData
+            )
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = centerLabel,
+                    fontSize = 11.sp,
                     color = ModernDashboardTheme.Muted
                 )
                 Text(
-                    text = amount,
-                    style = MaterialTheme.typography.titleLarge,
+                    text = if (hasData) formatAmount(total) else "—",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = ModernDashboardTheme.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (trendLabel != null && trendPercent != null) {
+            }
+        }
+        ModernBreakdownLegendGrid(
+            slices = slices,
+            colors = sliceColors,
+            emptyLabel = emptyLabel,
+            formatAmount = formatAmount
+        )
+    }
+}
+
+@Composable
+private fun ModernBreakdownLegendGrid(
+    slices: List<CategorySlice>,
+    colors: List<Color>,
+    emptyLabel: String,
+    formatAmount: (Double) -> String
+) {
+    val items = slices.take(4)
+    if (items.isEmpty()) {
+        Text(emptyLabel, fontSize = 12.sp, color = ModernDashboardTheme.Muted)
+        return
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        items.chunked(2).forEach { rowItems ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                rowItems.forEach { slice ->
+                    val colorIndex = slices.indexOf(slice)
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.Top
                     ) {
-                        Icon(
-                            imageVector = if (trendPercent >= 0) {
-                                Icons.Default.TrendingUp
-                            } else {
-                                Icons.Default.TrendingDown
-                            },
-                            contentDescription = null,
-                            tint = ModernDashboardTheme.Positive,
-                            modifier = Modifier.size(14.dp)
+                        Box(
+                            modifier = Modifier
+                                .padding(top = 4.dp)
+                                .width(14.dp)
+                                .height(3.dp)
+                                .background(colors[colorIndex % colors.size], RoundedCornerShape(2.dp))
                         )
-                        Text(
-                            text = trendLabel,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = ModernDashboardTheme.Positive
-                        )
+                        Spacer(Modifier.width(6.dp))
+                        Column {
+                            Text(
+                                text = localizedCategoryLabel(slice),
+                                fontSize = 11.sp,
+                                color = ModernDashboardTheme.Primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = formatAmount(slice.amount),
+                                fontSize = 10.sp,
+                                color = ModernDashboardTheme.Muted
+                            )
+                        }
+                    }
+                }
+                if (rowItems.size == 1) Spacer(Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TreasuryTrendCard(
+    points: List<DashboardBalancePoint>,
+    expenseTotal: Double,
+    monthLabel: String,
+    formatAmount: (Double) -> String
+) {
+    DashboardCard {
+        SectionTitle(stringResource(R.string.dashboard_treasury_forecasts))
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            Column(modifier = Modifier.weight(0.42f)) {
+                Text(
+                    text = stringResource(R.string.expense_title),
+                    fontSize = 12.sp,
+                    color = ModernDashboardTheme.Muted
+                )
+                Text(
+                    text = formatAmount(expenseTotal),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = ModernDashboardTheme.Primary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = monthLabel,
+                    fontSize = 11.sp,
+                    color = ModernDashboardTheme.Muted
+                )
+                Spacer(Modifier.height(8.dp))
+                TrendLegendRow(
+                    color = ModernDashboardTheme.Positive,
+                    label = stringResource(R.string.your_treasury)
+                )
+                Spacer(Modifier.height(6.dp))
+                TrendLegendRow(
+                    color = ModernDashboardTheme.Positive.copy(alpha = 0.45f),
+                    label = stringResource(R.string.forecasts_30_days)
+                )
+            }
+            if (points.size < 2) {
+                Box(
+                    modifier = Modifier
+                        .weight(0.58f)
+                        .height(140.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(stringResource(R.string.not_enough_data), color = ModernDashboardTheme.Muted, fontSize = 12.sp)
+                }
+            } else {
+                Column(modifier = Modifier.weight(0.58f)) {
+                    ForecastBalanceLineChart(
+                        points = points,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(120.dp)
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        forecastAxisLabels().forEach { label ->
+                            Text(
+                                text = label,
+                                fontSize = 9.sp,
+                                color = ModernDashboardTheme.Muted,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.weight(1f),
+                                maxLines = 1
+                            )
+                        }
                     }
                 }
             }
@@ -477,168 +710,68 @@ private fun KpiSummaryCard(
 }
 
 @Composable
-private fun TreasuryForecastCard(
-    points: List<DashboardBalancePoint>,
-    formatAmount: (Double) -> String
-) {
-    DashboardCard {
-        Text(
-            text = stringResource(R.string.dashboard_treasury_forecasts),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = ModernDashboardTheme.Primary
+private fun TrendLegendRow(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(
+            modifier = Modifier
+                .width(12.dp)
+                .height(3.dp)
+                .background(color, RoundedCornerShape(2.dp))
         )
-        Text(
-            text = stringResource(R.string.forecasts_30_days),
-            style = MaterialTheme.typography.bodySmall,
-            color = ModernDashboardTheme.Muted
-        )
-
-        if (points.size < 2) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(stringResource(R.string.not_enough_data), color = ModernDashboardTheme.Muted)
-            }
-        } else {
-            ForecastBalanceLineChart(
-                points = points,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(180.dp)
-            )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                forecastAxisLabels().forEach { label ->
-                    Text(
-                        text = label,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = ModernDashboardTheme.Muted,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            val lastForecast = points.lastOrNull { it.isForecast } ?: points.last()
-            Text(
-                text = "${stringResource(R.string.dashboard_plus_days, 30)} · ${formatAmount(lastForecast.balance)}",
-                style = MaterialTheme.typography.labelSmall,
-                color = ModernDashboardTheme.Muted
-            )
-        }
+        Spacer(Modifier.width(6.dp))
+        Text(text = label, fontSize = 10.sp, color = ModernDashboardTheme.Muted, maxLines = 1)
     }
 }
 
 @Composable
-private fun CategoryBreakdownCard(
-    title: String,
-    subtitle: String,
+private fun SemiDonutChart(
     slices: List<CategorySlice>,
-    total: Double,
-    sliceColors: List<Color>,
-    emptyLabel: String,
-    formatAmount: (Double) -> String
-) {
-    DashboardCard {
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = ModernDashboardTheme.Primary
-        )
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
-            color = ModernDashboardTheme.Muted
-        )
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
-        ) {
-            Box(
-                modifier = Modifier.weight(0.9f),
-                contentAlignment = Alignment.Center
-            ) {
-                val hasData = slices.isNotEmpty() && slices.any { it.amount > 0 }
-                DonutChart(
-                    slices = if (hasData) slices else emptyList(),
-                    colors = sliceColors,
-                    modifier = Modifier.size(120.dp),
-                    emptyRing = !hasData
-                )
-            }
-            CategoryBreakdownLegend(
-                modifier = Modifier.weight(1.1f),
-                slices = slices,
-                total = total,
-                colors = sliceColors,
-                emptyLabel = emptyLabel,
-                formatAmount = formatAmount
-            )
-        }
-    }
-}
-
-@Composable
-private fun CategoryBreakdownLegend(
-    modifier: Modifier = Modifier,
-    slices: List<CategorySlice>,
-    total: Double,
     colors: List<Color>,
-    emptyLabel: String,
-    formatAmount: (Double) -> String
+    modifier: Modifier = Modifier,
+    emptyRing: Boolean = false
 ) {
-    val items = slices.take(4)
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        if (items.isEmpty()) {
-            Text(emptyLabel, style = MaterialTheme.typography.labelSmall, color = ModernDashboardTheme.Muted)
-            return
+    val displaySlices = remember(slices, emptyRing) {
+        when {
+            emptyRing -> listOf(CategorySlice(amount = 1.0))
+            slices.isEmpty() -> listOf(CategorySlice(amount = 1.0))
+            else -> slices
         }
-        items.forEachIndexed { index, slice ->
-            val percent = if (total > 0) (slice.amount / total * 100).toInt() else 0
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(colors[index % colors.size], CircleShape)
-                )
-                Spacer(Modifier.width(8.dp))
-                Text(
-                    text = localizedCategoryLabel(slice),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = ModernDashboardTheme.Primary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    text = "$percent%",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ModernDashboardTheme.Muted,
-                    modifier = Modifier.width(36.dp),
-                    textAlign = TextAlign.End
-                )
-                Text(
-                    text = formatAmount(slice.amount),
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    color = ModernDashboardTheme.Primary,
-                    modifier = Modifier.width(72.dp),
-                    textAlign = TextAlign.End,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
+    }
+    val ringColor = if (emptyRing) ModernDashboardTheme.Muted.copy(alpha = 0.2f) else null
+    val total = displaySlices.sumOf { it.amount }.coerceAtLeast(1.0)
+
+    Canvas(modifier = modifier) {
+        val stroke = size.minDimension * 0.14f
+        val diameter = size.width.coerceAtMost(size.height * 2f) - stroke
+        val topLeft = Offset((size.width - diameter) / 2f, size.height - diameter / 2f - stroke / 2f)
+        val arcSize = Size(diameter, diameter)
+
+        if (emptyRing) {
+            drawArc(
+                color = ringColor!!,
+                startAngle = 180f,
+                sweepAngle = 180f,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+            return@Canvas
+        }
+
+        var startAngle = 180f
+        displaySlices.forEachIndexed { index, slice ->
+            val sweep = (slice.amount / total * 180f).toFloat()
+            drawArc(
+                color = colors[index % colors.size],
+                startAngle = startAngle,
+                sweepAngle = sweep,
+                useCenter = false,
+                topLeft = topLeft,
+                size = arcSize,
+                style = Stroke(width = stroke, cap = StrokeCap.Round)
+            )
+            startAngle += sweep
         }
     }
 }
@@ -660,15 +793,10 @@ private fun MonthlyComparisonBarCard(
     val hasData = bars.any { (showIncome && it.income > 0) || (showExpenses && it.expenses > 0) }
 
     DashboardCard {
-        Text(
-            text = stringResource(R.string.dashboard_monthly_bars_title),
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            color = ModernDashboardTheme.Primary
-        )
+        SectionTitle(stringResource(R.string.dashboard_monthly_bars_title))
         Text(
             text = subtitle,
-            style = MaterialTheme.typography.bodySmall,
+            fontSize = 12.sp,
             color = ModernDashboardTheme.Muted
         )
         Row(
@@ -811,59 +939,6 @@ private fun forecastAxisLabels(): List<String> = listOf(
     stringResource(R.string.dashboard_plus_days, 21),
     stringResource(R.string.dashboard_plus_days, 30)
 )
-
-@Composable
-private fun DonutChart(
-    slices: List<CategorySlice>,
-    colors: List<Color>,
-    modifier: Modifier = Modifier,
-    emptyRing: Boolean = false
-) {
-    val displaySlices = remember(slices, emptyRing) {
-        when {
-            emptyRing -> listOf(CategorySlice(amount = 1.0))
-            slices.isEmpty() -> listOf(CategorySlice(amount = 1.0))
-            else -> slices
-        }
-    }
-    val ringColor = if (emptyRing) ModernDashboardTheme.Muted.copy(alpha = 0.2f) else null
-    val total = displaySlices.sumOf { it.amount }.coerceAtLeast(1.0)
-
-    Canvas(modifier = modifier) {
-        val stroke = size.minDimension * 0.13f
-        val diameter = size.minDimension - stroke
-        val topLeft = Offset((size.width - diameter) / 2f, (size.height - diameter) / 2f)
-        val arcSize = Size(diameter, diameter)
-
-        if (emptyRing) {
-            drawArc(
-                color = ringColor!!,
-                startAngle = 0f,
-                sweepAngle = 360f,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Butt)
-            )
-            return@Canvas
-        }
-
-        var startAngle = -90f
-        displaySlices.forEachIndexed { index, slice ->
-            val sweep = (slice.amount / total * 360f).toFloat()
-            drawArc(
-                color = colors[index % colors.size],
-                startAngle = startAngle,
-                sweepAngle = sweep,
-                useCenter = false,
-                topLeft = topLeft,
-                size = arcSize,
-                style = Stroke(width = stroke, cap = StrokeCap.Butt)
-            )
-            startAngle += sweep
-        }
-    }
-}
 
 @Composable
 private fun ForecastBalanceLineChart(

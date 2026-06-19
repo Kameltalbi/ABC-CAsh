@@ -42,6 +42,7 @@
     <string name="password_min_chars">Le mot de passe doit contenir au moins 6 caractères</string>
 
     <!-- DASHBOARD -->
+    <string name="dashboard_welcome_back">Bonjour 👋</string>
     <string name="hello_name">Bonjour %1$s</string>
     <string name="your_treasury">Votre trésorerie</string>
     <string name="company_fallback">Votre entreprise</string>
