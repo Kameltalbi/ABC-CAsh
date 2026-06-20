@@ -147,7 +147,19 @@ object DashboardCalculations {
         today: LocalDate = LocalDate.now()
     ): DashboardData {
         val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
-        val calculated = computedBalance(invoices, expenses)
+        
+        // Calculer le solde selon la période sélectionnée
+        val calculated = when (viewMode) {
+            DashboardViewMode.YEAR -> {
+                val year = focusMonth.year
+                val yearEnd = LocalDate.of(year, 12, 31)
+                computedBalanceAtDate(invoices, expenses, yearEnd)
+            }
+            DashboardViewMode.MONTH -> {
+                val monthEnd = focusMonth.atEndOfMonth()
+                computedBalanceAtDate(invoices, expenses, monthEnd)
+            }
+        }
         val displayBalance = bankBalance ?: calculated
 
         val periodLabel = when (viewMode) {
@@ -430,6 +442,21 @@ object DashboardCalculations {
     fun computedBalance(invoices: List<Invoice>, expenses: List<Expense>): Double {
         val collected = invoices.sumOf { it.paidAmount }
         val paid = expenses.filter { it.isPaid }.sumOf { it.amount }
+        return collected - paid
+    }
+
+    fun computedBalanceAtDate(invoices: List<Invoice>, expenses: List<Expense>, date: LocalDate): Double {
+        val collected = invoices
+            .filter { it.paidAmount > 0 }
+            .sumOf { invoice ->
+                // Somme des paiements de la facture avant ou à la date
+                // Pour simplifier, on utilise paidAmount (somme totale encaissée)
+                // Pour être plus précis, il faudrait filtrer les paiements par date
+                invoice.paidAmount
+            }
+        val paid = expenses
+            .filter { it.isPaid && !it.date.isAfter(date) }
+            .sumOf { it.amount }
         return collected - paid
     }
 

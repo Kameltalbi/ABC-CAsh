@@ -160,7 +160,7 @@ class TreasuryViewModel(
             )
             val error = repository.addInvoice(invoice)
             if (error == null && markAsCollected) {
-                repository.addPayment(
+                val paymentError = repository.addPayment(
                     Payment(
                         invoiceId = invoice.id,
                         amount = totalAmount,
@@ -168,6 +168,10 @@ class TreasuryViewModel(
                         method = paymentMethod
                     )
                 )
+                if (paymentError != null) {
+                    onResult(paymentError)
+                    return@launch
+                }
             }
             onResult(error)
             if (error == null) scheduleAutoSync()
@@ -203,7 +207,7 @@ class TreasuryViewModel(
             )
             val error = repository.addInvoice(invoice)
             if (error == null && markAsCollected) {
-                repository.addPayment(
+                val paymentError = repository.addPayment(
                     Payment(
                         invoiceId = invoice.id,
                         amount = amount,
@@ -211,6 +215,10 @@ class TreasuryViewModel(
                         method = paymentMethod
                     )
                 )
+                if (paymentError != null) {
+                    onResult(paymentError)
+                    return@launch
+                }
             }
             onResult(error)
             if (error == null) scheduleAutoSync()
@@ -305,7 +313,7 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            repository.addPayment(
+            val error = repository.addPayment(
                 Payment(
                     invoiceId = invoiceId,
                     amount = amount,
@@ -313,8 +321,8 @@ class TreasuryViewModel(
                     method = method
                 )
             )
-            onResult(null)
-            scheduleAutoSync()
+            onResult(error)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -368,8 +376,8 @@ class TreasuryViewModel(
 
     fun deleteInvoice(invoiceId: String) {
         viewModelScope.launch {
-            repository.deleteInvoice(invoiceId)
-            scheduleAutoSync()
+            val error = repository.deleteInvoice(invoiceId)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -390,7 +398,7 @@ class TreasuryViewModel(
         val invoice = getInvoice(invoiceId) ?: return false
         if (amount <= 0 || amount > invoice.remainingAmount) return false
         viewModelScope.launch {
-            repository.addPayment(
+            val error = repository.addPayment(
                 Payment(
                     invoiceId = invoiceId,
                     amount = amount,
@@ -398,7 +406,7 @@ class TreasuryViewModel(
                     method = method
                 )
             )
-            scheduleAutoSync()
+            if (error == null) scheduleAutoSync()
         }
         return true
     }
@@ -414,7 +422,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId() ?: return
         viewModelScope.launch {
-            repository.addExpense(
+            val error = repository.addExpense(
                 Expense(
                     label = label,
                     amount = amount,
@@ -426,14 +434,14 @@ class TreasuryViewModel(
                     entrepriseId = entrepriseId
                 )
             )
-            scheduleAutoSync()
+            if (error == null) scheduleAutoSync()
         }
     }
 
     fun deleteExpense(expenseId: String) {
         viewModelScope.launch {
-            repository.deleteExpense(expenseId)
-            scheduleAutoSync()
+            val error = repository.deleteExpense(expenseId)
+            if (error == null) scheduleAutoSync()
         }
     }
 
@@ -680,18 +688,20 @@ class TreasuryViewModel(
                     dueDate = today,
                     entrepriseId = entrepriseId
                 )
-                repository.addInvoice(invoice).also { invoiceError ->
-                    if (invoiceError == null) {
-                        repository.addPayment(
-                            Payment(
-                                invoiceId = invoice.id,
-                                amount = gap,
-                                date = today,
-                                method = PaymentMethod.CASH,
-                                note = "Ajustement automatique solde bancaire"
-                            )
+                val invoiceError = repository.addInvoice(invoice)
+                if (invoiceError == null) {
+                    val paymentError = repository.addPayment(
+                        Payment(
+                            invoiceId = invoice.id,
+                            amount = gap,
+                            date = today,
+                            method = PaymentMethod.CASH,
+                            note = "Ajustement automatique solde bancaire"
                         )
-                    }
+                    )
+                    paymentError
+                } else {
+                    invoiceError
                 }
             } else {
                 repository.addExpense(
@@ -703,7 +713,6 @@ class TreasuryViewModel(
                         entrepriseId = entrepriseId
                     )
                 )
-                null
             }
             onResult(error)
             if (error == null) scheduleAutoSync()

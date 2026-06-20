@@ -15,7 +15,7 @@ import androidx.room.TypeConverters
         ExpenseEntity::class
     ],
     version = 8,
-    exportSchema = true
+    exportSchema = false
 )
 @TypeConverters(TreasuryConverters::class)
 abstract class TreasuryDatabase : RoomDatabase() {

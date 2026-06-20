@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -5,6 +7,14 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
 }
+
+val localProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) file.inputStream().use(::load)
+}
+
+fun secret(name: String): String? =
+    localProperties.getProperty(name) ?: providers.gradleProperty(name).orNull ?: System.getenv(name)
 
 android {
     namespace = "com.abccash.app"
@@ -16,24 +26,24 @@ android {
         targetSdk = 35
         versionCode = 27
         versionName = "1.11.5"
-        buildConfigField("String", "API_BASE_URL", "\"http://213.130.144.183/abc-cash\"")
+        buildConfigField("String", "API_BASE_URL", "\"https://213.130.144.183/abc-cash\"")
     }
 
     signingConfigs {
         create("release") {
-            storeFile = file("cashtrack-release.keystore")
-            storePassword = "cashtrack2026"
-            keyAlias = "cashtrack"
-            keyPassword = "cashtrack2026"
+            storeFile = secret("ABC_CASH_RELEASE_STORE_FILE")?.let { file(it) }
+            storePassword = secret("ABC_CASH_RELEASE_STORE_PASSWORD")
+            keyAlias = secret("ABC_CASH_RELEASE_KEY_ALIAS")
+            keyPassword = secret("ABC_CASH_RELEASE_KEY_PASSWORD")
         }
     }
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("release")
+            signingConfig = signingConfigs.getByName("debug")
         }
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
             signingConfig = signingConfigs.getByName("release")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

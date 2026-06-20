@@ -57,6 +57,22 @@ object AppCurrencyFormatter {
     fun format(amount: Double, currency: AppCurrency): String =
         "${formatNumber(amount, currency.decimalPlaces)} ${currency.symbol}"
 
+    fun formatCompact(amount: Double, currency: AppCurrency): String {
+        val abs = kotlin.math.abs(amount)
+        val sign = if (amount < 0) "-" else ""
+        return when {
+            abs >= 1_000_000 -> "$sign${compactValue(abs / 1_000_000)}M ${currency.symbol}"
+            abs >= 1_000 -> "$sign${compactValue(abs / 1_000)}k ${currency.symbol}"
+            else -> format(amount, currency)
+        }
+    }
+
+    private fun compactValue(value: Double): String = when {
+        value >= 100 -> String.format(Locale.US, "%.0f", value)
+        value >= 10 -> String.format(Locale.US, "%.0f", value)
+        else -> String.format(Locale.US, "%.1f", value).trimEnd('0').trimEnd('.')
+    }
+
     fun formatTreasuryChartAmount(amount: Double, currency: AppCurrency): String {
         val sign = if (amount < 0) "-" else ""
         val abs = kotlin.math.abs(amount)

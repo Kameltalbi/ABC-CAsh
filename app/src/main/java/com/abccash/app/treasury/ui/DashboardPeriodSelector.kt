@@ -31,18 +31,21 @@ fun DashboardPeriodSelector(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
-            SegmentedButton(
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            PeriodToggleButton(
+                text = stringResource(R.string.dashboard_period_year),
                 selected = viewMode == DashboardViewMode.YEAR,
                 onClick = { onViewModeChange(DashboardViewMode.YEAR) },
-                shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2),
-                label = { Text(stringResource(R.string.dashboard_period_year)) }
+                modifier = Modifier.weight(1f)
             )
-            SegmentedButton(
+            PeriodToggleButton(
+                text = stringResource(R.string.dashboard_period_month),
                 selected = viewMode == DashboardViewMode.MONTH,
                 onClick = { onViewModeChange(DashboardViewMode.MONTH) },
-                shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2),
-                label = { Text(stringResource(R.string.dashboard_period_month)) }
+                modifier = Modifier.weight(1f)
             )
         }
         when (viewMode) {
@@ -59,38 +62,66 @@ fun DashboardPeriodSelector(
 }
 
 @Composable
+private fun PeriodToggleButton(
+    text: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(36.dp),
+        shape = RoundedCornerShape(8.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (selected) Color(0xFF22C55E) else Color(0xFFF3F4F6),
+            contentColor = if (selected) Color.White else Color(0xFF6B7280)
+        ),
+        elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
+        )
+    }
+}
+
+@Composable
 private fun YearSelectorRow(
     year: Int,
     onYearChange: (Int) -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(8.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 4.dp, vertical = 4.dp),
+                .padding(horizontal = 8.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { onYearChange(year - 1) }) {
                 Icon(
                     Icons.Default.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.previous_year)
+                    contentDescription = stringResource(R.string.previous_year),
+                    tint = Color(0xFF6B7280)
                 )
             }
             Text(
                 text = year.toString(),
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A)
             )
             IconButton(onClick = { onYearChange(year + 1) }) {
                 Icon(
                     Icons.Default.KeyboardArrowRight,
-                    contentDescription = stringResource(R.string.next_year)
+                    contentDescription = stringResource(R.string.next_year),
+                    tint = Color(0xFF6B7280)
                 )
             }
         }

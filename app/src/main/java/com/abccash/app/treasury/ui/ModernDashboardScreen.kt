@@ -91,7 +91,8 @@ fun ModernDashboardScreen(
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit
 ) {
-    val formatAmount = rememberFormatMoney()
+    val formatAmount = rememberFormatMoneyCompact()
+    val formatAmountFull = rememberFormatMoney()
     val today = remember { LocalDate.now() }
     var viewMode by remember { mutableStateOf(DashboardViewMode.MONTH) }
     var selectedMonth by remember { mutableStateOf(YearMonth.now()) }
@@ -121,11 +122,13 @@ fun ModernDashboardScreen(
     val balanceKpi = if (isCurrentPeriod) data.forecastBalance30Days else data.displayBalance
 
     val notificationCount = remember(visibleInvoices, visibleExpenses) {
+        val today = LocalDate.now()
+        val urgentDeadline = today.plusDays(7)
         EcheanceForecast.buildItems(
             invoices = visibleInvoices,
             expenses = visibleExpenses,
             from = today,
-            to = today.plusDays(30)
+            to = urgentDeadline
         ).size
     }
 
@@ -188,8 +191,8 @@ fun ModernDashboardScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding),
-            verticalArrangement = Arrangement.spacedBy(14.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 88.dp)
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(top = 6.dp, bottom = 80.dp)
         ) {
             item {
                 Box(Modifier.padding(horizontal = 20.dp)) {
@@ -263,8 +266,8 @@ fun ModernDashboardScreen(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp)
-                            .height(52.dp),
-                        shape = RoundedCornerShape(18.dp),
+                            .height(48.dp),
+                        shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
                             containerColor = ModernDashboardTheme.AccentGreen,
                             contentColor = ModernDashboardTheme.Primary
@@ -274,7 +277,7 @@ fun ModernDashboardScreen(
                         Text(
                             text = stringResource(R.string.quick_entry),
                             fontWeight = FontWeight.SemiBold,
-                            fontSize = 16.sp
+                            fontSize = 15.sp
                         )
                     }
                 }
@@ -344,13 +347,13 @@ private fun DashboardCard(
 ) {
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = ModernDashboardTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(18.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
             content = content
         )
     }
@@ -360,9 +363,9 @@ private fun DashboardCard(
 private fun SectionTitle(text: String) {
     Text(
         text = text.uppercase(),
-        fontSize = 11.sp,
+        fontSize = 10.sp,
         fontWeight = FontWeight.SemiBold,
-        letterSpacing = 1.sp,
+        letterSpacing = 0.8.sp,
         color = ModernDashboardTheme.SectionLabel
     )
 }
@@ -381,12 +384,12 @@ private fun ModernWelcomeHeader(
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = stringResource(R.string.dashboard_welcome_back),
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 color = ModernDashboardTheme.Muted
             )
             Text(
                 text = displayName,
-                fontSize = 26.sp,
+                fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = ModernDashboardTheme.Primary,
                 maxLines = 1,
@@ -394,7 +397,7 @@ private fun ModernWelcomeHeader(
             )
             Text(
                 text = companyName,
-                fontSize = 12.sp,
+                fontSize = 11.sp,
                 color = ModernDashboardTheme.Muted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -402,7 +405,7 @@ private fun ModernWelcomeHeader(
         }
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             BadgedBox(
                 badge = {
@@ -410,7 +413,7 @@ private fun ModernWelcomeHeader(
                         Badge(containerColor = ModernDashboardTheme.Negative) {
                             Text(
                                 text = notificationCount.coerceAtMost(99).toString(),
-                                fontSize = 9.sp
+                                fontSize = 8.sp
                             )
                         }
                     }
@@ -420,20 +423,20 @@ private fun ModernWelcomeHeader(
                     imageVector = Icons.Default.Notifications,
                     contentDescription = stringResource(R.string.dashboard_notifications),
                     tint = ModernDashboardTheme.Primary,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Box(
                 modifier = Modifier
-                    .size(40.dp)
-                    .background(ModernDashboardTheme.AccentGreen.copy(alpha = 0.35f), CircleShape),
+                    .size(36.dp)
+                    .background(ModernDashboardTheme.AccentGreen.copy(alpha = 0.25f), CircleShape),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.AccountCircle,
                     contentDescription = null,
                     tint = ModernDashboardTheme.Primary,
-                    modifier = Modifier.size(32.dp)
+                    modifier = Modifier.size(28.dp)
                 )
             }
         }
@@ -452,13 +455,13 @@ private fun WalletMetricCard(
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(20.dp),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = ModernDashboardTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
-            modifier = Modifier.padding(14.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
+            modifier = Modifier.padding(12.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -467,7 +470,7 @@ private fun WalletMetricCard(
             ) {
                 Text(
                     text = title,
-                    fontSize = 12.sp,
+                    fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
                     color = ModernDashboardTheme.Muted,
                     maxLines = 1,
@@ -476,37 +479,37 @@ private fun WalletMetricCard(
                 )
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .background(accentColor.copy(alpha = 0.15f), CircleShape),
+                        .size(24.dp)
+                        .background(accentColor.copy(alpha = 0.12f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = icon,
                         contentDescription = null,
                         tint = accentColor,
-                        modifier = Modifier.size(16.dp)
+                        modifier = Modifier.size(14.dp)
                     )
                 }
             }
             Text(
                 text = meta,
-                fontSize = 10.sp,
+                fontSize = 9.sp,
                 color = ModernDashboardTheme.Muted,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = amount,
-                fontSize = 17.sp,
+                fontSize = 15.sp,
                 fontWeight = FontWeight.Bold,
                 color = ModernDashboardTheme.Primary,
-                maxLines = 2,
+                maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             shareLabel?.let { label ->
                 Text(
                     text = label,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = ModernDashboardTheme.Positive
                 )
@@ -530,13 +533,13 @@ private fun SemiDonutBreakdownCard(
         SectionTitle(sectionTitle)
         Text(
             text = subtitle,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             color = ModernDashboardTheme.Muted
         )
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(150.dp),
+                .height(140.dp),
             contentAlignment = Alignment.BottomCenter
         ) {
             val hasData = slices.isNotEmpty() && slices.any { it.amount > 0 }
@@ -545,18 +548,18 @@ private fun SemiDonutBreakdownCard(
                 colors = sliceColors,
                 modifier = Modifier
                     .fillMaxWidth(0.82f)
-                    .height(120.dp),
+                    .height(110.dp),
                 emptyRing = !hasData
             )
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
                     text = centerLabel,
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     color = ModernDashboardTheme.Muted
                 )
                 Text(
                     text = if (hasData) formatAmount(total) else "—",
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = ModernDashboardTheme.Primary,
                     maxLines = 1,
@@ -582,14 +585,14 @@ private fun ModernBreakdownLegendGrid(
 ) {
     val items = slices.take(4)
     if (items.isEmpty()) {
-        Text(emptyLabel, fontSize = 12.sp, color = ModernDashboardTheme.Muted)
+        Text(emptyLabel, fontSize = 11.sp, color = ModernDashboardTheme.Muted)
         return
     }
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items.chunked(2).forEach { rowItems ->
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 rowItems.forEach { slice ->
                     val colorIndex = slices.indexOf(slice)
@@ -599,23 +602,23 @@ private fun ModernBreakdownLegendGrid(
                     ) {
                         Box(
                             modifier = Modifier
-                                .padding(top = 4.dp)
-                                .width(14.dp)
-                                .height(3.dp)
-                                .background(colors[colorIndex % colors.size], RoundedCornerShape(2.dp))
+                                .padding(top = 3.dp)
+                                .width(12.dp)
+                                .height(2.5.dp)
+                                .background(colors[colorIndex % colors.size], RoundedCornerShape(1.5.dp))
                         )
-                        Spacer(Modifier.width(6.dp))
+                        Spacer(Modifier.width(5.dp))
                         Column {
                             Text(
                                 text = localizedCategoryLabel(slice),
-                                fontSize = 11.sp,
+                                fontSize = 10.sp,
                                 color = ModernDashboardTheme.Primary,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = formatAmount(slice.amount),
-                                fontSize = 10.sp,
+                                fontSize = 9.sp,
                                 color = ModernDashboardTheme.Muted
                             )
                         }
@@ -638,11 +641,11 @@ private fun TreasuryTrendCard(
         SectionTitle(stringResource(R.string.dashboard_treasury_forecasts))
         Text(
             text = stringResource(R.string.dashboard_treasury_curve_explain),
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             color = ModernDashboardTheme.Muted,
-            lineHeight = 15.sp
+            lineHeight = 14.sp
         )
-        Spacer(Modifier.height(10.dp))
+        Spacer(Modifier.height(8.dp))
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -651,26 +654,26 @@ private fun TreasuryTrendCard(
             Column(modifier = Modifier.weight(0.42f)) {
                 Text(
                     text = stringResource(R.string.dashboard_balance_today),
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     color = ModernDashboardTheme.Muted
                 )
                 Text(
                     text = formatAmount(currentBalance),
-                    fontSize = 20.sp,
+                    fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
                     color = ModernDashboardTheme.Primary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 Text(
                     text = stringResource(R.string.dashboard_balance_forecast_30d),
-                    fontSize = 11.sp,
+                    fontSize = 10.sp,
                     color = ModernDashboardTheme.Muted
                 )
                 Text(
                     text = formatAmount(forecastBalance),
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = if (forecastBalance >= currentBalance) {
                         ModernDashboardTheme.Positive
@@ -680,12 +683,12 @@ private fun TreasuryTrendCard(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 TrendLegendRow(
                     color = ModernDashboardTheme.Positive,
                     label = stringResource(R.string.dashboard_treasury_curve_history_legend)
                 )
-                Spacer(Modifier.height(6.dp))
+                Spacer(Modifier.height(4.dp))
                 TrendLegendRow(
                     color = ModernDashboardTheme.Positive.copy(alpha = 0.45f),
                     label = stringResource(R.string.dashboard_treasury_curve_forecast_legend),
@@ -696,10 +699,10 @@ private fun TreasuryTrendCard(
                 Box(
                     modifier = Modifier
                         .weight(0.58f)
-                        .height(140.dp),
+                        .height(120.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(stringResource(R.string.not_enough_data), color = ModernDashboardTheme.Muted, fontSize = 12.sp)
+                    Text(stringResource(R.string.not_enough_data), color = ModernDashboardTheme.Muted, fontSize = 11.sp)
                 }
             } else {
                 Column(modifier = Modifier.weight(0.58f)) {
@@ -707,7 +710,7 @@ private fun TreasuryTrendCard(
                         points = points,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(120.dp)
+                            .height(100.dp)
                     )
                     Row(
                         modifier = Modifier.fillMaxWidth(),
@@ -716,7 +719,7 @@ private fun TreasuryTrendCard(
                         treasuryCurveAxisLabels().forEach { label ->
                             Text(
                                 text = label,
-                                fontSize = 9.sp,
+                                fontSize = 8.sp,
                                 color = ModernDashboardTheme.Muted,
                                 textAlign = TextAlign.Center,
                                 modifier = Modifier.weight(1f),

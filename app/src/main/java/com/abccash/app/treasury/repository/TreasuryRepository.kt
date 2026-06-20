@@ -141,6 +141,13 @@ class TreasuryRepository(
 
     suspend fun addInvoice(invoice: Invoice): String? {
         if (invoice.invoiceNumber.isBlank()) return "Le numéro de facture est obligatoire"
+        if (invoice.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (invoice.clientName.isBlank()) return "Le nom du client est obligatoire"
+        if (invoice.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (invoice.paidAmount < 0) return "Le montant payé ne peut pas être négatif"
+        if (invoice.totalAmount < invoice.paidAmount) {
+            return "Le montant total ne peut pas être inférieur au montant déjà encaissé"
+        }
         if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) {
             return "Ce numéro de facture existe déjà"
         }
@@ -194,24 +201,35 @@ class TreasuryRepository(
         return null
     }
 
-    suspend fun deleteInvoice(invoiceId: String) {
+    suspend fun deleteInvoice(invoiceId: String): String? {
+        if (invoiceId.isBlank()) return "L'ID facture est obligatoire"
         dao.deleteInvoiceById(invoiceId)
+        return null
     }
 
-    suspend fun addPayment(payment: Payment) {
+    suspend fun addPayment(payment: Payment): String? {
+        if (payment.invoiceId.isBlank()) return "L'ID facture est obligatoire"
+        if (payment.amount <= 0) return "Le montant du paiement doit être supérieur à 0"
         dao.upsertPayment(payment.toEntity())
+        return null
     }
 
-    suspend fun addExpense(expense: Expense) {
+    suspend fun addExpense(expense: Expense): String? {
+        if (expense.label.isBlank()) return "Le libellé de la dépense est obligatoire"
+        if (expense.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (expense.amount <= 0) return "Le montant de la dépense doit être supérieur à 0"
         dao.upsertExpense(expense.toEntity())
+        return null
     }
 
     suspend fun updateExpense(expense: Expense) {
         dao.upsertExpense(expense.toEntity())
     }
 
-    suspend fun deleteExpense(expenseId: String) {
+    suspend fun deleteExpense(expenseId: String): String? {
+        if (expenseId.isBlank()) return "L'ID dépense est obligatoire"
         dao.deleteExpenseById(expenseId)
+        return null
     }
 
     suspend fun addUser(user: User): String? {
