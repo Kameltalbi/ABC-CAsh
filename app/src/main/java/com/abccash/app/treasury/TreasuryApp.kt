@@ -63,10 +63,13 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object BankReconciliation : Screen("bank_reconciliation", R.string.bank_account, Icons.Default.AccountBalance)
     object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
     object AddUser : Screen("add_user", R.string.settings_users, Icons.Default.PersonAdd)
+    object Subscription : Screen("subscription", R.string.plan_free, Icons.Default.Payments)
 }
 
 private fun plusSectionSelected(currentRoute: String?): Boolean =
-    currentRoute == Screen.Previsions.route || currentRoute == Screen.Settings.route
+    currentRoute == Screen.Previsions.route ||
+        currentRoute == Screen.Settings.route ||
+        currentRoute == Screen.Subscription.route
 
 @Composable
 private fun Screen.adaptiveNavLabel(itemCount: Int): String {
@@ -309,6 +312,19 @@ fun TreasuryApp(
                 appSettings = appSettings,
                 userPreferences = userPreferences,
                 startDestination = Screen.Settings.route,
+                onLogout = ::logout
+            )
+        }
+
+        composable(Screen.Subscription.route) {
+            MainAppScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                userRole = currentUserRole ?: uiState.currentUserRole,
+                permissions = currentPermissions.ifEmpty { uiState.permissions },
+                appSettings = appSettings,
+                userPreferences = userPreferences,
+                startDestination = Screen.Subscription.route,
                 onLogout = ::logout
             )
         }
@@ -638,32 +654,22 @@ private fun MainAppScaffold(
                 )
             )
         }
-        if (isAdmin) {
-            add(
-                PlusMenuEntry(
-                    titleRes = R.string.plus_import,
-                    subtitleRes = R.string.plus_import_sub,
-                    icon = Icons.Default.FileUpload,
-                    onClick = {
-                        showPlusMenu = false
-                        navController.navigate(Screen.ImportInvoices.route)
-                    }
-                )
+        add(
+            PlusMenuEntry(
+                titleRes = R.string.plus_subscription,
+                subtitleRes = R.string.plus_subscription_sub,
+                icon = Icons.Default.Payments,
+                onClick = { navigateToMainTab(Screen.Subscription.route) }
             )
-        }
-        if (canViewTreasury && (isAdmin || canManageExpenses)) {
-            add(
-                PlusMenuEntry(
-                    titleRes = R.string.plus_bank_reconciliation,
-                    subtitleRes = R.string.plus_bank_reconciliation_sub,
-                    icon = Icons.Default.AccountBalance,
-                    onClick = {
-                        showPlusMenu = false
-                        navController.navigate(Screen.BankReconciliation.route)
-                    }
-                )
+        )
+        add(
+            PlusMenuEntry(
+                titleRes = R.string.plus_bank_connection,
+                subtitleRes = R.string.plus_bank_connection_sub,
+                icon = Icons.Default.AccountBalance,
+                onClick = { navigateToMainTab(Screen.Subscription.route) }
             )
-        }
+        )
         add(
             PlusMenuEntry(
                 titleRes = R.string.plus_settings,
@@ -715,6 +721,18 @@ private fun MainAppScaffold(
                         },
                         onNavigateToAddExpense = {
                             navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
+                        },
+                        onNavigateToSubscription = {
+                            navigateToMainTab(Screen.Subscription.route)
+                        }
+                    )
+                }
+                Screen.Subscription.route -> {
+                    SubscriptionScreen(
+                        currentPlan = com.abccash.app.treasury.data.SubscriptionPlan.FREE,
+                        onBack = { navigateToMainTab(Screen.Dashboard.route) },
+                        onSelectPlan = {
+                            // TODO: Implement subscription upgrade logic via BillingManager
                         }
                     )
                 }

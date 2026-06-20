@@ -23,7 +23,7 @@ android {
     defaultConfig {
         applicationId = "com.abccash.app"
         minSdk = 26
-        targetSdk = 35
+        targetSdk = 34
         versionCode = 27
         versionName = "1.11.5"
         buildConfigField("String", "API_BASE_URL", "\"https://213.130.144.183/abc-cash\"")
@@ -112,6 +112,9 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
 
     implementation("androidx.work:work-runtime-ktx:2.10.0")
+
+    // Google Play Billing Library
+    implementation("com.android.billingclient:billing:7.1.1")
 
     testImplementation("junit:junit:4.13.2")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")

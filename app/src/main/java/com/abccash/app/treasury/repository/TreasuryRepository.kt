@@ -7,6 +7,8 @@ import com.abccash.app.treasury.data.Payment
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
+import com.abccash.app.treasury.data.SubscriptionPlan
+import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.local.EntrepriseEntity
 import com.abccash.app.treasury.local.ExpenseEntity
 import com.abccash.app.treasury.local.InvoiceEntity
@@ -25,6 +27,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.util.Locale
 
 data class InvoiceImportStats(
@@ -370,6 +373,49 @@ class TreasuryRepository(
             expenses = expenses.map { it.toDto() },
             users = users
         )
+    }
+
+    // Subscription management
+    suspend fun getUserSubscription(entrepriseId: String): UserSubscription {
+        // For now, return free plan for all users
+        // This will be enhanced with actual subscription data from backend
+        val currentMonth = YearMonth.now()
+        val transactionsThisMonth = countTransactionsThisMonth(entrepriseId, currentMonth)
+        return UserSubscription(
+            plan = SubscriptionPlan.FREE,
+            transactionsThisMonth = transactionsThisMonth
+        )
+    }
+
+    suspend fun canAddTransaction(entrepriseId: String): Boolean {
+        val subscription = getUserSubscription(entrepriseId)
+        return !subscription.isTransactionLimitReached
+    }
+
+    private suspend fun countTransactionsThisMonth(entrepriseId: String, month: YearMonth): Int {
+        val invoices = dao.getInvoicesForBackup(entrepriseId)
+        val expenses = dao.getExpensesForBackup(entrepriseId)
+        
+        val monthStart = month.atDay(1)
+        val monthEnd = month.atEndOfMonth()
+        
+        // Count real transactions (invoices + expenses)
+        val invoiceCount = invoices.count { 
+            it.createdDate >= monthStart && it.createdDate <= monthEnd
+        }
+        val expenseCount = expenses.count { 
+            it.createdDate >= monthStart && it.createdDate <= monthEnd
+        }
+        
+        // Count forecasts (échéances) for the month
+        val forecastCount = com.abccash.app.treasury.data.EcheanceForecast.buildItems(
+            invoices = invoices.map { it.toDomain(emptyList()) },
+            expenses = expenses.map { it.toDomain() },
+            from = monthStart,
+            to = monthEnd
+        ).size
+        
+        return invoiceCount + expenseCount + forecastCount
     }
 }
 

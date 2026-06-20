@@ -2,6 +2,7 @@ package com.abccash.app.treasury.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
@@ -89,7 +90,8 @@ fun ModernDashboardScreen(
     entrepriseId: String?,
     userPreferences: UserPreferences,
     onNavigateToAddIncome: () -> Unit,
-    onNavigateToAddExpense: () -> Unit
+    onNavigateToAddExpense: () -> Unit,
+    onNavigateToSubscription: () -> Unit = {}
 ) {
     val formatAmount = rememberFormatMoneyCompact()
     val formatAmountFull = rememberFormatMoney()
@@ -119,7 +121,7 @@ fun ModernDashboardScreen(
         )
     }
 
-    val balanceKpi = if (isCurrentPeriod) data.forecastBalance30Days else data.displayBalance
+    val balanceKpi = data.displayBalance
 
     val notificationCount = remember(visibleInvoices, visibleExpenses) {
         val today = LocalDate.now()
@@ -248,10 +250,9 @@ fun ModernDashboardScreen(
                         modifier = Modifier.weight(1f),
                         title = stringResource(R.string.forecast_balance),
                         amount = formatAmount(balanceKpi),
-                        meta = if (isCurrentPeriod) {
-                            stringResource(R.string.forecasts_30_days)
-                        } else {
-                            data.monthLabel
+                        meta = when (viewMode) {
+                            DashboardViewMode.YEAR -> stringResource(R.string.dashboard_period_year)
+                            DashboardViewMode.MONTH -> stringResource(R.string.dashboard_period_month)
                         },
                         shareLabel = balance30Trend?.let { formatTrendPercent(it) },
                         accentColor = Color(0xFF4A90E2),
@@ -332,6 +333,24 @@ fun ModernDashboardScreen(
                             subtitle = barChartSubtitle,
                             showIncome = canViewIncome || userRole == UserRole.ADMIN,
                             showExpenses = canManageExpense || userRole == UserRole.ADMIN
+                        )
+                    }
+                }
+            }
+            item {
+                Box(Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
+                    val subscription = remember(entrepriseId) {
+                        // TODO: Get from ViewModel
+                        com.abccash.app.treasury.data.UserSubscription(
+                            plan = com.abccash.app.treasury.data.SubscriptionPlan.FREE,
+                            transactionsThisMonth = 14
+                        )
+                    }
+                    if (subscription.plan.hasTransactionLimit) {
+                        SubscriptionProgressBar(
+                            usedTransactions = subscription.transactionsThisMonth,
+                            totalTransactions = subscription.plan.transactionsPerMonth!!,
+                            onClickUpgrade = { onNavigateToSubscription() }
                         )
                     }
                 }
@@ -1054,5 +1073,70 @@ private fun ForecastBalanceLineChart(
                 )
             )
         }
+    }
+}
+
+@Composable
+private fun SubscriptionProgressBar(
+    usedTransactions: Int,
+    totalTransactions: Int,
+    onClickUpgrade: () -> Unit = {}
+) {
+    val progress = usedTransactions.toFloat() / totalTransactions.toFloat()
+    val filledBlocks = (progress * 10).toInt()
+    val emptyBlocks = 10 - filledBlocks
+    
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(12.dp)
+            .clickable(onClick = onClickUpgrade),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "📊",
+                fontSize = 14.sp
+            )
+            Text(
+                text = stringResource(R.string.subscription_monthly_usage, usedTransactions, totalTransactions),
+                fontSize = 11.sp,
+                color = Color(0xFF6B7280)
+            )
+        }
+        
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(2.dp)
+        ) {
+            repeat(filledBlocks) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .background(Color(0xFF22C55E), RoundedCornerShape(2.dp))
+                )
+            }
+            repeat(emptyBlocks) {
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(6.dp)
+                        .background(Color(0xFFE5E7EB), RoundedCornerShape(2.dp))
+                )
+            }
+        }
+        
+        Text(
+            text = stringResource(R.string.subscription_free_usage),
+            fontSize = 10.sp,
+            color = Color(0xFF9CA3AF),
+            modifier = Modifier.fillMaxWidth(),
+            textAlign = TextAlign.Center
+        )
     }
 }

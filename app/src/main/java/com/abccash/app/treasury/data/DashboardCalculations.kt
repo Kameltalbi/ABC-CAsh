@@ -148,16 +148,14 @@ object DashboardCalculations {
     ): DashboardData {
         val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
         
-        // Calculer le solde selon la période sélectionnée
+        // Calculer le solde avec prévisions selon la période sélectionnée
         val calculated = when (viewMode) {
             DashboardViewMode.YEAR -> {
                 val year = focusMonth.year
-                val yearEnd = LocalDate.of(year, 12, 31)
-                computedBalanceAtDate(invoices, expenses, yearEnd)
+                TreasuryCalculations.yearlyForecastBalance(invoices, expenses, year)
             }
             DashboardViewMode.MONTH -> {
-                val monthEnd = focusMonth.atEndOfMonth()
-                computedBalanceAtDate(invoices, expenses, monthEnd)
+                monthlyForecastBalance(invoices, expenses, focusMonth)
             }
         }
         val displayBalance = bankBalance ?: calculated
@@ -178,14 +176,14 @@ object DashboardCalculations {
                 val year = focusMonth.year
                 incomeByCategory = incomeCategoryBreakdownForYear(invoices, year)
                 expenseByCategory = expenseCategoryBreakdownForYear(expenses, year)
-                incomeTotal = TreasuryCalculations.yearlyCollections(invoices, year)
+                incomeTotal = TreasuryCalculations.yearlyCollections(invoices, year) + TreasuryCalculations.yearlyPendingIncome(invoices, year)
                 expensePaidTotal = TreasuryCalculations.yearlyPaidExpenses(expenses, year)
                 expensePendingTotal = TreasuryCalculations.yearlyPendingExpenses(expenses, year)
             }
             DashboardViewMode.MONTH -> {
                 incomeByCategory = incomeCategoryBreakdown(invoices, focusMonth)
                 expenseByCategory = expenseCategoryBreakdown(expenses, focusMonth)
-                incomeTotal = TreasuryCalculations.monthlyCollections(invoices, focusMonth)
+                incomeTotal = TreasuryCalculations.monthlyCollections(invoices, focusMonth) + TreasuryCalculations.pendingInvoiceAmount(invoices, focusMonth)
                 expensePaidTotal = TreasuryCalculations.monthlyPaidExpenses(expenses, focusMonth)
                 expensePendingTotal = TreasuryCalculations.monthlyUnpaidExpenses(expenses, focusMonth)
             }
@@ -458,6 +456,22 @@ object DashboardCalculations {
             .filter { it.isPaid && !it.date.isAfter(date) }
             .sumOf { it.amount }
         return collected - paid
+    }
+
+    fun monthlyForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, month: YearMonth): Double {
+        val year = month.year
+        val cumulativeBalance = TreasuryCalculations.openingBalanceAtYearStart(invoices, expenses, year)
+        
+        // Ajouter les soldes cumulés pour tous les mois jusqu'au mois sélectionné
+        var balance = cumulativeBalance
+        for (m in 1..month.monthValue) {
+            val currentMonth = YearMonth.of(year, m)
+            balance += (TreasuryCalculations.monthlyCollections(invoices, currentMonth) +
+                TreasuryCalculations.pendingInvoiceAmount(invoices, currentMonth) -
+                TreasuryCalculations.monthlyPaidExpenses(expenses, currentMonth) -
+                TreasuryCalculations.monthlyUnpaidExpenses(expenses, currentMonth))
+        }
+        return balance
     }
 
     fun expenseWeekTrendPercent(

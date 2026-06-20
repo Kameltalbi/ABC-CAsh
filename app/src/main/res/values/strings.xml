@@ -196,12 +196,25 @@
     <string name="plus">More</string>
     <string name="plus_forecasts">Forecasts</string>
     <string name="plus_forecasts_sub">Upcoming income and expenses</string>
+    <string name="plus_subscription">Subscription</string>
+    <string name="plus_subscription_sub">Free, Starter and Pro plans</string>
+    <string name="plus_bank_connection">Bank Connection</string>
+    <string name="plus_bank_connection_sub">Link your bank account (Coming Soon - Premium)</string>
     <string name="plus_settings">Settings</string>
     <string name="plus_settings_sub">Profile, categories, security</string>
     <string name="plus_import">Import invoices</string>
     <string name="plus_import_sub">Import data from a CSV file</string>
     <string name="plus_bank_reconciliation">Bank reconciliation</string>
     <string name="plus_bank_reconciliation_sub">Adjust the bank balance</string>
+
+    <!-- SUBSCRIPTION -->
+    <string name="plan_free">Free</string>
+    <string name="plan_starter">Starter</string>
+    <string name="plan_pro">Pro</string>
+    <string name="subscription_limit_reached">Transaction limit reached for this month</string>
+    <string name="subscription_upgrade_required">Please upgrade to a paid plan to continue</string>
+    <string name="subscription_monthly_usage">Monthly usage: %1$d / %2$d transactions</string>
+    <string name="subscription_free_usage">Free usage this month.</string>
 
     <!-- PERMISSIONS -->
     <string name="admin_import_only">Only administrators can import data</string>
