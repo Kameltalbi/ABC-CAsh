@@ -12,6 +12,21 @@ data class MonthlyBarPoint(
     val expenses: Double
 )
 
+data class MonthFinancialSummary(
+    val month: YearMonth,
+    val label: String,
+    val income: Double,
+    val expenses: Double
+) {
+    val total: Double get() = income - expenses
+}
+
+data class DailyExpenseBar(
+    val date: LocalDate,
+    val amount: Double,
+    val label: String
+)
+
 data class DashboardBalancePoint(
     val date: LocalDate,
     val balance: Double,
@@ -84,7 +99,8 @@ object DashboardCalculations {
             invoices = invoices,
             expenses = expenses,
             anchorBalance = periodData.displayBalance,
-            today = today
+            today = today,
+            bankOnly = true
         )
         val forecastBalance30Days = balanceHistory
             .lastOrNull { it.isForecast }
@@ -147,18 +163,25 @@ object DashboardCalculations {
         today: LocalDate = LocalDate.now()
     ): DashboardData {
         val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
-        
-        // Calculer le solde avec prévisions selon la période sélectionnée
-        val calculated = when (viewMode) {
+
+        val calculatedBank = when (viewMode) {
             DashboardViewMode.YEAR -> {
-                val year = focusMonth.year
-                TreasuryCalculations.yearlyForecastBalance(invoices, expenses, year)
+                TreasuryCalculations.yearlyForecastBalance(invoices, expenses, focusMonth.year)
             }
             DashboardViewMode.MONTH -> {
-                monthlyForecastBalance(invoices, expenses, focusMonth)
+                val year = focusMonth.year
+                var balance = TreasuryCalculations.openingBalanceAtYearStart(invoices, expenses, year)
+                for (m in 1..focusMonth.monthValue) {
+                    val currentMonth = YearMonth.of(year, m)
+                    balance += (TreasuryCalculations.monthlyCollections(invoices, currentMonth) +
+                        TreasuryCalculations.pendingInvoiceAmount(invoices, currentMonth) -
+                        TreasuryCalculations.monthlyPaidExpenses(expenses, currentMonth) -
+                        TreasuryCalculations.monthlyUnpaidExpenses(expenses, currentMonth))
+                }
+                balance
             }
         }
-        val displayBalance = bankBalance ?: calculated
+        val displayBalance = bankBalance ?: calculatedBank
 
         val periodLabel = when (viewMode) {
             DashboardViewMode.YEAR -> focusMonth.year.toString()
@@ -203,10 +226,10 @@ object DashboardCalculations {
         return DashboardData(
             displayBalance = displayBalance,
             bankBalance = bankBalance,
-            calculatedBalance = calculated,
+            calculatedBalance = calculatedBank,
             balanceFromBank = bankBalance != null,
             monthLabel = periodLabel,
-            balanceHistory = buildHistoryCurve(invoices, expenses, displayBalance, referenceDate),
+            balanceHistory = buildHistoryCurve(invoices, expenses, displayBalance, referenceDate, bankOnly = true),
             incomeByCategory = incomeByCategory,
             incomeTotal = incomeTotal,
             expenseByCategory = expenseByCategory,
@@ -243,14 +266,17 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         anchorBalance: Double,
-        today: LocalDate = LocalDate.now()
+        today: LocalDate = LocalDate.now(),
+        bankOnly: Boolean = false
     ): List<DashboardBalancePoint> {
         val start = today.minusDays(HISTORY_DAYS.toLong())
         val allDays = generateSequence(start) { prev ->
             if (prev.isBefore(today)) prev.plusDays(1) else null
         }.toList() + today
 
-        val dailyNet = allDays.associateWith { day -> netCashFlowOnDay(invoices, expenses, day) }
+        val dailyNet = allDays.associateWith { day ->
+            netCashFlowOnDay(invoices, expenses, day, bankOnly = bankOnly)
+        }
 
         return allDays.map { day ->
             val futureFromDay = dailyNet.filterKeys { it.isAfter(day) && !it.isAfter(today) }
@@ -311,11 +337,19 @@ object DashboardCalculations {
         month: YearMonth
     ): List<CategorySlice> =
         invoices.flatMap { invoice ->
-            invoice.payments
+            val paidInMonth = invoice.payments
                 .filter { YearMonth.from(it.date) == month }
-                .map { payment ->
-                    CategorySelection.displayIncome(invoice.category, invoice.categoryLabel) to payment.amount
-                }
+                .sumOf { it.amount }
+            val pendingInMonth = if (YearMonth.from(invoice.dueDate) == month && invoice.paidAmount < invoice.totalAmount) {
+                invoice.totalAmount - invoice.paidAmount
+            } else {
+                0.0
+            }
+            if (paidInMonth > 0 || pendingInMonth > 0) {
+                listOf(CategorySelection.displayIncome(invoice.category, invoice.categoryLabel) to (paidInMonth + pendingInMonth))
+            } else {
+                emptyList()
+            }
         }
             .groupBy({ it.first }, { it.second })
             .map { (key, amounts) ->
@@ -406,7 +440,7 @@ object DashboardCalculations {
         bankBalance: Double?,
         today: LocalDate = LocalDate.now()
     ): DashboardSnapshot {
-        val computed = computedBalance(invoices, expenses)
+        val computed = computedBankBalance(invoices, expenses)
         val balance = bankBalance ?: computed
         val month = YearMonth.from(today)
 
@@ -437,41 +471,77 @@ object DashboardCalculations {
         )
     }
 
-    fun computedBalance(invoices: List<Invoice>, expenses: List<Expense>): Double {
-        val collected = invoices.sumOf { it.paidAmount }
-        val paid = expenses.filter { it.isPaid }.sumOf { it.amount }
-        return collected - paid
-    }
+    fun computedBalance(invoices: List<Invoice>, expenses: List<Expense>): Double =
+        computedBankBalance(invoices, expenses)
+
+    fun computedBankBalance(invoices: List<Invoice>, expenses: List<Expense>): Double =
+        TreasuryCalculations.computedBankBalance(invoices, expenses)
 
     fun computedBalanceAtDate(invoices: List<Invoice>, expenses: List<Expense>, date: LocalDate): Double {
-        val collected = invoices
-            .filter { it.paidAmount > 0 }
-            .sumOf { invoice ->
-                // Somme des paiements de la facture avant ou à la date
-                // Pour simplifier, on utilise paidAmount (somme totale encaissée)
-                // Pour être plus précis, il faudrait filtrer les paiements par date
-                invoice.paidAmount
-            }
+        val collected = invoices.flatMap { it.payments }
+            .filter { !it.date.isAfter(date) && it.affectsBankTreasury() }
+            .sumOf { it.amount }
         val paid = expenses
-            .filter { it.isPaid && !it.date.isAfter(date) }
+            .filter { it.affectsBankTreasury() && !it.date.isAfter(date) }
             .sumOf { it.amount }
         return collected - paid
     }
 
-    fun monthlyForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, month: YearMonth): Double {
+    fun monthlyBankForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, month: YearMonth): Double {
         val year = month.year
-        val cumulativeBalance = TreasuryCalculations.openingBalanceAtYearStart(invoices, expenses, year)
-        
-        // Ajouter les soldes cumulés pour tous les mois jusqu'au mois sélectionné
-        var balance = cumulativeBalance
+        var balance = TreasuryCalculations.openingBankBalanceAtYearStart(invoices, expenses, year)
         for (m in 1..month.monthValue) {
             val currentMonth = YearMonth.of(year, m)
-            balance += (TreasuryCalculations.monthlyCollections(invoices, currentMonth) +
+            balance += (TreasuryCalculations.monthlyBankCollections(invoices, currentMonth) +
                 TreasuryCalculations.pendingInvoiceAmount(invoices, currentMonth) -
-                TreasuryCalculations.monthlyPaidExpenses(expenses, currentMonth) -
+                TreasuryCalculations.monthlyBankPaidExpenses(expenses, currentMonth) -
                 TreasuryCalculations.monthlyUnpaidExpenses(expenses, currentMonth))
         }
         return balance
+    }
+
+    @Deprecated("Use monthlyBankForecastBalance", ReplaceWith("monthlyBankForecastBalance(invoices, expenses, month)"))
+    fun monthlyForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, month: YearMonth): Double =
+        monthlyBankForecastBalance(invoices, expenses, month)
+
+    fun buildMonthComparison(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        focusMonth: YearMonth = YearMonth.now()
+    ): Pair<MonthFinancialSummary, MonthFinancialSummary> {
+        val current = buildMonthSummary(invoices, expenses, focusMonth)
+        val previous = buildMonthSummary(invoices, expenses, focusMonth.minusMonths(1))
+        return current to previous
+    }
+
+    fun buildMonthSummary(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        month: YearMonth
+    ): MonthFinancialSummary = MonthFinancialSummary(
+        month = month,
+        label = AppLocale.monthYear(month),
+        income = TreasuryCalculations.monthlyCollections(invoices, month),
+        expenses = TreasuryCalculations.monthlyPaidExpenses(expenses, month)
+    )
+
+    fun buildDailyExpensesLast7Days(
+        expenses: List<Expense>,
+        today: LocalDate = LocalDate.now(),
+        locale: Locale = AppLocale.current()
+    ): List<DailyExpenseBar> {
+        val formatter = DateTimeFormatter.ofPattern("dd/MM", locale)
+        return (6 downTo 0).map { offset ->
+            val day = today.minusDays(offset.toLong())
+            val amount = expenses
+                .filter { it.isPaid && expenseOccursOn(it, day) }
+                .sumOf { it.amount }
+            DailyExpenseBar(
+                date = day,
+                amount = amount,
+                label = day.format(formatter)
+            )
+        }
     }
 
     fun expenseWeekTrendPercent(
@@ -516,7 +586,8 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         anchorBalance: Double,
-        today: LocalDate
+        today: LocalDate,
+        bankOnly: Boolean = false
     ): List<DashboardBalancePoint> {
         val start = today.minusDays(HISTORY_DAYS.toLong())
         val end = today.plusDays(FORECAST_DAYS.toLong())
@@ -524,7 +595,9 @@ object DashboardCalculations {
             if (prev.isBefore(end)) prev.plusDays(1) else null
         }.toList()
 
-        val dailyNet = allDays.associateWith { day -> netCashFlowOnDay(invoices, expenses, day) }
+        val dailyNet = allDays.associateWith { day ->
+            netCashFlowOnDay(invoices, expenses, day, bankOnly = bankOnly)
+        }
 
         val historyPoints = allDays
             .filter { !it.isAfter(today) }
@@ -538,7 +611,7 @@ object DashboardCalculations {
             val day = today.plusDays(offset.toLong())
             val flowSinceToday = (1..offset).sumOf { o ->
                 val d = today.plusDays(o.toLong())
-                (dailyNet[d] ?: forecastFlowOnDay(invoices, expenses, d)).toDouble()
+                (dailyNet[d] ?: forecastFlowOnDay(invoices, expenses, d, bankOnly = bankOnly)).toDouble()
             }
             DashboardBalancePoint(day, anchorBalance + flowSinceToday, isForecast = true)
         }
@@ -549,13 +622,14 @@ object DashboardCalculations {
     private fun netCashFlowOnDay(
         invoices: List<Invoice>,
         expenses: List<Expense>,
-        day: LocalDate
+        day: LocalDate,
+        bankOnly: Boolean = false
     ): Double {
         val income = invoices.flatMap { it.payments }
-            .filter { it.date == day }
+            .filter { it.date == day && (!bankOnly || it.affectsBankTreasury()) }
             .sumOf { it.amount }
         val outcome = expenses
-            .filter { it.isPaid && expenseOccursOn(it, day) }
+            .filter { it.isPaid && expenseOccursOn(it, day) && (!bankOnly || it.affectsBankTreasury()) }
             .sumOf { it.amount }
         return income - outcome
     }
@@ -563,7 +637,8 @@ object DashboardCalculations {
     private fun forecastFlowOnDay(
         invoices: List<Invoice>,
         expenses: List<Expense>,
-        day: LocalDate
+        day: LocalDate,
+        bankOnly: Boolean = false
     ): Double {
         val expectedIncome = invoices
             .filter { it.status != InvoiceStatus.PAID && it.dueDate == day }

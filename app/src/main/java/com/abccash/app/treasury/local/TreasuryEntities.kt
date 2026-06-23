@@ -5,8 +5,17 @@ import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import com.abccash.app.treasury.data.BankAccountSource
+import com.abccash.app.treasury.data.ContactType
+import com.abccash.app.treasury.data.TaxIdType
+import com.abccash.app.treasury.data.TaxIdValidationStatus
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
+import com.abccash.app.treasury.data.InvoiceDocumentStatus
+import com.abccash.app.treasury.data.OtherTaxMode
+import com.abccash.app.treasury.data.ProductKind
+import com.abccash.app.treasury.data.ProductUnit
+import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
@@ -57,6 +66,8 @@ data class InvoiceEntity(
     @PrimaryKey val id: String,
     val invoiceNumber: String,
     val clientName: String,
+    @ColumnInfo(defaultValue = "NULL")
+    val clientContactId: String? = null,
     val totalAmount: Double,
     val dueDate: LocalDate,
     val createdDate: LocalDate,
@@ -65,7 +76,82 @@ data class InvoiceEntity(
     @ColumnInfo(defaultValue = "'OTHER'")
     val category: RevenueCategory = RevenueCategory.OTHER,
     @ColumnInfo(defaultValue = "''")
-    val categoryLabel: String = ""
+    val categoryLabel: String = "",
+    @ColumnInfo(defaultValue = "'VALIDATED'")
+    val documentStatus: InvoiceDocumentStatus = InvoiceDocumentStatus.VALIDATED,
+    val amountExclTax: Double? = null,
+    @ColumnInfo(defaultValue = "0")
+    val tvaRate: Double = 0.0,
+    @ColumnInfo(defaultValue = "0")
+    val otherTaxRate: Double = 0.0,
+    @ColumnInfo(defaultValue = "'PERCENTAGE'")
+    val otherTaxMode: OtherTaxMode = OtherTaxMode.PERCENTAGE,
+    @ColumnInfo(defaultValue = "''")
+    val otherTaxLabel: String = "",
+    @ColumnInfo(defaultValue = "'[]'")
+    val lineItemsJson: String = "[]"
+)
+
+@Entity(
+    tableName = "quotes",
+    indices = [Index(value = ["entrepriseId"])]
+)
+data class QuoteEntity(
+    @PrimaryKey val id: String,
+    val quoteNumber: String,
+    val clientName: String,
+    @ColumnInfo(defaultValue = "NULL")
+    val clientContactId: String? = null,
+    val totalAmount: Double,
+    val issueDate: LocalDate,
+    val validUntil: LocalDate,
+    val createdDate: LocalDate,
+    @ColumnInfo(defaultValue = "''")
+    val entrepriseId: String,
+    @ColumnInfo(defaultValue = "'OTHER'")
+    val category: RevenueCategory = RevenueCategory.OTHER,
+    @ColumnInfo(defaultValue = "''")
+    val categoryLabel: String = "",
+    @ColumnInfo(defaultValue = "'DRAFT'")
+    val status: QuoteStatus = QuoteStatus.DRAFT,
+    val amountExclTax: Double? = null,
+    @ColumnInfo(defaultValue = "0")
+    val tvaRate: Double = 0.0,
+    @ColumnInfo(defaultValue = "0")
+    val otherTaxRate: Double = 0.0,
+    @ColumnInfo(defaultValue = "'PERCENTAGE'")
+    val otherTaxMode: OtherTaxMode = OtherTaxMode.PERCENTAGE,
+    @ColumnInfo(defaultValue = "''")
+    val otherTaxLabel: String = "",
+    @ColumnInfo(defaultValue = "'[]'")
+    val lineItemsJson: String = "[]",
+    @ColumnInfo(defaultValue = "NULL")
+    val convertedInvoiceId: String? = null,
+    @ColumnInfo(defaultValue = "''")
+    val notes: String = ""
+)
+
+@Entity(
+    tableName = "products",
+    indices = [Index(value = ["entrepriseId"])]
+)
+data class ProductEntity(
+    @PrimaryKey val id: String,
+    @ColumnInfo(defaultValue = "''")
+    val entrepriseId: String,
+    val name: String,
+    val unitPriceExclTax: Double,
+    @ColumnInfo(defaultValue = "'SERVICE'")
+    val kind: ProductKind = ProductKind.SERVICE,
+    @ColumnInfo(defaultValue = "'PIECE'")
+    val unit: ProductUnit = ProductUnit.PIECE,
+    @ColumnInfo(defaultValue = "'OTHER'")
+    val category: RevenueCategory = RevenueCategory.OTHER,
+    @ColumnInfo(defaultValue = "''")
+    val categoryLabel: String = "",
+    @ColumnInfo(defaultValue = "1")
+    val isActive: Boolean = true,
+    val createdDate: LocalDate
 )
 
 @Entity(
@@ -86,7 +172,68 @@ data class PaymentEntity(
     val amount: Double,
     val date: LocalDate,
     val method: PaymentMethod,
-    val note: String
+    val note: String,
+    val bankAccountId: String? = null
+)
+
+@Entity(
+    tableName = "bank_accounts",
+    indices = [Index(value = ["entrepriseId"])]
+)
+data class BankAccountEntity(
+    @PrimaryKey val id: String,
+    val entrepriseId: String,
+    val name: String,
+    @ColumnInfo(defaultValue = "''")
+    val bankName: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val ibanLast4: String = "",
+    @ColumnInfo(defaultValue = "0")
+    val openingBalance: Double = 0.0,
+    val alertLowBalance: Double? = null,
+    @ColumnInfo(defaultValue = "0")
+    val isDefault: Boolean = false,
+    @ColumnInfo(defaultValue = "'MANUAL'")
+    val source: BankAccountSource = BankAccountSource.MANUAL,
+    val createdDate: LocalDate
+)
+
+@Entity(
+    tableName = "contacts",
+    indices = [Index(value = ["entrepriseId", "type"])]
+)
+data class ContactEntity(
+    @PrimaryKey val id: String,
+    val entrepriseId: String,
+    val type: ContactType,
+    val name: String,
+    @ColumnInfo(defaultValue = "''")
+    val email: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val phone: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val address: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val notes: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val countryCode: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val legalName: String = "",
+    @ColumnInfo(defaultValue = "NULL")
+    val taxIdType: TaxIdType? = null,
+    @ColumnInfo(defaultValue = "''")
+    val taxIdValue: String = "",
+    @ColumnInfo(defaultValue = "'UNVERIFIED'")
+    val taxIdValidationStatus: TaxIdValidationStatus = TaxIdValidationStatus.UNVERIFIED,
+    @ColumnInfo(defaultValue = "''")
+    val addressLine1: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val addressLine2: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val postalCode: String = "",
+    @ColumnInfo(defaultValue = "''")
+    val city: String = "",
+    val createdDate: LocalDate
 )
 
 @Entity(
@@ -103,11 +250,21 @@ data class ExpenseEntity(
     val recurrenceEndDate: LocalDate?,
     val isPaid: Boolean,
     val paymentMethod: PaymentMethod? = null,
+    @ColumnInfo(defaultValue = "NULL")
+    val bankAccountId: String? = null,
     val createdDate: LocalDate,
     @ColumnInfo(defaultValue = "''")
     val entrepriseId: String,
     @ColumnInfo(defaultValue = "'OTHER'")
     val category: ExpenseCategory = ExpenseCategory.OTHER,
     @ColumnInfo(defaultValue = "''")
-    val categoryLabel: String = ""
+    val categoryLabel: String = "",
+    @ColumnInfo(defaultValue = "NULL")
+    val supplierContactId: String? = null,
+    @ColumnInfo(defaultValue = "''")
+    val note: String = "",
+    @ColumnInfo(defaultValue = "NULL")
+    val receiptImagePath: String? = null,
+    @ColumnInfo(defaultValue = "0")
+    val isExpenseNote: Boolean = false
 )

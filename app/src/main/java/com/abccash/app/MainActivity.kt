@@ -9,14 +9,15 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abccash.app.treasury.TreasuryApp
+import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.local.TreasuryDatabase
-import com.abccash.app.treasury.remote.TreasuryApiClient
-import com.abccash.app.treasury.remote.TreasurySyncService
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import com.abccash.app.treasury.viewmodel.TreasuryViewModelFactory
 import com.abccash.app.ui.theme.AppColors
+import com.abccash.app.ui.theme.AppPalette
+import com.abccash.app.ui.theme.appColorScheme
 
 class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -26,32 +27,19 @@ class MainActivity : FragmentActivity() {
         val userPreferences = UserPreferences(this)
         val database = TreasuryDatabase.getInstance(this)
         val repository = TreasuryRepository(database.treasuryDao(), database)
-        val apiClient = TreasuryApiClient(BuildConfig.API_BASE_URL)
-        val syncService = TreasurySyncService(apiClient, repository, userPreferences)
-        val factory = TreasuryViewModelFactory(repository, syncService)
+        val googleBackupManager = GoogleBackupManager(this)
+        val factory = TreasuryViewModelFactory(repository, googleBackupManager, userPreferences)
 
         setContent {
             MaterialTheme(
-                colorScheme = lightColorScheme(
-                    primary = AppColors.Primary,
-                    onPrimary = Color.White,
-                    primaryContainer = Color(0xFFD1FAE8),
-                    onPrimaryContainer = Color(0xFF065F46),
-                    secondary = AppColors.Secondary,
-                    onSecondary = Color.White,
-                    background = AppColors.Background,
-                    surface = AppColors.Surface,
-                    surfaceVariant = AppColors.SurfaceVariant,
-                    error = AppColors.Error,
-                    onError = Color.White
-                )
+                colorScheme = appColorScheme(darkMode = false, palette = AppPalette.ABC_CASH)
             ) {
                 val vm: TreasuryViewModel = viewModel(factory = factory)
                 TreasuryApp(
                     repository = repository,
                     viewModel = vm,
-                    syncService = syncService,
-                    userPreferences = userPreferences
+                    userPreferences = userPreferences,
+                    googleBackupManager = googleBackupManager
                 )
             }
         }

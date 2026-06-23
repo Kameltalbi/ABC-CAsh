@@ -9,5 +9,6 @@ data class Payment(
     val amount: Double,
     val date: LocalDate,
     val method: PaymentMethod,
-    val note: String = ""
+    val note: String = "",
+    val bankAccountId: String? = null
 )

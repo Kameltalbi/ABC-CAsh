@@ -1,9 +1,18 @@
 package com.abccash.app.treasury.local
 
 import androidx.room.TypeConverter
+import com.abccash.app.treasury.data.BankAccountSource
+import com.abccash.app.treasury.data.ContactType
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
+import com.abccash.app.treasury.data.InvoiceDocumentStatus
+import com.abccash.app.treasury.data.ProductKind
+import com.abccash.app.treasury.data.ProductUnit
+import com.abccash.app.treasury.data.TaxIdType
+import com.abccash.app.treasury.data.TaxIdValidationStatus
+import com.abccash.app.treasury.data.OtherTaxMode
 import com.abccash.app.treasury.data.PaymentMethod
+import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
@@ -30,6 +39,13 @@ class TreasuryConverters {
     fun toUserRole(value: String?): UserRole? = value?.let(UserRole::valueOf)
 
     @TypeConverter
+    fun fromBankAccountSource(value: BankAccountSource?): String? = value?.name
+
+    @TypeConverter
+    fun toBankAccountSource(value: String?): BankAccountSource? =
+        value?.let { runCatching { BankAccountSource.valueOf(it) }.getOrNull() }
+
+    @TypeConverter
     fun fromPaymentMethod(value: PaymentMethod?): String? = value?.name
 
     @TypeConverter
@@ -54,6 +70,64 @@ class TreasuryConverters {
     @TypeConverter
     fun toExpenseCategory(value: String?): ExpenseCategory? =
         value?.let { runCatching { ExpenseCategory.valueOf(it) }.getOrNull() } ?: ExpenseCategory.OTHER
+
+    @TypeConverter
+    fun fromContactType(value: ContactType?): String? = value?.name
+
+    @TypeConverter
+    fun toContactType(value: String?): ContactType? =
+        value?.let { runCatching { ContactType.valueOf(it) }.getOrNull() }
+
+    @TypeConverter
+    fun fromInvoiceDocumentStatus(value: InvoiceDocumentStatus?): String? = value?.name
+
+    @TypeConverter
+    fun toInvoiceDocumentStatus(value: String?): InvoiceDocumentStatus? =
+        value?.let { runCatching { InvoiceDocumentStatus.valueOf(it) }.getOrNull() }
+            ?: InvoiceDocumentStatus.VALIDATED
+
+    @TypeConverter
+    fun fromQuoteStatus(value: QuoteStatus?): String? = value?.name
+
+    @TypeConverter
+    fun toQuoteStatus(value: String?): QuoteStatus? =
+        value?.let { runCatching { QuoteStatus.valueOf(it) }.getOrNull() } ?: QuoteStatus.DRAFT
+
+    @TypeConverter
+    fun fromProductKind(value: ProductKind?): String? = value?.name
+
+    @TypeConverter
+    fun toProductKind(value: String?): ProductKind? =
+        value?.let { runCatching { ProductKind.valueOf(it) }.getOrNull() } ?: ProductKind.SERVICE
+
+    @TypeConverter
+    fun fromProductUnit(value: ProductUnit?): String? = value?.name
+
+    @TypeConverter
+    fun toProductUnit(value: String?): ProductUnit? =
+        value?.let { runCatching { ProductUnit.valueOf(it) }.getOrNull() } ?: ProductUnit.PIECE
+
+    @TypeConverter
+    fun fromTaxIdType(value: TaxIdType?): String? = value?.name
+
+    @TypeConverter
+    fun toTaxIdType(value: String?): TaxIdType? =
+        value?.let { runCatching { TaxIdType.valueOf(it) }.getOrNull() }
+
+    @TypeConverter
+    fun fromTaxIdValidationStatus(value: TaxIdValidationStatus?): String? = value?.name
+
+    @TypeConverter
+    fun toTaxIdValidationStatus(value: String?): TaxIdValidationStatus? =
+        value?.let { runCatching { TaxIdValidationStatus.valueOf(it) }.getOrNull() }
+            ?: TaxIdValidationStatus.UNVERIFIED
+
+    @TypeConverter
+    fun fromOtherTaxMode(value: OtherTaxMode?): String? = value?.name
+
+    @TypeConverter
+    fun toOtherTaxMode(value: String?): OtherTaxMode? =
+        value?.let { runCatching { OtherTaxMode.valueOf(it) }.getOrNull() } ?: OtherTaxMode.PERCENTAGE
 
     @TypeConverter
     fun fromUserPermissions(value: Set<UserPermission>?): String? = value?.joinToString(",") { it.name }

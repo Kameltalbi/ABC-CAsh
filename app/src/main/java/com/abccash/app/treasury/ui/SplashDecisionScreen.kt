@@ -9,7 +9,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -21,44 +20,51 @@ import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.repository.TreasuryRepository
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.first
 
 @Composable
 fun SplashDecisionScreen(
     repository: TreasuryRepository,
     userPreferences: UserPreferences,
-    onNavigateToLogin: () -> Unit,
     onNavigateToInscription: () -> Unit,
-    onNavigateToMainApp: (String, UserRole, String, Set<UserPermission>) -> Unit,
-    onSessionInvalid: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    onNavigateToAccountSetup: () -> Unit,
+    onNavigateToMainApp: (String, UserRole, String, Set<UserPermission>) -> Unit
 ) {
     LaunchedEffect(Unit) {
-        delay(1200)
-
-        val isLoggedIn = userPreferences.isLoggedIn.first()
-        if (isLoggedIn) {
-            val userId = userPreferences.currentUserId.first().orEmpty()
-            val user = userId.takeIf { it.isNotBlank() }?.let { repository.getUserById(it) }
-            if (user == null || !user.isActive || user.entrepriseId.isBlank()) {
-                userPreferences.clearUserSession()
-                onSessionInvalid()
+        delay(800)
+        try {
+            if (!repository.hasAnyUser()) {
+                onNavigateToInscription()
                 return@LaunchedEffect
             }
 
-            val permissions = effectivePermissions(user.role, user.permissions)
-            userPreferences.saveUserSession(
-                userId = user.id,
-                email = user.email,
-                nom = user.nom,
-                role = user.role,
-                entrepriseId = user.entrepriseId,
-                permissions = permissions
-            )
-            onNavigateToMainApp(user.id, user.role, user.entrepriseId, permissions)
-        } else if (repository.hasAnyUser()) {
+            if (repository.needsAccountCredentialsSetup()) {
+                onNavigateToAccountSetup()
+                return@LaunchedEffect
+            }
+
+            if (userPreferences.readLoggedIn()) {
+                val userId = userPreferences.readSessionUserId()
+                val user = userId?.let { repository.getUserById(it) }
+                if (user != null && user.isActive && user.entrepriseId.isNotBlank()) {
+                    val permissions = effectivePermissions(user.role, user.permissions)
+                    userPreferences.saveUserSession(
+                        userId = user.id,
+                        email = user.email,
+                        nom = user.nom,
+                        role = user.role,
+                        entrepriseId = user.entrepriseId,
+                        permissions = permissions
+                    )
+                    onNavigateToMainApp(user.id, user.role, user.entrepriseId, permissions)
+                    return@LaunchedEffect
+                }
+                userPreferences.clearUserSession()
+            }
+
             onNavigateToLogin()
-        } else {
-            onNavigateToInscription()
+        } catch (_: Exception) {
+            onNavigateToLogin()
         }
     }
 

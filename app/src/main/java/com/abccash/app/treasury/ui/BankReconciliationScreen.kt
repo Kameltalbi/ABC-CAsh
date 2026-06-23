@@ -59,7 +59,7 @@ fun BankReconciliationScreen(
     val formatAmount = rememberFormatMoney()
 
     val calculatedBalance = remember(invoices, expenses, displayYear) {
-        TreasuryCalculations.yearlyBalance(invoices, expenses, displayYear)
+        TreasuryCalculations.yearlyBankBalance(invoices, expenses, displayYear)
     }
 
     var amountText by remember(bankBalance) {

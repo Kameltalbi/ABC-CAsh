@@ -10,6 +10,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import com.abccash.app.ui.theme.AppColors
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -73,7 +74,7 @@ private fun PeriodToggleButton(
         modifier = modifier.height(36.dp),
         shape = RoundedCornerShape(8.dp),
         colors = ButtonDefaults.buttonColors(
-            containerColor = if (selected) Color(0xFF22C55E) else Color(0xFFF3F4F6),
+            containerColor = if (selected) AppColors.BrandBlue else Color(0xFFF3F4F6),
             contentColor = if (selected) Color.White else Color(0xFF6B7280)
         ),
         elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)

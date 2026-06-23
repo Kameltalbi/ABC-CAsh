@@ -5,9 +5,12 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -25,6 +28,27 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+
+val AbcCashFabShape = RoundedCornerShape(16.dp)
+
+@Composable
+fun AbcCashFab(
+    onClick: () -> Unit,
+    contentDescription: String,
+    modifier: Modifier = Modifier,
+    icon: ImageVector = Icons.Default.Add,
+    containerColor: Color = MaterialTheme.colorScheme.primary
+) {
+    FloatingActionButton(
+        onClick = onClick,
+        modifier = modifier,
+        containerColor = containerColor,
+        contentColor = Color.White,
+        shape = AbcCashFabShape
+    ) {
+        Icon(icon, contentDescription = contentDescription)
+    }
+}
 
 val TreasuryFormDateFormatter: DateTimeFormatter =
     DateTimeFormatter.ofPattern("dd/MM/yyyy")

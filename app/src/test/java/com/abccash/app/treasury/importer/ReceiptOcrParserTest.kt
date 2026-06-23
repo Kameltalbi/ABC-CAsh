@@ -2,6 +2,7 @@ package com.abccash.app.treasury.importer
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
 import org.junit.Test
 
 class ReceiptOcrParserTest {
@@ -44,5 +45,46 @@ class ReceiptOcrParserTest {
         """.trimIndent()
 
         assertEquals(14.28, ReceiptOcrParser.parseAmount(text)!!, 0.001)
+    }
+
+    @Test
+    fun `parses space separated millimes as tunisian amount`() {
+        assertEquals(69.0, ReceiptOcrParser.parseAmountToken("69 000")!!, 0.001)
+        assertEquals(69.0, ReceiptOcrParser.parseAmountToken("69,000")!!, 0.001)
+        assertEquals(69.0, ReceiptOcrParser.parseAmountToken("69.000")!!, 0.001)
+    }
+
+    @Test
+    fun `parses ocr total without separator as tunisian millimes`() {
+        val text = "TOTAL 69000 DR"
+        assertEquals(69.0, ReceiptOcrParser.parseAmount(text)!!, 0.001)
+    }
+
+    @Test
+    fun `ignores phone number on ticket`() {
+        val text = """
+            SUPERMARCHE XYZ
+            Tel 71 234 567
+            TOTAL 25,500 DT
+        """.trimIndent()
+
+        assertEquals(25.5, ReceiptOcrParser.parseAmount(text)!!, 0.001)
+    }
+
+    @Test
+    fun `ignores phone line with country code`() {
+        val text = """
+            BOUTIQUE
+            +216 98 123 456
+            Net a payer 12,800 DT
+        """.trimIndent()
+
+        assertEquals(12.8, ReceiptOcrParser.parseAmount(text)!!, 0.001)
+    }
+
+    @Test
+    fun `rejects bare three digit phone fragment without total context`() {
+        assertNull(ReceiptOcrParser.parseAmountToken("216"))
+        assertNull(ReceiptOcrParser.parseAmountToken("712"))
     }
 }

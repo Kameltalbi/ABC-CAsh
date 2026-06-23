@@ -20,7 +20,6 @@ import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 
 enum class SettingsSection(@StringRes val titleRes: Int) {
-    MANAGEMENT(R.string.settings_management),
     PROFILE(R.string.settings_profile),
     CATEGORIES(R.string.settings_categories),
     OPTIONS(R.string.settings_options)
@@ -41,6 +40,7 @@ fun SettingsDetailScaffold(
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = { Text(title) },

@@ -122,6 +122,7 @@ class SyncService {
     }
 
     fun push(entrepriseId: String, request: SyncPushRequest): String? = transaction {
+        request.entreprise?.let { upsertEntreprise(it, entrepriseId)?.let { return@transaction it } }
         for (user in request.users) {
             upsertUser(user, entrepriseId)?.let { return@transaction it }
         }
@@ -137,6 +138,24 @@ class SyncService {
             upsertExpense(expense)
         }
         null
+    }
+
+    private fun upsertEntreprise(entreprise: EntrepriseDto, entrepriseId: String): String? {
+        if (entreprise.id != entrepriseId) return "Company belongs to another account"
+        if (entreprise.nom.isBlank()) return "Company name required"
+
+        val now = Instant.now()
+        val exists = Entreprises.selectAll().where { Entreprises.id eq entreprise.id }.count() > 0
+        if (exists) {
+            Entreprises.update({ Entreprises.id eq entreprise.id }) {
+                it[nom] = entreprise.nom.trim()
+                it[email] = entreprise.email.trim()
+                it[telephone] = entreprise.telephone.replace("\\s".toRegex(), "")
+                it[adresse] = entreprise.adresse.trim()
+                it[updatedAt] = now
+            }
+        }
+        return null
     }
 
     private fun upsertUser(user: UserPushDto, entrepriseId: String): String? {

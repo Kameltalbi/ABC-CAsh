@@ -9,24 +9,28 @@ import androidx.compose.ui.graphics.Color
  * Rendu : Sérieux, financier, professionnel, proche des banques modernes
  */
 object AppColors {
-    // Couleurs principales — alignées sur le logo ABC Cash
-    val Primary = Color(0xFF00B982)        // Vert ABC Cash
-    val PrimaryDark = Color(0xFF00956E)      // Vert foncé (pressed)
-    val Secondary = Color(0xFF2563EB)      // Bleu royal - accents
-    val Success = Color(0xFF16A34A)        // Vert - Succès/Revenus
+    // Bleu principal (Material Blue 500)
+    val BrandBlue = Color(0xFF2196F3)
+    val BrandBlueDark = Color(0xFF1976D2)
+    val BrandBlueLight = Color(0xFFE3F2FD)
+
+    val Primary = BrandBlue
+    val PrimaryDark = BrandBlueDark
+    val Secondary = BrandBlue
+    val Success = Color(0xFF4CAF50)        // Vert - Revenus
     val Warning = Color(0xFFF59E0B)        // Orange - Alerte/Échéances
-    val Error = Color(0xFFDC2626)          // Rouge - Erreur/Dépenses
+    val Error = Color(0xFFF44336)          // Rouge - Dépenses
     
     // Fonds et surfaces
-    val Background = Color(0xFFF4FBF8)     // Fond légèrement vert, plus chaleureux
-    val Surface = Color.White              // Surface des cartes
-    val SurfaceVariant = Color(0xFFE8F5F0) // Surface variante
+    val Background = Color.White
+    val Surface = Color.White
+    val SurfaceVariant = Color.White
     
     // Couleurs métier
-    val IncomeGreen = Color(0xFF16A34A)    // Revenus/Encaissements
-    val ExpenseRed = Color(0xFFDC2626)     // Dépenses/Sorties
+    val IncomeGreen = Color(0xFF4CAF50)    // Revenus/Encaissements
+    val ExpenseRed = Color(0xFFF44336)     // Dépenses/Sorties
     val OverdueOrange = Color(0xFFF59E0B)  // Retards/Alertes
-    val PendingBlue = Color(0xFF2563EB)    // En attente
+    val PendingBlue = BrandBlue            // En attente
     
     // Backgrounds colorés
     val SuccessBackground = Color(0xFFDCFCE7)  // Fond vert clair
@@ -50,12 +54,12 @@ object AppColors {
     
     // Bordures
     val Border = Color(0xFFE2E8F0)
-    val BorderFocus = Color(0xFF2563EB)
+    val BorderFocus = BrandBlue
     
     // Couleurs pour les thèmes clairs
-    val LightBackground = Color(0xFFF8FAFC)
+    val LightBackground = Color.White
     val LightSurface = Color.White
-    val LightSurfaceVariant = Color(0xFFF1F5F9)
+    val LightSurfaceVariant = Color.White
     
     // Couleurs pour les cartes
     val CardBackground = Color.White
@@ -63,11 +67,12 @@ object AppColors {
     val InfoCardBackground = Color(0xFFF1F5F9)
     
     // Couleurs pour les indicateurs de catégories
-    val RevenueDot = Color(0xFF16A34A)  // Vert pour revenus
-    val ExpenseDot = Color(0xFFDC2626)  // Rouge pour dépenses
+    val RevenueDot = IncomeGreen
+    val ExpenseDot = ExpenseRed
 }
 
 enum class AppPalette(val label: String) {
+    ABC_CASH("ABC Cash"),
     SUNSET("Sunset"),
     OCEAN("Ocean"),
     FOREST("Forest"),
@@ -77,6 +82,49 @@ enum class AppPalette(val label: String) {
 }
 
 fun appColorScheme(darkMode: Boolean, palette: AppPalette) = when (palette) {
+    AppPalette.ABC_CASH -> if (darkMode) {
+        darkColorScheme(
+            primary = AppColors.BrandBlue,
+            onPrimary = Color.White,
+            primaryContainer = Color(0xFF0D47A1),
+            onPrimaryContainer = Color.White,
+            secondary = AppColors.IncomeGreen,
+            onSecondary = Color.White,
+            background = Color(0xFF0F1620),
+            surface = Color(0xFF1A2535),
+            surfaceVariant = Color(0xFF243140),
+            error = AppColors.ExpenseRed,
+            onError = Color.White
+        )
+    } else {
+        lightColorScheme(
+            primary = AppColors.BrandBlue,
+            onPrimary = Color.White,
+            primaryContainer = AppColors.BrandBlueLight,
+            onPrimaryContainer = AppColors.BrandBlueDark,
+            secondary = AppColors.IncomeGreen,
+            onSecondary = Color.White,
+            secondaryContainer = AppColors.InfoBackground,
+            onSecondaryContainer = AppColors.BrandBlueDark,
+            tertiary = AppColors.BrandBlue,
+            onTertiary = Color.White,
+            tertiaryContainer = AppColors.InfoBackground,
+            onTertiaryContainer = AppColors.BrandBlueDark,
+            background = AppColors.Background,
+            surface = AppColors.Surface,
+            surfaceVariant = AppColors.InfoCardBackground,
+            surfaceContainer = Color.White,
+            surfaceContainerHigh = Color(0xFFF8FAFC),
+            surfaceContainerHighest = AppColors.InfoCardBackground,
+            surfaceContainerLow = Color.White,
+            surfaceContainerLowest = Color.White,
+            error = AppColors.ExpenseRed,
+            onError = Color.White,
+            outline = AppColors.Border,
+            onSurface = AppColors.TextPrimary,
+            onSurfaceVariant = AppColors.TextSecondary
+        )
+    }
     AppPalette.SUNSET -> if (darkMode) {
         darkColorScheme(
             primary = Color(0xFFFF8A50),
@@ -205,6 +253,7 @@ fun appColorScheme(darkMode: Boolean, palette: AppPalette) = when (palette) {
 
 fun palettePreviewColor(palette: AppPalette): Color {
     return when (palette) {
+        AppPalette.ABC_CASH -> AppColors.BrandBlue
         AppPalette.SUNSET -> Color(0xFFFF5A00)
         AppPalette.OCEAN -> Color(0xFF0D47A1)
         AppPalette.FOREST -> Color(0xFF1B5E20)

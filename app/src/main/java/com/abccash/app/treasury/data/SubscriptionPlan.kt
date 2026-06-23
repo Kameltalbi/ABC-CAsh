@@ -1,7 +1,7 @@
 package com.abccash.app.treasury.data
 
 enum class SubscriptionPlan(val id: String, val nameRes: Int, val priceUsd: Double, val transactionsPerMonth: Int?) {
-    FREE("free", 0, 0.0, 50),
+    FREE("free", 0, 0.0, 30),
     STARTER("starter", 0, 4.99, null),
     PRO("pro", 0, 9.99, null);
 

@@ -13,6 +13,7 @@
     <string name="nav_settings_short">Indst.</string>
     <string name="nav_plus">Mere</string>
     <string name="nav_forecasts">Prognoser</string>
+    <string name="nav_forecasts_short">Progn.</string>
 
     <!-- COMMON -->
     <string name="ok">OK</string>
@@ -228,7 +229,6 @@
     <string name="signup_admin_title">Adminregistrering</string>
     <string name="signup_admin_subtitle">Opret din konto for at blive administrator for dit firma</string>
     <string name="signup_create_button">Opret min konto</string>
-    <string name="signup_admin_note">Du bliver automatisk udpeget som administrator</string>
     <string name="your_name">Dit navn</string>
     <string name="company_name_placeholder">Dit firmanavn</string>
     <string name="email_placeholder">eksempel@email.com</string>
@@ -402,6 +402,7 @@
     <string name="payment_check">Check</string>
     <string name="payment_transfer">Overførsel</string>
     <string name="payment_cash">Kontanter</string>
+    <string name="payment_card">Betalingskort</string>
     <string name="payment_bill">Veksel</string>
 
     <!-- RECURRENCE -->
@@ -425,6 +426,7 @@
     <string name="filter_due">Forfaldne</string>
     <string name="filter_partial">Delvise</string>
     <string name="filter_paid">Betalte</string>
+    <string name="filter_unpaid">At betale</string>
     <string name="status_paid">Betalt</string>
     <string name="status_partial">Delvis</string>
     <string name="status_due">Forfalden</string>

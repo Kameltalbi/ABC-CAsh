@@ -3,11 +3,11 @@ package com.abccash.app.treasury.viewmodel
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
-import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserRole
+import com.abccash.app.treasury.data.UserPermission
+import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.repository.TreasuryRepository
-import com.abccash.app.treasury.remote.TreasurySyncService
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -22,7 +22,6 @@ data class InscriptionUiState(
     val password: String = "",
     val confirmPassword: String = "",
     val isLoading: Boolean = false,
-    val isSuccess: Boolean = false,
     val nomError: String? = null,
     val nomEntrepriseError: String? = null,
     val emailError: String? = null,
@@ -33,8 +32,7 @@ data class InscriptionUiState(
 )
 
 class InscriptionViewModel(
-    private val repository: TreasuryRepository,
-    private val syncService: TreasurySyncService
+    private val repository: TreasuryRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(InscriptionUiState())
@@ -59,31 +57,11 @@ class InscriptionViewModel(
     }
 
     fun updatePassword(password: String) {
-        _uiState.update { it.copy(password = password, passwordError = null) }
+        _uiState.update { it.copy(password = password, passwordError = null, generalError = null) }
     }
 
-    fun updateConfirmPassword(password: String) {
-        _uiState.update { it.copy(confirmPassword = password, confirmPasswordError = null) }
-    }
-
-    fun checkEmailAvailability(email: String) {
-        if (email.isNotBlank() && isValidEmail(email)) {
-            viewModelScope.launch {
-                if (repository.isEmailTaken(email)) {
-                    _uiState.update { it.copy(emailError = "Cette adresse email est déjà utilisée") }
-                }
-            }
-        }
-    }
-
-    fun checkTelephoneAvailability(telephone: String) {
-        if (telephone.isNotBlank() && isValidPhone(telephone)) {
-            viewModelScope.launch {
-                if (repository.isTelephoneTaken(telephone)) {
-                    _uiState.update { it.copy(telephoneError = "Ce numéro de téléphone est déjà utilisé") }
-                }
-            }
-        }
+    fun updateConfirmPassword(confirmPassword: String) {
+        _uiState.update { it.copy(confirmPassword = confirmPassword, confirmPasswordError = null, generalError = null) }
     }
 
     fun inscrire() {
@@ -95,123 +73,68 @@ class InscriptionViewModel(
             }
 
             val state = _uiState.value
-            if (repository.hasAnyUser()) {
-                _uiState.update {
-                    it.copy(
-                        generalError = "Un compte entreprise existe déjà. Contactez votre administrateur.",
-                        isLoading = false
-                    )
-                }
-                return@launch
-            }
-
-            if (syncService.isEnabled()) {
-                syncService.register(
-                    entrepriseNom = state.nomEntreprise,
-                    nom = state.nom,
-                    email = state.email,
-                    telephone = state.telephone,
-                    password = state.password
-                ).onSuccess { user ->
-                    _uiState.update { it.copy(isLoading = false, isSuccess = true) }
-                    onInscriptionSuccess?.invoke(user)
-                    return@launch
-                }.onFailure { error ->
-                    if (error.message != "sync_disabled") {
-                        _uiState.update {
-                            it.copy(
-                                generalError = error.message ?: "Erreur serveur",
-                                isLoading = false
-                            )
-                        }
-                        return@launch
-                    }
-                }
-            }
-
-            if (repository.isEmailTaken(state.email)) {
-                _uiState.update {
-                    it.copy(emailError = "Cette adresse email est déjà associée à un compte", isLoading = false)
-                }
-                return@launch
-            }
-            if (repository.isTelephoneTaken(state.telephone)) {
-                _uiState.update {
-                    it.copy(telephoneError = "Ce numéro est déjà associé à un compte", isLoading = false)
-                }
-                return@launch
-            }
-
-            val entreprise = Entreprise(nom = state.nomEntreprise)
+            val entreprise = Entreprise(nom = state.nomEntreprise.trim())
             val user = User(
                 nom = state.nom.trim(),
-                email = state.email,
-                telephone = state.telephone,
+                email = state.email.trim(),
+                telephone = state.telephone.trim(),
                 passwordHash = "",
                 role = UserRole.ADMIN,
+                permissions = UserPermission.entries.toSet(),
                 entrepriseId = entreprise.id
             )
-            val registered = repository.registerAdmin(entreprise, user, state.password)
-            _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+            val registered = repository.registerAdmin(
+                entreprise = entreprise,
+                user = user,
+                plainPassword = state.password
+            )
+            _uiState.update { it.copy(isLoading = false) }
             onInscriptionSuccess?.invoke(registered)
         }
     }
 
-    private fun validateFields(): Boolean {
+    private suspend fun validateFields(): Boolean {
         val state = _uiState.value
         var isValid = true
 
         if (state.nom.isBlank()) {
-            _uiState.update { it.copy(nomError = "Le nom est requis") }
+            _uiState.update { it.copy(nomError = "name_required") }
             isValid = false
         }
         if (state.nomEntreprise.isBlank()) {
-            _uiState.update { it.copy(nomEntrepriseError = "Le nom de l'entreprise est requis") }
+            _uiState.update { it.copy(nomEntrepriseError = "company_required") }
             isValid = false
         }
         if (state.email.isBlank()) {
-            _uiState.update { it.copy(emailError = "L'email est requis") }
+            _uiState.update { it.copy(emailError = "email_required") }
             isValid = false
-        } else if (!isValidEmail(state.email)) {
-            _uiState.update { it.copy(emailError = "Format d'email invalide") }
-            isValid = false
-        }
-        if (state.telephone.isBlank()) {
-            _uiState.update { it.copy(telephoneError = "Le numéro de téléphone est requis") }
-            isValid = false
-        } else if (!isValidPhone(state.telephone)) {
-            _uiState.update { it.copy(telephoneError = "Format de téléphone invalide") }
+        } else if (repository.isEmailTaken(state.email)) {
+            _uiState.update { it.copy(emailError = "email_taken") }
             isValid = false
         }
-        if (state.password.isBlank()) {
-            _uiState.update { it.copy(passwordError = "Le mot de passe est requis") }
-            isValid = false
-        } else if (state.password.length < 6) {
-            _uiState.update { it.copy(passwordError = "Au moins 6 caractères") }
+        if (state.telephone.isNotBlank() && repository.isTelephoneTaken(state.telephone)) {
+            _uiState.update { it.copy(telephoneError = "phone_taken") }
             isValid = false
         }
-        if (state.confirmPassword != state.password) {
-            _uiState.update { it.copy(confirmPasswordError = "Les mots de passe ne correspondent pas") }
+        if (state.password.length < 6) {
+            _uiState.update { it.copy(passwordError = "password_min_chars") }
+            isValid = false
+        }
+        if (state.password != state.confirmPassword) {
+            _uiState.update { it.copy(confirmPasswordError = "passwords_dont_match") }
             isValid = false
         }
         return isValid
     }
-
-    private fun isValidEmail(email: String): Boolean =
-        android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
-
-    private fun isValidPhone(phone: String): Boolean =
-        phone.replace("[^0-9]".toRegex(), "").length >= 8
 }
 
 class InscriptionViewModelFactory(
-    private val repository: TreasuryRepository,
-    private val syncService: TreasurySyncService
+    private val repository: TreasuryRepository
 ) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         if (modelClass.isAssignableFrom(InscriptionViewModel::class.java)) {
-            return InscriptionViewModel(repository, syncService) as T
+            return InscriptionViewModel(repository) as T
         }
         throw IllegalArgumentException("Unknown ViewModel class")
     }

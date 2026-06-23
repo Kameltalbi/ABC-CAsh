@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.net.Uri
 import com.abccash.app.R
+import com.abccash.app.treasury.ui.AbcCashFab
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
@@ -185,12 +186,10 @@ fun SettingsUsersScreen(
             modifier = Modifier.padding(padding),
             floatingActionButton = {
                 if (userRole == UserRole.ADMIN) {
-                    FloatingActionButton(
+                    AbcCashFab(
                         onClick = onNavigateToAddUser,
-                        containerColor = MaterialTheme.colorScheme.primary
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_user), tint = Color.White)
-                    }
+                        contentDescription = stringResource(R.string.add_user)
+                    )
                 }
             }
         ) { fabPadding ->

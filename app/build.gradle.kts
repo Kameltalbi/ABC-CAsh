@@ -5,7 +5,6 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.kapt")
     id("org.jetbrains.kotlin.plugin.compose")
-    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 val localProperties = Properties().apply {
@@ -24,9 +23,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 27
-        versionName = "1.11.5"
-        buildConfigField("String", "API_BASE_URL", "\"https://213.130.144.183/abc-cash\"")
+        versionCode = 42
+        versionName = "1.19.0"
     }
 
     signingConfigs {
@@ -50,6 +48,14 @@ android {
                 "proguard-rules.pro"
             )
         }
+        // APK bureau : même clé release, sans minify (évite crash ProGuard/Room au démarrage).
+        create("sideload") {
+            initWith(getByName("release"))
+            signingConfig = signingConfigs.getByName("release")
+            matchingFallbacks += listOf("release", "debug")
+            isMinifyEnabled = false
+            isShrinkResources = false
+        }
     }
 
     compileOptions {
@@ -63,6 +69,15 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+
+    packaging {
+        resources {
+            excludes += setOf(
+                "META-INF/INDEX.LIST",
+                "META-INF/DEPENDENCIES"
+            )
+        }
     }
 }
 
@@ -105,13 +120,9 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")
 
-    val ktorVersion = "3.0.3"
-    implementation("io.ktor:ktor-client-core:$ktorVersion")
-    implementation("io.ktor:ktor-client-okhttp:$ktorVersion")
-    implementation("io.ktor:ktor-client-content-negotiation:$ktorVersion")
-    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktorVersion")
-
-    implementation("androidx.work:work-runtime-ktx:2.10.0")
+    implementation("com.google.android.gms:play-services-auth:21.3.0")
+    implementation("com.google.api-client:google-api-client-android:2.7.2")
+    implementation("com.google.apis:google-api-services-drive:v3-rev20241027-2.0.0")
 
     // Google Play Billing Library
     implementation("com.android.billingclient:billing:7.1.1")

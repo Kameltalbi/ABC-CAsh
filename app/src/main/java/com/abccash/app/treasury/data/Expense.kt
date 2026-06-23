@@ -26,8 +26,13 @@ data class Expense(
     val recurrenceEndDate: LocalDate? = null,
     val isPaid: Boolean = true,
     val paymentMethod: PaymentMethod? = null,
+    val bankAccountId: String? = null,
     val createdDate: LocalDate = LocalDate.now(),
     val entrepriseId: String = "",
     val category: ExpenseCategory = ExpenseCategory.OTHER,
-    val categoryLabel: String = ""
+    val categoryLabel: String = "",
+    val supplierContactId: String? = null,
+    val note: String = "",
+    val receiptImagePath: String? = null,
+    val isExpenseNote: Boolean = false
 )

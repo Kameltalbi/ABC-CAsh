@@ -13,6 +13,7 @@
     <string name="nav_settings_short">Einst.</string>
     <string name="nav_plus">Mehr</string>
     <string name="nav_forecasts">Prognosen</string>
+    <string name="nav_forecasts_short">Progn.</string>
 
     <!-- COMMON -->
     <string name="ok">OK</string>
@@ -228,7 +229,6 @@
     <string name="signup_admin_title">Admin-Registrierung</string>
     <string name="signup_admin_subtitle">Erstellen Sie Ihr Konto, um Administrator Ihres Unternehmens zu werden</string>
     <string name="signup_create_button">Mein Konto erstellen</string>
-    <string name="signup_admin_note">Sie werden automatisch als Administrator festgelegt</string>
     <string name="your_name">Ihr Name</string>
     <string name="company_name_placeholder">Name Ihres Unternehmens</string>
     <string name="email_placeholder">beispiel@email.com</string>
@@ -402,6 +402,7 @@
     <string name="payment_check">Scheck</string>
     <string name="payment_transfer">Überweisung</string>
     <string name="payment_cash">Bargeld</string>
+    <string name="payment_card">Kredit-/Debitkarte</string>
     <string name="payment_bill">Wechsel</string>
 
     <!-- RECURRENCE -->
@@ -425,6 +426,7 @@
     <string name="filter_due">Fällig</string>
     <string name="filter_partial">Teilweise</string>
     <string name="filter_paid">Bezahlt</string>
+    <string name="filter_unpaid">Offen</string>
     <string name="status_paid">Bezahlt</string>
     <string name="status_partial">Teilweise</string>
     <string name="status_due">Fällig</string>

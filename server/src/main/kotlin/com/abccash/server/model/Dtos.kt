@@ -112,6 +112,7 @@ data class UserPushDto(
 
 @Serializable
 data class SyncPushRequest(
+    val entreprise: EntrepriseDto? = null,
     val invoices: List<InvoiceDto> = emptyList(),
     val expenses: List<ExpenseDto> = emptyList(),
     val users: List<UserPushDto> = emptyList(),

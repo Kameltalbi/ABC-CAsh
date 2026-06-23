@@ -14,8 +14,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Euro
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Store
+import androidx.compose.material.icons.filled.Label
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -26,24 +25,32 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.abccash.app.treasury.data.CategorySelection
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.TransactionType
-import com.abccash.app.treasury.data.defaultDateForMonth
-import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
 
-private val FormBackground = Color(0xFFFAF9F6)
+private val FormBackground = Color.White
 private val FieldBackground = Color.White
 private val FieldBorder = Color(0xFFE8E4DD)
+
+private enum class PaymentChannel {
+    BANK,
+    CASH;
+
+    fun toPaymentMethod(): PaymentMethod = when (this) {
+        BANK -> PaymentMethod.TRANSFER
+        CASH -> PaymentMethod.CASH
+    }
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -56,6 +63,7 @@ fun NewTransactionScreen(
     onBack: () -> Unit,
     onSaveIncome: (
         clientName: String,
+        clientContactId: String?,
         amount: Double,
         date: LocalDate,
         category: RevenueCategory,
@@ -75,43 +83,50 @@ fun NewTransactionScreen(
         recurrenceEndDate: LocalDate?,
         isPaid: Boolean,
         paymentMethod: PaymentMethod,
+        note: String,
         onResult: (String?) -> Unit
     ) -> Unit
 ) {
-    val defaultDate = remember(selectedMonth) { defaultDateForMonth(selectedMonth) }
-    val isIncome = type == TransactionType.INCOME
-    val scope = rememberCoroutineScope()
+    @Suppress("UNUSED_PARAMETER")
+    val unusedMonth = selectedMonth
+    @Suppress("UNUSED_PARAMETER")
+    val unusedCustomIncome = customIncomeCategories
+    @Suppress("UNUSED_PARAMETER")
+    val unusedCustomExpense = customExpenseCategories
+    @Suppress("UNUSED_PARAMETER")
+    val unusedForecastMode = forecastMode
 
-    val categoryOptions = if (isIncome) {
-        incomeCategoryOptions(customIncomeCategories)
-    } else {
-        expenseCategoryOptions(customExpenseCategories)
-    }
-    val defaultCategoryLabel = categoryOptions.firstOrNull().orEmpty()
+    val isIncome = type == TransactionType.INCOME
+    val today = remember { LocalDate.now() }
+
+    val incomeOptions = defaultIncomeFormOptions()
+    val expenseOptions = defaultExpenseFormOptions()
 
     var amountText by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
-    var note by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(defaultDate) }
-    var revenueCategory by remember { mutableStateOf(RevenueCategory.OTHER) }
-    var expenseCategory by remember { mutableStateOf(ExpenseCategory.OTHER) }
-    var selectedCategoryLabel by remember(type, defaultCategoryLabel) {
-        mutableStateOf(defaultCategoryLabel)
-    }
-    var markAsCollected by remember(forecastMode) { mutableStateOf(!forecastMode) }
-    var isPaid by remember(forecastMode) { mutableStateOf(!forecastMode) }
-    var paymentMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    var date by remember { mutableStateOf(LocalDate.now()) }
+    var selectedIncomeCategory by remember { mutableStateOf(RevenueCategory.SERVICE) }
+    var selectedExpenseCategory by remember { mutableStateOf(ExpenseCategory.TAXES) }
+    var paymentChannel by remember { mutableStateOf(PaymentChannel.BANK) }
     var isRecurring by remember { mutableStateOf(false) }
     var selectedRecurrence by remember { mutableStateOf(ExpenseRecurrence.MONTHLY) }
     var showRecurrenceMenu by remember { mutableStateOf(false) }
     var hasRecurrenceEnd by remember { mutableStateOf(false) }
-    var recurrenceEndDate by remember(selectedMonth) { mutableStateOf(selectedMonth.atEndOfMonth()) }
-    var showRevenueMenu by remember { mutableStateOf(false) }
-    var showExpenseMenu by remember { mutableStateOf(false) }
+    var recurrenceEndDate by remember { mutableStateOf(LocalDate.now().plusMonths(6)) }
+    var showIncomeCategoryMenu by remember { mutableStateOf(false) }
+    var showExpenseCategoryMenu by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     var isSaving by remember { mutableStateOf(false) }
     val amountFocus = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
+
+    val incomeCategoryLabel = incomeOptions.firstOrNull { it.value == selectedIncomeCategory }
+        ?.let { stringResource(it.labelRes) }.orEmpty()
+    val expenseCategoryLabel = expenseOptions.firstOrNull { it.value == selectedExpenseCategory }
+        ?.let { stringResource(it.labelRes) }.orEmpty()
+
+    val isForecastDate = date.isAfter(today)
+    val isRealized = !isForecastDate
 
     val (scanState, scanActions) = rememberReceiptScan(snackbarHostState) { result ->
         result.amount?.let { amount ->
@@ -133,14 +148,15 @@ fun NewTransactionScreen(
     val endDateAfterExpenseError = stringResource(R.string.end_date_after_expense)
     val amountLabel = stringResource(R.string.amount)
     val dateLabel = stringResource(R.string.date)
-    val clientLabel = stringResource(R.string.client)
-    val supplierLabel = stringResource(R.string.supplier)
-    val clientPlaceholder = stringResource(R.string.client_placeholder)
-    val supplierPlaceholder = stringResource(R.string.supplier_placeholder)
-    val incomeCategoryLabel = stringResource(R.string.income_category)
-    val expenseCategoryLabel = stringResource(R.string.expense_category)
-    val noteLabel = stringResource(R.string.note_optional)
-    val notePlaceholder = stringResource(R.string.note_placeholder)
+    val titleLabel = stringResource(R.string.label)
+    val incomeCategoryField = stringResource(R.string.income_category)
+    val expenseCategoryField = stringResource(R.string.expense_category)
+    val labelPlaceholder = if (isIncome) {
+        stringResource(R.string.label_placeholder_income)
+    } else {
+        stringResource(R.string.label_placeholder_expense)
+    }
+    val paymentMethodLabel = stringResource(R.string.payment_method)
 
     LaunchedEffect(Unit) {
         amountFocus.requestFocus()
@@ -171,7 +187,7 @@ fun NewTransactionScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = type.localizedTitle(forecastMode),
+                        text = type.localizedTitle(),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A1A1A)
@@ -188,22 +204,20 @@ fun NewTransactionScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
-            if (!isIncome) {
-                ReceiptScanPlaceholder(
-                    isScanning = scanState.isScanning,
-                    onClick = scanActions.onOpenSourcePicker
-                )
-                scanState.successMessage?.let { ReceiptScanSuccessBanner(it) }
-            }
-
-            FormLabeledField(
+            LargeAmountField(
                 label = amountLabel,
                 value = amountText,
                 onValueChange = { amountText = it },
-                leadingIcon = Icons.Default.Euro,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 modifier = Modifier.focusRequester(amountFocus),
                 suffix = appCurrencySymbol()
+            )
+
+            FormLabeledField(
+                label = titleLabel,
+                value = label,
+                onValueChange = { label = it },
+                leadingIcon = Icons.Default.Label,
+                placeholder = labelPlaceholder
             )
 
             TreasuryDateField(
@@ -212,60 +226,61 @@ fun NewTransactionScreen(
                 onDateChange = { date = it }
             )
 
-            FormLabeledField(
-                label = if (isIncome) clientLabel else supplierLabel,
-                value = label,
-                onValueChange = { label = it },
-                leadingIcon = if (isIncome) Icons.Default.Person else Icons.Default.Store,
-                placeholder = if (isIncome) clientPlaceholder else supplierPlaceholder
-            )
-
-            CategoryDropdownField(
-                label = if (isIncome) incomeCategoryLabel else expenseCategoryLabel,
-                value = selectedCategoryLabel,
-                expanded = if (isIncome) showRevenueMenu else showExpenseMenu,
-                onExpandedChange = { expanded ->
-                    if (isIncome) showRevenueMenu = expanded else showExpenseMenu = expanded
+            Text(
+                text = if (isForecastDate) {
+                    stringResource(R.string.transaction_date_forecast_hint)
+                } else {
+                    stringResource(R.string.transaction_date_real_hint)
                 },
-                options = categoryOptions,
-                onSelect = { selected ->
-                    selectedCategoryLabel = selected
-                    if (isIncome) {
-                        val resolved = CategorySelection.resolveIncome(
-                            selected,
-                            customIncomeCategories
-                        )
-                        revenueCategory = resolved.revenueCategory ?: RevenueCategory.OTHER
-                        showRevenueMenu = false
-                    } else {
-                        val resolved = CategorySelection.resolveExpense(
-                            selected,
-                            customExpenseCategories
-                        )
-                        expenseCategory = resolved.expenseCategory ?: ExpenseCategory.OTHER
-                        showExpenseMenu = false
-                    }
-                }
+                fontSize = 12.sp,
+                color = if (isForecastDate) Color(0xFFFF9800) else Color(0xFF64748B),
+                lineHeight = 16.sp
             )
 
-            if (categoryOptions.isEmpty()) {
+            if (isIncome) {
+                EnumCategoryDropdownField(
+                    label = incomeCategoryField,
+                    value = incomeCategoryLabel,
+                    expanded = showIncomeCategoryMenu,
+                    onExpandedChange = { showIncomeCategoryMenu = it },
+                    options = incomeOptions.map { stringResource(it.labelRes) },
+                    onSelect = { index ->
+                        incomeOptions.getOrNull(index)?.let { option ->
+                            selectedIncomeCategory = option.value
+                        }
+                        showIncomeCategoryMenu = false
+                    }
+                )
+            } else {
+                EnumCategoryDropdownField(
+                    label = expenseCategoryField,
+                    value = expenseCategoryLabel,
+                    expanded = showExpenseCategoryMenu,
+                    onExpandedChange = { showExpenseCategoryMenu = it },
+                    options = expenseOptions.map { stringResource(it.labelRes) },
+                    onSelect = { index ->
+                        expenseOptions.getOrNull(index)?.let { option ->
+                            selectedExpenseCategory = option.value
+                        }
+                        showExpenseCategoryMenu = false
+                    }
+                )
+            }
+
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringResource(R.string.add_category_in_settings),
+                    paymentMethodLabel,
                     fontSize = 13.sp,
-                    color = Color(0xFFFF9800)
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF64748B)
+                )
+                BankCashPaymentChips(
+                    selected = paymentChannel,
+                    onSelect = { paymentChannel = it }
                 )
             }
 
             if (!isIncome) {
-                FormLabeledField(
-                    label = noteLabel,
-                    value = note,
-                    onValueChange = { note = it },
-                    leadingIcon = Icons.Default.Category,
-                    placeholder = notePlaceholder,
-                    singleLine = false,
-                    minLines = 2
-                )
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically
@@ -332,126 +347,125 @@ fun NewTransactionScreen(
                         }
                     }
                 }
-                Row(
+
+                OutlinedButton(
+                    onClick = scanActions.onOpenSourcePicker,
+                    enabled = !scanState.isScanning,
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    shape = RoundedCornerShape(12.dp),
+                    border = BorderStroke(1.dp, FieldBorder)
                 ) {
-                    Text(
-                        text = if (isPaid) {
-                            stringResource(R.string.already_paid_expense)
-                        } else {
-                            stringResource(R.string.upcoming_forecast)
-                        },
-                        fontSize = 14.sp
-                    )
-                    Switch(checked = isPaid, onCheckedChange = { isPaid = it })
+                    if (scanState.isScanning) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(R.string.reading_receipt))
+                    } else {
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text(
+                            if (scanState.lastScannedUri != null) {
+                                stringResource(R.string.receipt_attached)
+                            } else {
+                                stringResource(R.string.attach_receipt)
+                            }
+                        )
+                    }
                 }
-                if (isPaid) {
-                    TreasuryPaymentMethodField(
-                        selectedMethod = paymentMethod,
-                        onMethodChange = { paymentMethod = it }
-                    )
-                }
-            } else {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Checkbox(checked = markAsCollected, onCheckedChange = { markAsCollected = it })
-                    Text(
-                        text = if (forecastMode) {
-                            stringResource(R.string.already_collected)
-                        } else {
-                            stringResource(R.string.fully_collected)
-                        },
-                        fontSize = 14.sp
-                    )
-                }
-                if (markAsCollected) {
-                    TreasuryPaymentMethodField(
-                        selectedMethod = paymentMethod,
-                        onMethodChange = { paymentMethod = it }
-                    )
-                }
+                scanState.successMessage?.let { ReceiptScanSuccessBanner(it) }
             }
 
             saveError?.let { Text(it, color = Color(0xFFF44336), fontSize = 13.sp) }
 
-            OutlinedButton(
-                onClick = {
-                    val amount = amountText.replace(" ", "").replace(",", ".").toDoubleOrNull()
-                    val finalLabel = if (!isIncome && note.isNotBlank()) "$label — $note" else label
-                    when {
-                        amount == null || amount <= 0 -> saveError = invalidAmountError
-                        label.isBlank() -> saveError = labelRequiredError
-                        selectedCategoryLabel.isBlank() -> saveError = categoryRequiredError
-                        !isIncome && isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(date) ->
-                            saveError = endDateAfterExpenseError
-                        else -> {
-                            saveError = null
-                            isSaving = true
-                            if (isIncome) {
-                                val resolved = CategorySelection.resolveIncome(
-                                    selectedCategoryLabel,
-                                    customIncomeCategories
-                                )
-                                onSaveIncome(
-                                    finalLabel,
-                                    amount,
-                                    date,
-                                    resolved.revenueCategory ?: RevenueCategory.OTHER,
-                                    resolved.customLabel.orEmpty(),
-                                    markAsCollected,
-                                    paymentMethod
-                                ) { error ->
-                                    isSaving = false
-                                    if (error == null) onBack() else saveError = error
-                                }
-                            } else {
-                                val resolved = CategorySelection.resolveExpense(
-                                    selectedCategoryLabel,
-                                    customExpenseCategories
-                                )
-                                onSaveExpense(
-                                    finalLabel,
-                                    amount,
-                                    date,
-                                    resolved.expenseCategory ?: ExpenseCategory.OTHER,
-                                    resolved.customLabel.orEmpty(),
-                                    isRecurring,
-                                    if (isRecurring) selectedRecurrence else null,
-                                    if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
-                                    isPaid,
-                                    paymentMethod
-                                ) { error ->
-                                    isSaving = false
-                                    if (error == null) onBack() else saveError = error
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    enabled = !isSaving,
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+
+                Button(
+                    onClick = {
+                        val amount = amountText.replace(" ", "").replace(",", ".").toDoubleOrNull()
+                        when {
+                            amount == null || amount <= 0 -> saveError = invalidAmountError
+                            label.isBlank() -> saveError = labelRequiredError
+                            !isIncome && isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(date) ->
+                                saveError = endDateAfterExpenseError
+                            else -> {
+                                saveError = null
+                                isSaving = true
+                                val method = paymentChannel.toPaymentMethod()
+                                if (isIncome) {
+                                    onSaveIncome(
+                                        label.trim(),
+                                        null,
+                                        amount,
+                                        date,
+                                        selectedIncomeCategory,
+                                        "",
+                                        isRealized,
+                                        method
+                                    ) { error ->
+                                        isSaving = false
+                                        if (error == null) onBack() else saveError = error
+                                    }
+                                } else {
+                                    onSaveExpense(
+                                        label.trim(),
+                                        amount,
+                                        date,
+                                        selectedExpenseCategory,
+                                        "",
+                                        isRecurring,
+                                        if (isRecurring) selectedRecurrence else null,
+                                        if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
+                                        isRealized,
+                                        method,
+                                        ""
+                                    ) { error ->
+                                        isSaving = false
+                                        if (error == null) onBack() else saveError = error
+                                    }
                                 }
                             }
                         }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(50.dp),
+                    enabled = !isSaving,
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))
+                ) {
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = Color.White
+                        )
+                    } else {
+                        Text(
+                            text = if (isIncome) {
+                                stringResource(R.string.save_invoice)
+                            } else {
+                                stringResource(R.string.save_expense)
+                            },
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                enabled = !isSaving,
-                shape = RoundedCornerShape(12.dp),
-                border = BorderStroke(1.5.dp, Color(0xFF1A1A1A))
-            ) {
-                if (isSaving) {
-                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
-                } else {
-                    Text(
-                        text = if (isIncome) {
-                            stringResource(R.string.save_invoice)
-                        } else {
-                            stringResource(R.string.save_expense)
-                        },
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color(0xFF1A1A1A)
-                    )
                 }
             }
 
@@ -470,7 +484,90 @@ fun NewTransactionScreen(
 }
 
 @Composable
-private fun ReceiptScanPlaceholder(
+private fun LargeAmountField(
+    label: String,
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    suffix: String? = null
+) {
+    Column(modifier = modifier.fillMaxWidth()) {
+        Text(
+            label,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            color = Color(0xFF64748B),
+            modifier = Modifier.padding(bottom = 6.dp)
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    stringResource(R.string.amount_placeholder),
+                    fontSize = 28.sp,
+                    color = Color(0xFFBDBDBD)
+                )
+            },
+            textStyle = LocalTextStyle.current.copy(
+                fontSize = 32.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            ),
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            leadingIcon = {
+                Icon(Icons.Default.Euro, contentDescription = null, tint = Color(0xFF9E9E9E))
+            },
+            trailingIcon = suffix?.let {
+                {
+                    Text(it, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF64748B))
+                }
+            },
+            shape = RoundedCornerShape(14.dp),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = FieldBackground,
+                unfocusedContainerColor = FieldBackground,
+                focusedBorderColor = FieldBorder,
+                unfocusedBorderColor = FieldBorder
+            )
+        )
+    }
+}
+
+@Composable
+private fun BankCashPaymentChips(
+    selected: PaymentChannel,
+    onSelect: (PaymentChannel) -> Unit
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        FilterChip(
+            selected = selected == PaymentChannel.BANK,
+            onClick = { onSelect(PaymentChannel.BANK) },
+            label = { Text(stringResource(R.string.payment_channel_bank)) },
+            leadingIcon = if (selected == PaymentChannel.BANK) {
+                { Text("🏦", fontSize = 14.sp) }
+            } else {
+                { Text("🏦", fontSize = 14.sp) }
+            },
+            modifier = Modifier.weight(1f)
+        )
+        FilterChip(
+            selected = selected == PaymentChannel.CASH,
+            onClick = { onSelect(PaymentChannel.CASH) },
+            label = { Text(stringResource(R.string.payment_channel_cash)) },
+            leadingIcon = { Text("💵", fontSize = 14.sp) },
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+@Composable
+fun ReceiptScanPlaceholder(
     isScanning: Boolean,
     onClick: () -> Unit
 ) {
@@ -581,13 +678,13 @@ private fun FormLabeledField(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryDropdownField(
+private fun EnumCategoryDropdownField(
     label: String,
     value: String,
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     options: List<String>,
-    onSelect: (String) -> Unit
+    onSelect: (Int) -> Unit
 ) {
     Column(modifier = Modifier.fillMaxWidth()) {
         Text(label, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Color(0xFF64748B), modifier = Modifier.padding(bottom = 6.dp))
@@ -608,8 +705,8 @@ private fun CategoryDropdownField(
                 )
             )
             ExposedDropdownMenu(expanded = expanded, onDismissRequest = { onExpandedChange(false) }) {
-                options.forEach { option ->
-                    DropdownMenuItem(text = { Text(option) }, onClick = { onSelect(option) })
+                options.forEachIndexed { index, option ->
+                    DropdownMenuItem(text = { Text(option) }, onClick = { onSelect(index) })
                 }
             }
         }
@@ -626,6 +723,8 @@ fun TransactionTypeChoiceSheet(
     onSelectIncome: () -> Unit,
     onSelectExpense: () -> Unit
 ) {
+    @Suppress("UNUSED_PARAMETER")
+    val unused = forecastMode
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 32.dp),
@@ -642,14 +741,7 @@ fun TransactionTypeChoiceSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF4CAF50))
                 ) {
-                    Text(
-                        text = if (forecastMode) {
-                            "➕ ${stringResource(R.string.forecast_income)}"
-                        } else {
-                            "➕ ${stringResource(R.string.new_collection)}"
-                        },
-                        fontSize = 15.sp
-                    )
+                    Text("➕ ${stringResource(R.string.new_collection)}", fontSize = 15.sp)
                 }
             }
             if (canAddExpense) {
@@ -658,14 +750,7 @@ fun TransactionTypeChoiceSheet(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFF44336))
                 ) {
-                    Text(
-                        text = if (forecastMode) {
-                            "➖ ${stringResource(R.string.forecast_expense)}"
-                        } else {
-                            "➖ ${stringResource(R.string.new_expense)}"
-                        },
-                        fontSize = 15.sp
-                    )
+                    Text("➖ ${stringResource(R.string.new_expense)}", fontSize = 15.sp)
                 }
             }
         }

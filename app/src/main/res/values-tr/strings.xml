@@ -13,6 +13,7 @@
     <string name="nav_settings_short">Ayarlar</string>
     <string name="nav_plus">Daha fazla</string>
     <string name="nav_forecasts">Tahminler</string>
+    <string name="nav_forecasts_short">Tahm.</string>
 
     <!-- COMMON -->
     <string name="ok">Tamam</string>
@@ -228,7 +229,6 @@
     <string name="signup_admin_title">Yönetici kaydı</string>
     <string name="signup_admin_subtitle">Şirketinizin yöneticisi olmak için hesabınızı oluşturun</string>
     <string name="signup_create_button">Hesabımı oluştur</string>
-    <string name="signup_admin_note">Otomatik olarak yönetici olarak atanacaksınız</string>
     <string name="your_name">Adınız</string>
     <string name="company_name_placeholder">Şirket adınız</string>
     <string name="email_placeholder">ornek@email.com</string>
@@ -402,6 +402,7 @@
     <string name="payment_check">Çek</string>
     <string name="payment_transfer">Havale</string>
     <string name="payment_cash">Nakit</string>
+    <string name="payment_card">Banka kartı</string>
     <string name="payment_bill">Senet</string>
 
     <!-- RECURRENCE -->
@@ -425,6 +426,7 @@
     <string name="filter_due">Vadesi gelen</string>
     <string name="filter_partial">Kısmi</string>
     <string name="filter_paid">Ödenen</string>
+    <string name="filter_unpaid">Ödenmemiş</string>
     <string name="status_paid">Ödendi</string>
     <string name="status_partial">Kısmi</string>
     <string name="status_due">Vadesi geldi</string>

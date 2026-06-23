@@ -52,13 +52,27 @@ fun Application.configureRouting() {
                     val entrepriseId = call.entrepriseId()
                         ?: return@post call.respond(HttpStatusCode.Unauthorized, ApiError("Unauthorized"))
                     val body = call.receive<SyncPushRequest>()
-                    if (body.users.isNotEmpty() || body.deletedUserIds.isNotEmpty()) {
-                        if (call.userRole() != "ADMIN") {
+                    if (body.deletedUserIds.isNotEmpty() && call.userRole() != "ADMIN") {
+                        return@post call.respond(
+                            HttpStatusCode.Forbidden,
+                            ApiError("Only admin can sync users")
+                        )
+                    }
+                    if (body.users.isNotEmpty() && call.userRole() != "ADMIN") {
+                        val currentUserId = call.userId()
+                            ?: return@post call.respond(HttpStatusCode.Unauthorized, ApiError("Unauthorized"))
+                        if (body.users.any { it.id != currentUserId }) {
                             return@post call.respond(
                                 HttpStatusCode.Forbidden,
-                                ApiError("Only admin can sync users")
+                                ApiError("Only admin can sync other users")
                             )
                         }
+                    }
+                    if (body.entreprise != null && call.userRole() != "ADMIN") {
+                        return@post call.respond(
+                            HttpStatusCode.Forbidden,
+                            ApiError("Only admin can sync company profile")
+                        )
                     }
                     val error = syncService.push(entrepriseId, body)
                     if (error != null) {

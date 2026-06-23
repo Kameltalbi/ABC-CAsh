@@ -80,8 +80,8 @@ class DashboardCalculationsTest {
         assertEquals(80.0, data.expensePaidTotal, 0.01)
         assertEquals(40.0, data.expensePendingTotal, 0.01)
         assertEquals(120.0, data.expenseTotal, 0.01)
-        assertEquals(220.0, data.calculatedBalance, 0.01)
-        assertEquals(220.0, data.displayBalance, 0.01)
+        assertEquals(180.0, data.calculatedBalance, 0.01)
+        assertEquals(180.0, data.displayBalance, 0.01)
         assertTrue(!data.balanceFromBank)
     }
 
@@ -221,7 +221,7 @@ class DashboardCalculationsTest {
                         invoiceId = id,
                         amount = paid,
                         date = paymentDate,
-                        method = PaymentMethod.CASH
+                        method = PaymentMethod.TRANSFER
                     )
                 )
             } else {

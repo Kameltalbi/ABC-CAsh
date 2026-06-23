@@ -7,7 +7,9 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import com.abccash.app.BuildConfig
+import com.abccash.app.treasury.data.DocumentPdfTemplate
+import com.abccash.app.treasury.data.InvoiceSettings
+import com.abccash.app.treasury.data.OtherTaxMode
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import kotlinx.coroutines.flow.Flow
@@ -25,31 +27,28 @@ object UserPreferencesKeys {
     val USER_PERMISSIONS = stringPreferencesKey("user_permissions")
     val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     val ONBOARDING_ADMIN_VU = booleanPreferencesKey("onboarding_admin_vu")
-    val AUTH_TOKEN = stringPreferencesKey("auth_token")
-    val API_BASE_URL = stringPreferencesKey("api_base_url")
-    val LAST_SYNC_AT = stringPreferencesKey("last_sync_at")
-    val SYNC_ENABLED = booleanPreferencesKey("sync_enabled")
-    val PENDING_DELETED_USER_IDS = stringPreferencesKey("pending_deleted_user_ids")
+    val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
+    val GOOGLE_LAST_BACKUP_AT = stringPreferencesKey("google_last_backup_at")
 }
 
 class UserPreferences(private val context: Context) {
-    
+
     val isLoggedIn: Flow<Boolean> = context.userDataStore.data
         .map { preferences ->
             preferences[UserPreferencesKeys.IS_LOGGED_IN] ?: false
         }
-    
+
     val isAdmin: Flow<Boolean> = context.userDataStore.data
         .map { preferences ->
             val role = preferences[UserPreferencesKeys.USER_ROLE]
             role == UserRole.ADMIN.name
         }
-    
+
     val onboardingAdminVu: Flow<Boolean> = context.userDataStore.data
         .map { preferences ->
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] ?: false
         }
-    
+
     val currentUserId: Flow<String?> = context.userDataStore.data
         .map { preferences ->
             preferences[UserPreferencesKeys.USER_ID]
@@ -59,7 +58,7 @@ class UserPreferences(private val context: Context) {
         .map { preferences ->
             preferences[UserPreferencesKeys.USER_ENTREPRISE_ID]
         }
-    
+
     val currentPermissions: Flow<Set<UserPermission>> = context.userDataStore.data
         .map { preferences ->
             preferences[UserPreferencesKeys.USER_PERMISSIONS]
@@ -70,61 +69,32 @@ class UserPreferences(private val context: Context) {
                 ?: emptySet()
         }
 
-    val isSyncEnabled: Flow<Boolean> = context.userDataStore.data
-        .map { preferences -> preferences[UserPreferencesKeys.SYNC_ENABLED] ?: true }
+    val googleAccountEmail: Flow<String?> = context.userDataStore.data
+        .map { preferences -> preferences[UserPreferencesKeys.GOOGLE_ACCOUNT_EMAIL] }
 
-    suspend fun getApiBaseUrl(): String = BuildConfig.API_BASE_URL
+    val googleLastBackupAt: Flow<String?> = context.userDataStore.data
+        .map { preferences -> preferences[UserPreferencesKeys.GOOGLE_LAST_BACKUP_AT] }
 
-    suspend fun setApiBaseUrl(@Suppress("UNUSED_PARAMETER") url: String) {
-        // Server URL is fixed in the app build — not user-configurable.
-    }
-
-    suspend fun setSyncEnabled(enabled: Boolean) {
+    suspend fun saveGoogleAccount(email: String?) {
         context.userDataStore.edit { preferences ->
-            preferences[UserPreferencesKeys.SYNC_ENABLED] = enabled
+            if (email.isNullOrBlank()) {
+                preferences.remove(UserPreferencesKeys.GOOGLE_ACCOUNT_EMAIL)
+            } else {
+                preferences[UserPreferencesKeys.GOOGLE_ACCOUNT_EMAIL] = email
+            }
         }
     }
 
-    suspend fun saveAuthToken(token: String) {
+    suspend fun setGoogleLastBackupAt(isoInstant: String) {
         context.userDataStore.edit { preferences ->
-            preferences[UserPreferencesKeys.AUTH_TOKEN] = token
+            preferences[UserPreferencesKeys.GOOGLE_LAST_BACKUP_AT] = isoInstant
         }
     }
 
-    suspend fun getAuthToken(): String? =
-        context.userDataStore.data.first()[UserPreferencesKeys.AUTH_TOKEN]
-
-    suspend fun getLastSyncAt(): String? =
-        context.userDataStore.data.first()[UserPreferencesKeys.LAST_SYNC_AT]
-
-    suspend fun setLastSyncAt(isoInstant: String) {
+    suspend fun clearGoogleAccount() {
         context.userDataStore.edit { preferences ->
-            preferences[UserPreferencesKeys.LAST_SYNC_AT] = isoInstant
-        }
-    }
-
-    suspend fun getPendingDeletedUserIds(): List<String> =
-        context.userDataStore.data.first()[UserPreferencesKeys.PENDING_DELETED_USER_IDS]
-            ?.split(',')
-            ?.filter { it.isNotBlank() }
-            ?: emptyList()
-
-    suspend fun addPendingDeletedUserId(userId: String) {
-        if (userId.isBlank()) return
-        context.userDataStore.edit { preferences ->
-            val current = preferences[UserPreferencesKeys.PENDING_DELETED_USER_IDS]
-                ?.split(',')
-                ?.filter { it.isNotBlank() }
-                ?.toMutableSet()
-                ?: mutableSetOf()
-            current.add(userId)
-            preferences[UserPreferencesKeys.PENDING_DELETED_USER_IDS] = current.joinToString(",")
-        }
-    }
-
-    suspend fun clearPendingDeletedUserIds() {
-        context.userDataStore.edit { preferences ->
-            preferences.remove(UserPreferencesKeys.PENDING_DELETED_USER_IDS)
+            preferences.remove(UserPreferencesKeys.GOOGLE_ACCOUNT_EMAIL)
+            preferences.remove(UserPreferencesKeys.GOOGLE_LAST_BACKUP_AT)
         }
     }
 
@@ -149,13 +119,13 @@ class UserPreferences(private val context: Context) {
             }
         }
     }
-    
+
     suspend fun setOnboardingAdminVu(vu: Boolean = true) {
         context.userDataStore.edit { preferences ->
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = vu
         }
     }
-    
+
     suspend fun updateProfileSession(nom: String, email: String) {
         context.userDataStore.edit { preferences ->
             preferences[UserPreferencesKeys.USER_NOM] = nom
@@ -172,11 +142,16 @@ class UserPreferences(private val context: Context) {
             preferences.remove(UserPreferencesKeys.USER_ROLE)
             preferences.remove(UserPreferencesKeys.USER_ENTREPRISE_ID)
             preferences.remove(UserPreferencesKeys.USER_PERMISSIONS)
-            preferences.remove(UserPreferencesKeys.AUTH_TOKEN)
             preferences[UserPreferencesKeys.IS_LOGGED_IN] = false
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = onboardingVu
         }
     }
+
+    suspend fun readLoggedIn(): Boolean =
+        context.userDataStore.data.first()[UserPreferencesKeys.IS_LOGGED_IN] ?: false
+
+    suspend fun readSessionUserId(): String? =
+        context.userDataStore.data.first()[UserPreferencesKeys.USER_ID]
 
     fun observeBankBalance(entrepriseId: String, year: Int): Flow<Double?> =
         context.userDataStore.data.map { preferences ->
@@ -193,7 +168,55 @@ class UserPreferences(private val context: Context) {
             }
         }
     }
+
+    fun observeInvoiceSettings(entrepriseId: String): Flow<InvoiceSettings> =
+        context.userDataStore.data.map { preferences ->
+            InvoiceSettings(
+                prefix = preferences[invoicePrefixKey(entrepriseId)] ?: "FAC-",
+                quotePrefix = preferences[quotePrefixKey(entrepriseId)] ?: "DEV-",
+                tvaRate = preferences[invoiceTvaKey(entrepriseId)]?.toDoubleOrNull() ?: 19.0,
+                otherTaxRate = preferences[invoiceOtherTaxKey(entrepriseId)]?.toDoubleOrNull() ?: 0.0,
+                otherTaxMode = OtherTaxMode.fromName(preferences[invoiceOtherTaxModeKey(entrepriseId)]),
+                otherTaxLabel = preferences[invoiceOtherTaxLabelKey(entrepriseId)] ?: "",
+                pdfTemplate = DocumentPdfTemplate.fromName(preferences[invoicePdfTemplateKey(entrepriseId)])
+            )
+        }
+
+    suspend fun saveInvoiceSettings(entrepriseId: String, settings: InvoiceSettings) {
+        context.userDataStore.edit { preferences ->
+            preferences[invoicePrefixKey(entrepriseId)] = settings.prefix.trim().ifBlank { "FAC-" }
+            preferences[quotePrefixKey(entrepriseId)] = settings.quotePrefix.trim().ifBlank { "DEV-" }
+            preferences[invoiceTvaKey(entrepriseId)] = settings.tvaRate.toString()
+            preferences[invoiceOtherTaxKey(entrepriseId)] = settings.otherTaxRate.toString()
+            preferences[invoiceOtherTaxModeKey(entrepriseId)] = settings.otherTaxMode.name
+            preferences[invoiceOtherTaxLabelKey(entrepriseId)] = settings.otherTaxLabel.trim()
+            preferences[invoicePdfTemplateKey(entrepriseId)] = settings.pdfTemplate.name
+        }
+    }
+
 }
 
 private fun bankBalanceKey(entrepriseId: String, year: Int) =
     stringPreferencesKey("bank_balance_${entrepriseId}_$year")
+
+private fun invoicePrefixKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_prefix_$entrepriseId")
+
+private fun quotePrefixKey(entrepriseId: String) =
+    stringPreferencesKey("quote_prefix_$entrepriseId")
+
+private fun invoiceTvaKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_tva_$entrepriseId")
+
+private fun invoiceOtherTaxKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_other_tax_$entrepriseId")
+
+private fun invoiceOtherTaxModeKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_other_tax_mode_$entrepriseId")
+
+private fun invoiceOtherTaxLabelKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_other_tax_label_$entrepriseId")
+
+private fun invoicePdfTemplateKey(entrepriseId: String) =
+    stringPreferencesKey("invoice_pdf_template_$entrepriseId")
+

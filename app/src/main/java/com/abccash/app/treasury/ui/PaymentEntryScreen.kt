@@ -36,7 +36,7 @@ fun PaymentEntryScreen(
 ) {
     var paymentAmount by remember { mutableStateOf("") }
     var selectedDate by remember { mutableStateOf(LocalDate.now()) }
-    var selectedMethod by remember { mutableStateOf(PaymentMethod.CASH) }
+    var selectedMethod by remember { mutableStateOf(PaymentMethod.CREDIT_CARD) }
     var showDatePicker by remember { mutableStateOf(false) }
     var paymentError by remember { mutableStateOf<String?>(null) }
     val datePickerState = rememberDatePickerState(

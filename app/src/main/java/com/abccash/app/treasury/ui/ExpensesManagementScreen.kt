@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.ExpenseRecurrence
+import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.forMonth
@@ -44,7 +45,7 @@ fun ExpensesManagementScreen(
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
     onNavigateToAddExpense: () -> Unit,
-    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean) -> Unit,
+    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
     onDeleteExpense: (String) -> Unit,
     onDeleteExpenses: (Collection<String>) -> Unit = {}
@@ -53,7 +54,7 @@ fun ExpensesManagementScreen(
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(Color(0xFFF5F5F5)),
+                .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
             Card(
@@ -106,14 +107,13 @@ fun ExpensesManagementScreen(
     val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
 
     Scaffold(
+        containerColor = Color.White,
         floatingActionButton = {
             if (canManage) {
-                FloatingActionButton(
+                AbcCashFab(
                     onClick = onNavigateToAddExpense,
-                    containerColor = MaterialTheme.colorScheme.primary
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add_expense), tint = Color.White)
-                }
+                    contentDescription = stringResource(R.string.add_expense)
+                )
             }
         }
     ) { paddingValues ->
@@ -201,8 +201,8 @@ fun ExpensesManagementScreen(
             initialExpense = expense,
             selectedMonth = selectedMonth,
             onDismiss = { expenseToEdit = null },
-            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid ->
-                onUpdateExpense(expense.id, label, amount, date, recurring, recurrence, endDate, paid)
+            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod ->
+                onUpdateExpense(expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod)
                 expenseToEdit = null
             },
             onStopRecurrence = { endDate ->
@@ -274,7 +274,7 @@ internal fun ExpenseFormDialog(
     initialExpense: Expense,
     selectedMonth: YearMonth,
     onDismiss: () -> Unit,
-    onConfirm: (String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean) -> Unit,
+    onConfirm: (String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
     onStopRecurrence: (LocalDate) -> Unit
 ) {
     var expenseLabel by remember(initialExpense) { mutableStateOf(initialExpense.label) }
@@ -294,6 +294,9 @@ internal fun ExpenseFormDialog(
         )
     }
     var isPaid by remember(initialExpense) { mutableStateOf(initialExpense.isPaid) }
+    var selectedPaymentMethod by remember(initialExpense) {
+        mutableStateOf(initialExpense.paymentMethod ?: PaymentMethod.CREDIT_CARD)
+    }
     val parsedAmount = expenseAmount.replace(",", ".").toDoubleOrNull()
     val dateLabel = stringResource(R.string.date)
     val recurrenceEndLabel = stringResource(R.string.recurrence_end)
@@ -322,6 +325,10 @@ internal fun ExpenseFormDialog(
                     label = dateLabel,
                     date = expenseDate,
                     onDateChange = { expenseDate = it }
+                )
+                TreasuryPaymentMethodField(
+                    selectedMethod = selectedPaymentMethod,
+                    onMethodChange = { selectedPaymentMethod = it }
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Checkbox(
@@ -427,7 +434,8 @@ internal fun ExpenseFormDialog(
                         isRecurring,
                         selectedRecurrence,
                         if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
-                        isPaid
+                        isPaid,
+                        selectedPaymentMethod
                     )
                 },
                 enabled = expenseLabel.isNotBlank() &&
@@ -553,7 +561,7 @@ fun ExpenseItem(
                             tint = Color(0xFF9E9E9E)
                         )
                     }
-                    DropdownMenu(
+                    AbcDropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {
@@ -594,7 +602,7 @@ fun ExpenseItem(
                             tint = Color(0xFF9E9E9E)
                         )
                     }
-                    DropdownMenu(
+                    AbcDropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {

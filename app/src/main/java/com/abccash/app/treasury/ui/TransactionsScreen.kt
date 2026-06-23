@@ -14,9 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.FileUpload
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -43,19 +40,20 @@ import com.abccash.app.treasury.data.displayTransactionDate
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.data.occurrenceDateIn
 import com.abccash.app.treasury.data.transactionDateIn
-import kotlinx.coroutines.delay
+import com.abccash.app.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 
 private object TransactionsTheme {
-    val Background = Color(0xFFF5F7FA)
-    val Primary = Color(0xFF1A1A1A)
-    val Income = Color(0xFF22C55E)
-    val Expense = Color(0xFFEF4444)
-    val Muted = Color(0xFF94A3B8)
-    val Divider = Color(0xFFEEEEEE)
-    val ChipInactive = Color(0xFF64748B)
+    val Background = Color.White
+    val Accent = AppColors.BrandBlue
+    val TextPrimary = AppColors.TextPrimary
+    val Income = AppColors.IncomeGreen
+    val Expense = AppColors.ExpenseRed
+    val Muted = AppColors.TextSecondary
+    val Divider = AppColors.Border
+    val ChipInactive = AppColors.TextSecondary
 }
 
 private data class TransactionRow(
@@ -66,25 +64,19 @@ private data class TransactionRow(
     val isIncome: Boolean get() = invoice != null
 
     fun amountValue(): Double = invoice?.totalAmount ?: expense?.amount ?: 0.0
+
+    fun isUnpaid(): Boolean = when {
+        invoice != null -> invoice.status != InvoiceStatus.PAID
+        expense != null -> !expense.isPaid
+        else -> false
+    }
 }
 
-private enum class TransactionTypeFilter(@StringRes val labelRes: Int) {
+private enum class TransactionListFilter(@StringRes val labelRes: Int) {
     ALL(R.string.filter_all),
     INCOME(R.string.income_title),
-    EXPENSE(R.string.expense_title)
-}
-
-private enum class TransactionStatusFilter(@StringRes val labelRes: Int) {
-    ALL(R.string.filter_all),
-    DUE(R.string.filter_due),
-    PARTIAL(R.string.filter_partial),
-    PAID(R.string.filter_paid)
-}
-
-private enum class TransactionSort(@StringRes val labelRes: Int) {
-    DATE(R.string.transactions_sort_date),
-    AMOUNT_DESC(R.string.transactions_sort_amount_desc),
-    AMOUNT_ASC(R.string.transactions_sort_amount_asc)
+    EXPENSE(R.string.expense_title),
+    UNPAID(R.string.filter_unpaid)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -96,18 +88,18 @@ fun TransactionsScreen(
     expenses: List<Expense>,
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
-    importFeedback: String? = null,
-    onClearImportFeedback: () -> Unit = {},
-    onNavigateToImport: () -> Unit,
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
     onUpdateInvoice: (String, String, String, Double, LocalDate, (String?) -> Unit) -> Unit,
     onRecordPayment: (String, Double, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit,
-    onDeleteInvoice: (String) -> Unit,
-    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean) -> Unit,
+    onDeleteInvoice: (String, (String?) -> Unit) -> Unit,
+    onDeleteInvoices: (Collection<String>) -> Unit = {},
+    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
     onDeleteExpense: (String) -> Unit,
-    onValidateExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit = { _, _, _, onResult -> onResult(null) }
+    onDeleteExpenses: (Collection<String>) -> Unit = {},
+    onValidateExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit = { _, _, _, onResult -> onResult(null) },
+    onOpenDrawer: () -> Unit = {}
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpense = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
@@ -123,11 +115,7 @@ fun TransactionsScreen(
     }
 
     var showTypeSheet by remember { mutableStateOf(false) }
-    var typeFilter by remember { mutableStateOf(TransactionTypeFilter.ALL) }
-    var statusFilter by remember { mutableStateOf(TransactionStatusFilter.ALL) }
-    var selectedClient by remember { mutableStateOf<String?>(null) }
-    var sortMode by remember { mutableStateOf(TransactionSort.DATE) }
-    var showClientMenu by remember { mutableStateOf(false) }
+    var listFilter by remember { mutableStateOf(TransactionListFilter.ALL) }
 
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var invoiceToDelete by remember { mutableStateOf<Invoice?>(null) }
@@ -138,17 +126,21 @@ fun TransactionsScreen(
     var expenseToValidate by remember { mutableStateOf<Expense?>(null) }
     var paymentError by remember { mutableStateOf<String?>(null) }
     var editError by remember { mutableStateOf<String?>(null) }
-
-    LaunchedEffect(importFeedback) {
-        if (importFeedback != null) {
-            delay(4000)
-            onClearImportFeedback()
-        }
-    }
+    var deleteError by remember { mutableStateOf<String?>(null) }
+    var selectedIncomeIds by remember { mutableStateOf(setOf<String>()) }
+    var selectedExpenseIds by remember { mutableStateOf(setOf<String>()) }
+    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
+    var bulkDeleteIncome by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedMonth) {
-        selectedClient = null
-        statusFilter = TransactionStatusFilter.ALL
+        listFilter = TransactionListFilter.ALL
+        selectedIncomeIds = emptySet()
+        selectedExpenseIds = emptySet()
+    }
+
+    LaunchedEffect(listFilter) {
+        selectedIncomeIds = emptySet()
+        selectedExpenseIds = emptySet()
     }
 
     val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
@@ -175,71 +167,40 @@ fun TransactionsScreen(
         (incomeRows + expenseRows).sortedByDescending { it.date }
     }
 
-    val availableClients = remember(allRows) {
-        allRows.mapNotNull { it.invoice?.clientName }
-            .distinct()
-            .sortedBy { it.lowercase() }
-    }
-
-    val typeFilters = remember(canViewIncome, canManageExpense) {
+    val listFilters = remember(canViewIncome, canManageExpense) {
         buildList {
-            add(TransactionTypeFilter.ALL)
-            if (canViewIncome) add(TransactionTypeFilter.INCOME)
-            if (canManageExpense) add(TransactionTypeFilter.EXPENSE)
+            add(TransactionListFilter.ALL)
+            if (canViewIncome) add(TransactionListFilter.INCOME)
+            if (canManageExpense) add(TransactionListFilter.EXPENSE)
+            add(TransactionListFilter.UNPAID)
         }
     }
 
-    val filteredRows = remember(allRows, typeFilter, statusFilter, selectedClient, sortMode) {
-        var result = allRows
-
-        result = when (typeFilter) {
-            TransactionTypeFilter.ALL -> result
-            TransactionTypeFilter.INCOME -> result.filter { it.isIncome }
-            TransactionTypeFilter.EXPENSE -> result.filter { !it.isIncome }
+    val filteredRows = remember(allRows, listFilter) {
+        val result = when (listFilter) {
+            TransactionListFilter.ALL -> allRows
+            TransactionListFilter.INCOME -> allRows.filter { it.isIncome }
+            TransactionListFilter.EXPENSE -> allRows.filter { !it.isIncome }
+            TransactionListFilter.UNPAID -> allRows.filter { it.isUnpaid() }
         }
-
-        selectedClient?.let { client ->
-            result = result.filter { it.invoice?.clientName == client }
-        }
-
-        if (statusFilter != TransactionStatusFilter.ALL) {
-            result = result.filter { row ->
-                when {
-                    row.invoice != null -> when (statusFilter) {
-                        TransactionStatusFilter.DUE -> row.invoice.status == InvoiceStatus.DUE
-                        TransactionStatusFilter.PARTIAL -> row.invoice.status == InvoiceStatus.PARTIAL
-                        TransactionStatusFilter.PAID -> row.invoice.status == InvoiceStatus.PAID
-                        TransactionStatusFilter.ALL -> true
-                    }
-                    row.expense != null -> when (statusFilter) {
-                        TransactionStatusFilter.PAID -> row.expense.isPaid
-                        TransactionStatusFilter.DUE -> !row.expense.isPaid
-                        TransactionStatusFilter.PARTIAL -> false
-                        TransactionStatusFilter.ALL -> true
-                    }
-                    else -> true
-                }
-            }
-        }
-
-        when (sortMode) {
-            TransactionSort.DATE -> result.sortedByDescending { it.date }
-            TransactionSort.AMOUNT_DESC -> result.sortedByDescending { it.amountValue() }
-            TransactionSort.AMOUNT_ASC -> result.sortedBy { it.amountValue() }
-        }
+        result.sortedByDescending { it.date }
     }
+
+    val incomeRows = remember(filteredRows) { filteredRows.filter { it.isIncome } }
+    val expenseRows = remember(filteredRows) { filteredRows.filter { !it.isIncome } }
+    val showIncomeBulk = listFilter == TransactionListFilter.INCOME && isAdmin && incomeRows.isNotEmpty()
+    val showExpenseBulk = listFilter == TransactionListFilter.EXPENSE &&
+        (isAdmin || canManageExpense) && expenseRows.isNotEmpty()
 
     Scaffold(
         containerColor = TransactionsTheme.Background,
         floatingActionButton = {
             if (canAdd) {
-                FloatingActionButton(
+                AbcCashFab(
                     onClick = { showTypeSheet = true },
-                    containerColor = TransactionsTheme.Primary,
-                    contentColor = Color.White
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.new_transaction))
-                }
+                    contentDescription = stringResource(R.string.new_transaction),
+                    containerColor = TransactionsTheme.Accent
+                )
             }
         }
     ) { padding ->
@@ -251,67 +212,70 @@ fun TransactionsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
+                    .padding(start = 8.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DrawerMenuIconButton(onClick = onOpenDrawer)
+                    Column {
                     Text(
                         text = stringResource(R.string.transactions),
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = TransactionsTheme.Primary
+                        color = TransactionsTheme.TextPrimary
                     )
                     Text(monthLabel, fontSize = 12.sp, color = TransactionsTheme.Muted)
-                }
-                if (isAdmin) {
-                    IconButton(onClick = onNavigateToImport) {
-                        Icon(
-                            Icons.Default.FileUpload,
-                            contentDescription = stringResource(R.string.import_action),
-                            tint = TransactionsTheme.ChipInactive
-                        )
                     }
                 }
             }
 
             MonthSelectorRow(selectedMonth = selectedMonth, onMonthChange = onMonthChange)
 
-            importFeedback?.let {
-                Text(
-                    text = it,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 4.dp),
-                    fontSize = 11.sp,
-                    color = TransactionsTheme.Income
+            TransactionListFilterRow(
+                filters = listFilters,
+                selected = listFilter,
+                onSelect = { listFilter = it }
+            )
+
+            if (showIncomeBulk) {
+                AdminBulkSelectionBar(
+                    totalCount = incomeRows.size,
+                    selectedCount = selectedIncomeIds.size,
+                    onToggleSelectAll = {
+                        selectedIncomeIds = if (selectedIncomeIds.size == incomeRows.size) {
+                            emptySet()
+                        } else {
+                            incomeRows.mapNotNull { it.invoice?.id }.toSet()
+                        }
+                    },
+                    onDeleteSelected = {
+                        bulkDeleteIncome = true
+                        showBulkDeleteConfirm = true
+                    }
                 )
             }
 
-            TransactionTypeTabs(
-                filters = typeFilters,
-                selected = typeFilter,
-                onSelect = { typeFilter = it }
-            )
-
-            TransactionSecondaryFilters(
-                statusFilter = statusFilter,
-                onStatusFilterChange = { statusFilter = it },
-                selectedClient = selectedClient,
-                showClientMenu = showClientMenu,
-                onShowClientMenu = { showClientMenu = it },
-                availableClients = availableClients,
-                onClientSelected = {
-                    selectedClient = it
-                    showClientMenu = false
-                },
-                sortMode = sortMode,
-                onSortClick = {
-                    sortMode = when (sortMode) {
-                        TransactionSort.DATE -> TransactionSort.AMOUNT_DESC
-                        TransactionSort.AMOUNT_DESC -> TransactionSort.AMOUNT_ASC
-                        TransactionSort.AMOUNT_ASC -> TransactionSort.DATE
+            if (showExpenseBulk) {
+                AdminBulkSelectionBar(
+                    totalCount = expenseRows.size,
+                    selectedCount = selectedExpenseIds.size,
+                    onToggleSelectAll = {
+                        selectedExpenseIds = if (selectedExpenseIds.size == expenseRows.size) {
+                            emptySet()
+                        } else {
+                            expenseRows.mapNotNull { it.expense?.id }.toSet()
+                        }
+                    },
+                    onDeleteSelected = {
+                        bulkDeleteIncome = false
+                        showBulkDeleteConfirm = true
                     }
-                }
-            )
+                )
+            }
 
             if (filteredRows.isEmpty()) {
                 Box(
@@ -343,6 +307,15 @@ fun TransactionsScreen(
                                 datePattern = datePattern,
                                 isAdmin = isAdmin,
                                 canAddPayment = canAddPayment,
+                                showSelection = showIncomeBulk,
+                                isSelected = row.invoice.id in selectedIncomeIds,
+                                onSelectionChange = { selected ->
+                                    selectedIncomeIds = if (selected) {
+                                        selectedIncomeIds + row.invoice.id
+                                    } else {
+                                        selectedIncomeIds - row.invoice.id
+                                    }
+                                },
                                 onMarkPaid = { invoiceToMarkPaid = row.invoice },
                                 onPartialPayment = {
                                     paymentError = null
@@ -357,6 +330,15 @@ fun TransactionsScreen(
                                 datePattern = datePattern,
                                 isAdmin = isAdmin,
                                 canManage = canManageExpense,
+                                showSelection = showExpenseBulk,
+                                isSelected = row.expense.id in selectedExpenseIds,
+                                onSelectionChange = { selected ->
+                                    selectedExpenseIds = if (selected) {
+                                        selectedExpenseIds + row.expense.id
+                                    } else {
+                                        selectedExpenseIds - row.expense.id
+                                    }
+                                },
                                 onEdit = { expenseToEdit = row.expense },
                                 onValidate = { expenseToValidate = row.expense },
                                 onDelete = { expenseToDelete = row.expense }
@@ -452,8 +434,14 @@ fun TransactionsScreen(
             text = { Text(stringResource(R.string.delete_invoice_confirm, invoice.clientName)) },
             confirmButton = {
                 TextButton(onClick = {
-                    onDeleteInvoice(invoice.id)
-                    invoiceToDelete = null
+                    onDeleteInvoice(invoice.id) { error ->
+                        if (error == null) {
+                            invoiceToDelete = null
+                        } else {
+                            deleteError = error
+                            invoiceToDelete = null
+                        }
+                    }
                 }) { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) }
             },
             dismissButton = {
@@ -467,8 +455,8 @@ fun TransactionsScreen(
             initialExpense = expense,
             selectedMonth = selectedMonth,
             onDismiss = { expenseToEdit = null },
-            onConfirm = { label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid ->
-                onUpdateExpense(expense.id, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid)
+            onConfirm = { label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
+                onUpdateExpense(expense.id, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
                 expenseToEdit = null
             },
             onStopRecurrence = { endDate ->
@@ -507,127 +495,67 @@ fun TransactionsScreen(
             }
         )
     }
-}
 
-@Composable
-private fun TransactionTypeTabs(
-    filters: List<TransactionTypeFilter>,
-    selected: TransactionTypeFilter,
-    onSelect: (TransactionTypeFilter) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 10.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        filters.forEach { filter ->
-            val isSelected = filter == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) TransactionsTheme.Primary else Color.Transparent)
-                    .clickable { onSelect(filter) }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(filter.labelRes),
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else TransactionsTheme.ChipInactive,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+    if (showBulkDeleteConfirm) {
+        val count = if (bulkDeleteIncome) selectedIncomeIds.size else selectedExpenseIds.size
+        AlertDialog(
+            onDismissRequest = { showBulkDeleteConfirm = false },
+            title = { Text(stringResource(R.string.delete_selection_question)) },
+            text = { Text(stringResource(R.string.delete_count, count)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        if (bulkDeleteIncome) {
+                            onDeleteInvoices(selectedIncomeIds)
+                            selectedIncomeIds = emptySet()
+                        } else {
+                            onDeleteExpenses(selectedExpenseIds)
+                            selectedExpenseIds = emptySet()
+                        }
+                        showBulkDeleteConfirm = false
+                    }
+                ) {
+                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showBulkDeleteConfirm = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
             }
-        }
+        )
+    }
+
+    deleteError?.let { message ->
+        AlertDialog(
+            onDismissRequest = { deleteError = null },
+            title = { Text(stringResource(R.string.error_generic)) },
+            text = { Text(message) },
+            confirmButton = {
+                TextButton(onClick = { deleteError = null }) {
+                    Text(stringResource(R.string.ok))
+                }
+            }
+        )
     }
 }
 
 @Composable
-private fun TransactionSecondaryFilters(
-    statusFilter: TransactionStatusFilter,
-    onStatusFilterChange: (TransactionStatusFilter) -> Unit,
-    selectedClient: String?,
-    showClientMenu: Boolean,
-    onShowClientMenu: (Boolean) -> Unit,
-    availableClients: List<String>,
-    onClientSelected: (String?) -> Unit,
-    sortMode: TransactionSort,
-    onSortClick: () -> Unit
+private fun TransactionListFilterRow(
+    filters: List<TransactionListFilter>,
+    selected: TransactionListFilter,
+    onSelect: (TransactionListFilter) -> Unit
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        items(
-            listOf(
-                TransactionStatusFilter.ALL,
-                TransactionStatusFilter.DUE,
-                TransactionStatusFilter.PARTIAL,
-                TransactionStatusFilter.PAID
-            )
-        ) { filter ->
+        items(filters) { filter ->
             UnderlineFilterChip(
                 label = stringResource(filter.labelRes),
-                selected = statusFilter == filter && selectedClient == null,
-                onClick = {
-                    onClientSelected(null)
-                    onStatusFilterChange(filter)
-                }
-            )
-        }
-
-        item {
-            Box {
-                UnderlineFilterChip(
-                    label = if (selectedClient != null) {
-                        selectedClient
-                    } else {
-                        stringResource(R.string.client)
-                    },
-                    selected = selectedClient != null,
-                    onClick = { onShowClientMenu(true) }
-                )
-                DropdownMenu(
-                    expanded = showClientMenu,
-                    onDismissRequest = { onShowClientMenu(false) }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text(stringResource(R.string.filter_all)) },
-                        onClick = { onClientSelected(null) }
-                    )
-                    availableClients.forEach { client ->
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    client,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            },
-                            onClick = { onClientSelected(client) }
-                        )
-                    }
-                }
-            }
-        }
-
-        item {
-            UnderlineFilterChip(
-                label = stringResource(sortMode.labelRes),
-                selected = sortMode != TransactionSort.DATE,
-                onClick = onSortClick,
-                trailingIcon = when (sortMode) {
-                    TransactionSort.AMOUNT_DESC -> Icons.Default.KeyboardArrowDown
-                    TransactionSort.AMOUNT_ASC -> Icons.Default.KeyboardArrowUp
-                    TransactionSort.DATE -> null
-                }
+                selected = filter == selected,
+                onClick = { onSelect(filter) }
             )
         }
     }
@@ -637,41 +565,27 @@ private fun TransactionSecondaryFilters(
 private fun UnderlineFilterChip(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
+    onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) TransactionsTheme.Primary else TransactionsTheme.ChipInactive,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            trailingIcon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = if (selected) TransactionsTheme.Primary else TransactionsTheme.ChipInactive
-                )
-            }
-        }
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) TransactionsTheme.Accent else TransactionsTheme.ChipInactive,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
                 .width(if (selected) 24.dp else 0.dp)
                 .height(2.dp)
                 .background(
-                    if (selected) TransactionsTheme.Primary else Color.Transparent,
+                    if (selected) TransactionsTheme.Accent else Color.Transparent,
                     RoundedCornerShape(1.dp)
                 )
         )
@@ -685,6 +599,9 @@ private fun TransactionIncomeLine(
     datePattern: DateTimeFormatter,
     isAdmin: Boolean,
     canAddPayment: Boolean,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
     onMarkPaid: () -> Unit,
     onPartialPayment: () -> Unit,
     onEdit: () -> Unit,
@@ -717,7 +634,10 @@ private fun TransactionIncomeLine(
             invoice.dueDate.format(datePattern)
         ),
         amount = formatAmount(invoice.totalAmount),
-        amountColor = TransactionsTheme.Primary,
+        amountColor = TransactionsTheme.Income,
+        showSelection = showSelection,
+        isSelected = isSelected,
+        onSelectionChange = onSelectionChange,
         showMenu = canUseMenu,
         menuExpanded = showMenu,
         onMenuToggle = { showMenu = it },
@@ -765,6 +685,9 @@ private fun TransactionExpenseLine(
     datePattern: DateTimeFormatter,
     isAdmin: Boolean,
     canManage: Boolean,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
     onEdit: () -> Unit,
     onValidate: () -> Unit,
     onDelete: () -> Unit
@@ -797,6 +720,9 @@ private fun TransactionExpenseLine(
         detail = detail,
         amount = formatAmount(expense.amount),
         amountColor = TransactionsTheme.Expense,
+        showSelection = showSelection,
+        isSelected = isSelected,
+        onSelectionChange = onSelectionChange,
         showMenu = isAdmin || canManage,
         menuExpanded = showMenu,
         onMenuToggle = { showMenu = it },
@@ -817,7 +743,7 @@ private fun TransactionExpenseLine(
                     }
                 )
             }
-            if (isAdmin) {
+            if (isAdmin || canManage) {
                 DropdownMenuItem(
                     text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },
                     onClick = {
@@ -840,6 +766,9 @@ private fun TransactionLineRow(
     detail: String?,
     amount: String,
     amountColor: Color,
+    showSelection: Boolean = false,
+    isSelected: Boolean = false,
+    onSelectionChange: (Boolean) -> Unit = {},
     showMenu: Boolean,
     menuExpanded: Boolean,
     onMenuToggle: (Boolean) -> Unit,
@@ -849,10 +778,16 @@ private fun TransactionLineRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(horizontal = 20.dp, vertical = 11.dp),
+            .padding(horizontal = if (showSelection) 8.dp else 20.dp, vertical = 11.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        if (showSelection) {
+            Checkbox(
+                checked = isSelected,
+                onCheckedChange = onSelectionChange
+            )
+        }
         Box(
             modifier = Modifier
                 .size(38.dp)
@@ -873,7 +808,7 @@ private fun TransactionLineRow(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TransactionsTheme.Primary,
+                color = TransactionsTheme.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -916,7 +851,7 @@ private fun TransactionLineRow(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    DropdownMenu(
+                    AbcDropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { onMenuToggle(false) }
                     ) {

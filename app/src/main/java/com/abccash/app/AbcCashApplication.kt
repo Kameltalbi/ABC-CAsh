@@ -9,9 +9,11 @@ import kotlinx.coroutines.runBlocking
 class AbcCashApplication : Application() {
     override fun onCreate() {
         super.onCreate()
-        runBlocking {
-            val tag = AppSettings(this@AbcCashApplication).getAppLanguageTag()
-            LocaleHelper.apply(tag)
+        runCatching {
+            runBlocking {
+                val tag = AppSettings(this@AbcCashApplication).getAppLanguageTag()
+                LocaleHelper.apply(tag)
+            }
         }
     }
 }

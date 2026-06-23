@@ -13,6 +13,7 @@
     <string name="nav_settings_short">Impost.</string>
     <string name="nav_plus">Altro</string>
     <string name="nav_forecasts">Previsioni</string>
+    <string name="nav_forecasts_short">Prev.</string>
 
     <!-- COMMON -->
     <string name="ok">OK</string>
@@ -228,7 +229,6 @@
     <string name="signup_admin_title">Registrazione amministratore</string>
     <string name="signup_admin_subtitle">Crea il tuo account per diventare amministratore della tua azienda</string>
     <string name="signup_create_button">Crea il mio account</string>
-    <string name="signup_admin_note">Sarai automaticamente designato come amministratore</string>
     <string name="your_name">Il tuo nome</string>
     <string name="company_name_placeholder">Nome della tua azienda</string>
     <string name="email_placeholder">esempio@email.com</string>
@@ -402,6 +402,7 @@
     <string name="payment_check">Assegno</string>
     <string name="payment_transfer">Bonifico</string>
     <string name="payment_cash">Contanti</string>
+    <string name="payment_card">Carta di credito / debito</string>
     <string name="payment_bill">Cambiale</string>
 
     <!-- RECURRENCE -->
@@ -425,6 +426,7 @@
     <string name="filter_due">Scadute</string>
     <string name="filter_partial">Parziali</string>
     <string name="filter_paid">Saldate</string>
+    <string name="filter_unpaid">Da saldare</string>
     <string name="status_paid">Saldato</string>
     <string name="status_partial">Parziale</string>
     <string name="status_due">Scaduto</string>

@@ -1,5 +1,6 @@
 package com.abccash.app.treasury.ui.settings
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -14,6 +15,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -134,83 +136,87 @@ private fun CustomCategoriesScreen(
     }
 
     SettingsDetailScaffold(title = title, onBack = onBack) { padding ->
-        LazyColumn(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp)
+                .padding(horizontal = 16.dp)
         ) {
+            Text(
+                text = stringResource(R.string.custom_categories),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)
+            )
+
             if (entrepriseId.isBlank()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.session_expired),
-                        color = MaterialTheme.colorScheme.error,
-                        fontSize = 14.sp
-                    )
+                Text(
+                    text = stringResource(R.string.session_expired),
+                    color = MaterialTheme.colorScheme.error,
+                    fontSize = 14.sp,
+                    modifier = Modifier.padding(bottom = 8.dp)
+                )
+            }
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                OutlinedTextField(
+                    value = newLabel,
+                    onValueChange = { newLabel = it },
+                    label = { Text(stringResource(R.string.new_category)) },
+                    modifier = Modifier.weight(1f),
+                    singleLine = true,
+                    enabled = entrepriseId.isNotBlank()
+                )
+                IconButton(
+                    onClick = {
+                        val label = newLabel.trim()
+                        if (label.isBlank() || entrepriseId.isBlank()) return@IconButton
+                        scope.launch {
+                            onAdd(entrepriseId, label)
+                            newLabel = ""
+                        }
+                    },
+                    enabled = entrepriseId.isNotBlank() && newLabel.trim().isNotBlank(),
+                    modifier = Modifier.size(40.dp)
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
                 }
             }
 
-            item {
-                Text(
-                    text = stringResource(R.string.custom_categories),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
-            }
+            HorizontalDivider(color = Color(0xFFE5E7EB))
 
             if (customCategories.isEmpty()) {
-                item {
-                    Text(
-                        text = stringResource(R.string.no_custom_categories),
-                        fontSize = 13.sp,
-                        color = Color.Gray
-                    )
-                }
-            }
-
-            items(customCategories, key = { it }) { label ->
-                CategoryRow(
-                    label = label,
-                    onEdit = if (entrepriseId.isNotBlank()) {
-                        { categoryToEdit = label }
-                    } else {
-                        null
-                    },
-                    onDelete = if (entrepriseId.isNotBlank()) {
-                        { categoryToDelete = label }
-                    } else {
-                        null
-                    }
+                Text(
+                    text = stringResource(R.string.no_custom_categories),
+                    fontSize = 13.sp,
+                    color = Color.Gray,
+                    modifier = Modifier.padding(vertical = 12.dp)
                 )
-            }
-
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize()
                 ) {
-                    OutlinedTextField(
-                        value = newLabel,
-                        onValueChange = { newLabel = it },
-                        label = { Text(stringResource(R.string.new_category)) },
-                        modifier = Modifier.weight(1f),
-                        singleLine = true,
-                        enabled = entrepriseId.isNotBlank()
-                    )
-                    IconButton(
-                        onClick = {
-                            val label = newLabel.trim()
-                            if (label.isBlank() || entrepriseId.isBlank()) return@IconButton
-                            scope.launch {
-                                onAdd(entrepriseId, label)
-                                newLabel = ""
+                    items(customCategories, key = { it }) { label ->
+                        CategoryRow(
+                            label = label,
+                            onEdit = if (entrepriseId.isNotBlank()) {
+                                { categoryToEdit = label }
+                            } else {
+                                null
+                            },
+                            onDelete = if (entrepriseId.isNotBlank()) {
+                                { categoryToDelete = label }
+                            } else {
+                                null
                             }
-                        },
-                        enabled = entrepriseId.isNotBlank() && newLabel.trim().isNotBlank()
-                    ) {
-                        Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
+                        )
+                        HorizontalDivider(color = Color(0xFFE5E7EB))
                     }
                 }
             }
@@ -266,35 +272,48 @@ private fun CategoryRow(
     onEdit: (() -> Unit)? = null,
     onDelete: (() -> Unit)? = null
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = Color.White)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = 40.dp)
+            .padding(start = 4.dp, end = 0.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Text(
+            text = label,
+            fontSize = 15.sp,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(start = 14.dp, end = 4.dp, top = 10.dp, bottom = 10.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
+                .weight(1f)
+                .padding(vertical = 8.dp)
+        )
+        Row(
+            horizontalArrangement = Arrangement.End,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(label, fontWeight = FontWeight.Medium, modifier = Modifier.weight(1f))
             if (onEdit != null) {
-                IconButton(onClick = onEdit) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = stringResource(R.string.edit),
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                }
+                Icon(
+                    Icons.Default.Edit,
+                    contentDescription = stringResource(R.string.edit),
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable(onClick = onEdit)
+                        .padding(8.dp)
+                )
             }
             if (onDelete != null) {
-                IconButton(onClick = onDelete) {
-                    Icon(
-                        Icons.Default.Delete,
-                        contentDescription = stringResource(R.string.delete),
-                        tint = Color(0xFFF44336)
-                    )
-                }
+                Icon(
+                    Icons.Default.Delete,
+                    contentDescription = stringResource(R.string.delete),
+                    tint = Color(0xFFF44336),
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clickable(onClick = onDelete)
+                        .padding(8.dp)
+                )
             }
         }
     }

@@ -49,6 +49,9 @@ interface TreasuryDao {
     @Query("SELECT COUNT(*) FROM users")
     suspend fun countUsers(): Int
 
+    @Query("SELECT * FROM users ORDER BY dateInscription ASC LIMIT 1")
+    suspend fun findFirstUser(): UserEntity?
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertInvoice(invoice: InvoiceEntity)
 
@@ -81,6 +84,43 @@ interface TreasuryDao {
 
     @Query("DELETE FROM users WHERE id = :userId")
     suspend fun deleteUserById(userId: String)
+
+    @Query("SELECT invoiceNumber FROM invoices WHERE entrepriseId = :entrepriseId AND documentStatus = 'VALIDATED'")
+    suspend fun getValidatedInvoiceNumbers(entrepriseId: String): List<String>
+
+    @Query(
+        """
+        SELECT * FROM quotes
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY issueDate DESC
+        """
+    )
+    fun observeQuotes(entrepriseId: String): Flow<List<QuoteEntity>>
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertQuote(quote: QuoteEntity)
+
+    @Query("SELECT quoteNumber FROM quotes WHERE entrepriseId = :entrepriseId AND status != 'DRAFT'")
+    suspend fun getIssuedQuoteNumbers(entrepriseId: String): List<String>
+
+    @Query("SELECT * FROM quotes WHERE id = :id LIMIT 1")
+    suspend fun findQuoteById(id: String): QuoteEntity?
+
+    @Query(
+        """
+        SELECT * FROM quotes
+        WHERE entrepriseId = :entrepriseId
+          AND lower(trim(quoteNumber)) = lower(trim(:quoteNumber))
+        LIMIT 1
+        """
+    )
+    suspend fun findQuoteByNumber(entrepriseId: String, quoteNumber: String): QuoteEntity?
+
+    @Query("DELETE FROM quotes WHERE id = :quoteId")
+    suspend fun deleteQuoteById(quoteId: String)
+
+    @Query("SELECT * FROM invoices WHERE id = :id LIMIT 1")
+    suspend fun findInvoiceById(id: String): InvoiceEntity?
 
     @Query("DELETE FROM invoices WHERE id = :invoiceId")
     suspend fun deleteInvoiceById(invoiceId: String)
@@ -122,4 +162,107 @@ interface TreasuryDao {
 
     @Query("SELECT * FROM users WHERE entrepriseId = :entrepriseId")
     suspend fun getUsersForBackup(entrepriseId: String): List<UserEntity>
+
+    @Query(
+        """
+        SELECT * FROM bank_accounts
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY isDefault DESC, name COLLATE NOCASE ASC
+        """
+    )
+    fun observeBankAccounts(entrepriseId: String): Flow<List<BankAccountEntity>>
+
+    @Query("SELECT * FROM bank_accounts WHERE id = :id LIMIT 1")
+    suspend fun findBankAccountById(id: String): BankAccountEntity?
+
+    @Query("SELECT * FROM bank_accounts WHERE entrepriseId = :entrepriseId AND isDefault = 1 LIMIT 1")
+    suspend fun findDefaultBankAccount(entrepriseId: String): BankAccountEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertBankAccount(account: BankAccountEntity)
+
+    @Query("DELETE FROM bank_accounts WHERE id = :id")
+    suspend fun deleteBankAccountById(id: String)
+
+    @Query("UPDATE bank_accounts SET isDefault = 0 WHERE entrepriseId = :entrepriseId")
+    suspend fun clearDefaultBankAccounts(entrepriseId: String)
+
+    @Query(
+        """
+        SELECT * FROM bank_accounts
+        WHERE entrepriseId = :entrepriseId
+        """
+    )
+    suspend fun getBankAccountsForBackup(entrepriseId: String): List<BankAccountEntity>
+
+    @Query(
+        """
+        SELECT * FROM contacts
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY name COLLATE NOCASE ASC
+        """
+    )
+    fun observeContacts(entrepriseId: String): Flow<List<ContactEntity>>
+
+    @Query("SELECT * FROM contacts WHERE id = :id LIMIT 1")
+    suspend fun findContactById(id: String): ContactEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertContact(contact: ContactEntity)
+
+    @Query("DELETE FROM contacts WHERE id = :id")
+    suspend fun deleteContactById(id: String)
+
+    @Query(
+        """
+        SELECT * FROM contacts
+        WHERE entrepriseId = :entrepriseId
+        """
+    )
+    suspend fun getContactsForBackup(entrepriseId: String): List<ContactEntity>
+
+    @Query(
+        """
+        SELECT * FROM products
+        WHERE entrepriseId = :entrepriseId AND isActive = 1
+        ORDER BY name COLLATE NOCASE ASC
+        """
+    )
+    fun observeProducts(entrepriseId: String): Flow<List<ProductEntity>>
+
+    @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
+    suspend fun findProductById(id: String): ProductEntity?
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertProduct(product: ProductEntity)
+
+    @Query("UPDATE products SET isActive = 0 WHERE id = :id")
+    suspend fun deactivateProduct(id: String)
+
+    @Query("DELETE FROM payments WHERE invoiceId IN (SELECT id FROM invoices WHERE entrepriseId = :entrepriseId)")
+    suspend fun deletePaymentsForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM invoices WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteInvoicesForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM expenses WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteExpensesForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM quotes WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteQuotesForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM bank_accounts WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteBankAccountsForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM contacts WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteContactsForEntreprise(entrepriseId: String)
+
+    @Query("UPDATE products SET isActive = 0 WHERE entrepriseId = :entrepriseId")
+    suspend fun deactivateProductsForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM users WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteUsersForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM entreprises WHERE id = :entrepriseId")
+    suspend fun deleteEntrepriseById(entrepriseId: String)
 }

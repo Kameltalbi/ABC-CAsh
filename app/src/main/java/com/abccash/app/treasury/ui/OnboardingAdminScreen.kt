@@ -30,7 +30,7 @@ fun OnboardingAdminScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF8FAFC))
+            .background(Color.White)
             .padding(24.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

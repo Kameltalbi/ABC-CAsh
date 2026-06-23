@@ -50,7 +50,7 @@ fun SubscriptionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(stringResource(R.string.plan_free)) },
+                title = { Text(stringResource(R.string.subscription_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = null)
@@ -68,13 +68,13 @@ fun SubscriptionScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             Text(
-                text = "Choisissez votre plan",
+                text = stringResource(R.string.subscription_choose_plan),
                 fontSize = 24.sp,
                 fontWeight = FontWeight.Bold
             )
             
             Text(
-                text = "Débloquez des fonctionnalités avancées avec nos plans payants",
+                text = stringResource(R.string.subscription_unlock_features),
                 fontSize = 14.sp,
                 color = Color.Gray
             )
@@ -85,7 +85,7 @@ fun SubscriptionScreen(
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD))
                 ) {
                     Text(
-                        text = "Connexion à Google Play en cours...",
+                        text = stringResource(R.string.subscription_play_connecting),
                         modifier = Modifier.padding(16.dp),
                         color = Color(0xFF856404)
                     )
@@ -238,8 +238,8 @@ private fun PlanFeatures(plan: SubscriptionPlan, textColor: Color) {
             }
             SubscriptionPlan.PRO -> {
                 FeatureItem("Tout le plan Starter", textColor)
-                FeatureItem("Connexion bancaire automatique", textColor)
-                FeatureItem("Synchronisation en temps réel", textColor)
+                FeatureItem(stringResource(R.string.subscription_pro_bank_feature), textColor)
+                FeatureItem(stringResource(R.string.google_backup_title), textColor)
                 FeatureItem("Support prioritaire", textColor)
             }
         }

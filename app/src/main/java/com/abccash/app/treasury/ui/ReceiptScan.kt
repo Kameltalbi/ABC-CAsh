@@ -28,7 +28,8 @@ import com.abccash.app.treasury.data.LocalAppCurrency
 
 data class ReceiptScanUiState(
     val isScanning: Boolean = false,
-    val successMessage: String? = null
+    val successMessage: String? = null,
+    val lastScannedUri: Uri? = null
 )
 
 @Composable
@@ -55,10 +56,12 @@ fun rememberReceiptScan(
                 .onSuccess { result ->
                     if (result.amount == null && result.date == null && result.merchantHint == null) {
                         snackbarHostState.showSnackbar(receiptNoData)
+                        uiState = uiState.copy(isScanning = false, lastScannedUri = uri)
                     } else {
                         onParsed(result)
                         uiState = uiState.copy(
-                            successMessage = buildReceiptSuccessMessage(result, currency, context)
+                            successMessage = buildReceiptSuccessMessage(result, currency, context),
+                            lastScannedUri = uri
                         )
                     }
                 }

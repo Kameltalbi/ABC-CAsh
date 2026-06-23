@@ -8,7 +8,7 @@ enum class TransactionType(
     @StringRes val titleRes: Int,
     @StringRes val forecastTitleRes: Int
 ) {
-    INCOME("income", R.string.new_invoice, R.string.forecast_income),
+    INCOME("income", R.string.new_collection, R.string.forecast_income),
     EXPENSE("expense", R.string.new_expense, R.string.forecast_expense);
 
     companion object {

@@ -14,8 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -41,36 +39,27 @@ import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.hasPermission
+import com.abccash.app.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.YearMonth
 
 private object PrevisionsTheme {
-    val Background = Color(0xFFF5F7FA)
-    val Primary = Color(0xFF1A1A1A)
-    val Income = Color(0xFF22C55E)
-    val Expense = Color(0xFFEF4444)
-    val Muted = Color(0xFF94A3B8)
-    val Divider = Color(0xFFEEEEEE)
-    val ChipInactive = Color(0xFF64748B)
-    val Overdue = Color(0xFFEF4444)
+    val Background = Color.White
+    val Accent = AppColors.BrandBlue
+    val TextPrimary = AppColors.TextPrimary
+    val Income = AppColors.IncomeGreen
+    val Expense = AppColors.ExpenseRed
+    val Muted = AppColors.TextSecondary
+    val Divider = AppColors.Border
+    val ChipInactive = AppColors.TextSecondary
+    val Overdue = AppColors.ExpenseRed
 }
 
-private enum class PrevisionTypeFilter(@StringRes val labelRes: Int) {
+private enum class PrevisionListFilter(@StringRes val labelRes: Int) {
     ALL(R.string.filter_all),
     INCOME(R.string.income_title),
-    EXPENSE(R.string.expense_title)
-}
-
-private enum class PrevisionTimingFilter(@StringRes val labelRes: Int) {
-    ALL(R.string.filter_all),
-    OVERDUE(R.string.forecasts_filter_overdue),
-    UPCOMING(R.string.upcoming_badge)
-}
-
-private enum class PrevisionSort(@StringRes val labelRes: Int) {
-    DATE(R.string.transactions_sort_date),
-    AMOUNT_DESC(R.string.transactions_sort_amount_desc),
-    AMOUNT_ASC(R.string.transactions_sort_amount_asc)
+    EXPENSE(R.string.expense_title),
+    OVERDUE(R.string.forecasts_filter_overdue)
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -88,13 +77,14 @@ fun PrevisionsScreen(
     onDeleteInvoice: (String) -> Unit,
     onUpdateExpense: (
         String, String, Double, LocalDate, Boolean,
-        ExpenseRecurrence?, LocalDate?, Boolean
+        ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?
     ) -> Unit,
     onDeleteExpense: (String) -> Unit,
     onValidateForecastExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit,
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
-    onForecastValidated: (YearMonth) -> Unit
+    onForecastValidated: (YearMonth) -> Unit,
+    onOpenDrawer: () -> Unit = {}
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES) ||
         hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
@@ -115,11 +105,7 @@ fun PrevisionsScreen(
     }
 
     var showTypeSheet by remember { mutableStateOf(false) }
-    var typeFilter by remember { mutableStateOf(PrevisionTypeFilter.ALL) }
-    var timingFilter by remember { mutableStateOf(PrevisionTimingFilter.ALL) }
-    var selectedClient by remember { mutableStateOf<String?>(null) }
-    var sortMode by remember { mutableStateOf(PrevisionSort.DATE) }
-    var showClientMenu by remember { mutableStateOf(false) }
+    var listFilter by remember { mutableStateOf(PrevisionListFilter.ALL) }
 
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
@@ -143,55 +129,27 @@ fun PrevisionsScreen(
         )
     }
 
-    val typeFilters = remember(canViewIncome, canViewExpenses) {
+    val listFilters = remember(canViewIncome, canViewExpenses) {
         buildList {
-            add(PrevisionTypeFilter.ALL)
-            if (canViewIncome) add(PrevisionTypeFilter.INCOME)
-            if (canViewExpenses) add(PrevisionTypeFilter.EXPENSE)
+            add(PrevisionListFilter.ALL)
+            if (canViewIncome) add(PrevisionListFilter.INCOME)
+            if (canViewExpenses) add(PrevisionListFilter.EXPENSE)
+            add(PrevisionListFilter.OVERDUE)
         }
-    }
-
-    val availableClients = remember(allItems) {
-        allItems
-            .filter { it.type == EcheanceType.INCOME }
-            .map { it.label }
-            .distinct()
-            .sortedBy { it.lowercase() }
     }
 
     LaunchedEffect(selectedMonth) {
-        selectedClient = null
-        timingFilter = PrevisionTimingFilter.ALL
+        listFilter = PrevisionListFilter.ALL
     }
 
-    val filteredItems = remember(allItems, typeFilter, timingFilter, selectedClient, sortMode, today) {
-        var result = allItems
-
-        result = when (typeFilter) {
-            PrevisionTypeFilter.ALL -> result
-            PrevisionTypeFilter.INCOME -> result.filter { it.type == EcheanceType.INCOME }
-            PrevisionTypeFilter.EXPENSE -> result.filter { it.type == EcheanceType.EXPENSE }
+    val filteredItems = remember(allItems, listFilter, today) {
+        val result = when (listFilter) {
+            PrevisionListFilter.ALL -> allItems
+            PrevisionListFilter.INCOME -> allItems.filter { it.type == EcheanceType.INCOME }
+            PrevisionListFilter.EXPENSE -> allItems.filter { it.type == EcheanceType.EXPENSE }
+            PrevisionListFilter.OVERDUE -> allItems.filter { it.dueDate.isBefore(today) }
         }
-
-        selectedClient?.let { client ->
-            result = result.filter { it.type == EcheanceType.INCOME && it.label == client }
-        }
-
-        if (timingFilter != PrevisionTimingFilter.ALL && selectedClient == null) {
-            result = result.filter { item ->
-                when (timingFilter) {
-                    PrevisionTimingFilter.OVERDUE -> item.dueDate.isBefore(today)
-                    PrevisionTimingFilter.UPCOMING -> !item.dueDate.isBefore(today)
-                    PrevisionTimingFilter.ALL -> true
-                }
-            }
-        }
-
-        when (sortMode) {
-            PrevisionSort.DATE -> result.sortedBy { it.dueDate }
-            PrevisionSort.AMOUNT_DESC -> result.sortedByDescending { it.amount }
-            PrevisionSort.AMOUNT_ASC -> result.sortedBy { it.amount }
-        }
+        result.sortedBy { it.dueDate }
     }
 
     val forecastIncome = remember(allItems) {
@@ -210,7 +168,9 @@ fun PrevisionsScreen(
                 invoiceToEdit = null
                 editError = null
             },
-            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _, _ ->
+            onConfirm = { invoiceNumber, clientName, totalAmount, dueDate, _, paymentMethod ->
+                // Note: InvoiceFormDialog only shows payment method when editing, not when creating
+                // The actual payment is recorded separately when marking as paid
                 onUpdateInvoice(invoice.id, invoiceNumber, clientName, totalAmount, dueDate) { error ->
                     if (error == null) {
                         invoiceToEdit = null
@@ -232,9 +192,9 @@ fun PrevisionsScreen(
                 expenseToEdit = null
                 editError = null
             },
-            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid ->
+            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod ->
                 onUpdateExpense(
-                    expense.id, label, amount, date, recurring, recurrence, endDate, paid
+                    expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod
                 )
                 expenseToEdit = null
             },
@@ -320,14 +280,11 @@ fun PrevisionsScreen(
         containerColor = PrevisionsTheme.Background,
         floatingActionButton = {
             if (canAddIncome || canAddExpense) {
-                FloatingActionButton(
+                AbcCashFab(
                     onClick = { showTypeSheet = true },
-                    containerColor = PrevisionsTheme.Primary,
-                    contentColor = Color.White,
-                    shape = CircleShape
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = stringResource(R.string.add))
-                }
+                    contentDescription = stringResource(R.string.add),
+                    containerColor = PrevisionsTheme.Accent
+                )
             }
         }
     ) { padding ->
@@ -339,18 +296,24 @@ fun PrevisionsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 20.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                    .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(
-                        text = stringResource(R.string.forecasts),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = PrevisionsTheme.Primary
-                    )
-                    Text(monthLabel, fontSize = 12.sp, color = PrevisionsTheme.Muted)
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    DrawerMenuIconButton(onClick = onOpenDrawer)
+                    Column {
+                        Text(
+                            text = stringResource(R.string.forecasts),
+                            fontSize = 26.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = PrevisionsTheme.TextPrimary
+                        )
+                        Text(monthLabel, fontSize = 12.sp, color = PrevisionsTheme.Muted)
+                    }
                 }
                 IconButton(onClick = onNavigateToSettings) {
                     Icon(
@@ -370,32 +333,10 @@ fun PrevisionsScreen(
                 expenseAmount = formatAmount(forecastExpenses)
             )
 
-            PrevisionTypeTabs(
-                filters = typeFilters,
-                selected = typeFilter,
-                onSelect = { typeFilter = it }
-            )
-
-            PrevisionSecondaryFilters(
-                timingFilter = timingFilter,
-                onTimingFilterChange = { timingFilter = it },
-                selectedClient = selectedClient,
-                showClientMenu = showClientMenu,
-                onShowClientMenu = { showClientMenu = it },
-                availableClients = availableClients,
-                onClientSelected = {
-                    selectedClient = it
-                    showClientMenu = false
-                },
-                sortMode = sortMode,
-                onSortClick = {
-                    sortMode = when (sortMode) {
-                        PrevisionSort.DATE -> PrevisionSort.AMOUNT_DESC
-                        PrevisionSort.AMOUNT_DESC -> PrevisionSort.AMOUNT_ASC
-                        PrevisionSort.AMOUNT_ASC -> PrevisionSort.DATE
-                    }
-                },
-                showClientFilter = canViewIncome && typeFilter != PrevisionTypeFilter.EXPENSE
+            PrevisionListFilterRow(
+                filters = listFilters,
+                selected = listFilter,
+                onSelect = { listFilter = it }
             )
 
             if (filteredItems.isEmpty()) {
@@ -532,112 +473,21 @@ private fun PrevisionSummaryMetric(
 }
 
 @Composable
-private fun PrevisionTypeTabs(
-    filters: List<PrevisionTypeFilter>,
-    selected: PrevisionTypeFilter,
-    onSelect: (PrevisionTypeFilter) -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color.White)
-            .padding(4.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
-    ) {
-        filters.forEach { filter ->
-            val isSelected = filter == selected
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(10.dp))
-                    .background(if (isSelected) PrevisionsTheme.Primary else Color.Transparent)
-                    .clickable { onSelect(filter) }
-                    .padding(vertical = 9.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = stringResource(filter.labelRes),
-                    fontSize = 12.sp,
-                    fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium,
-                    color = if (isSelected) Color.White else PrevisionsTheme.ChipInactive,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun PrevisionSecondaryFilters(
-    timingFilter: PrevisionTimingFilter,
-    onTimingFilterChange: (PrevisionTimingFilter) -> Unit,
-    selectedClient: String?,
-    showClientMenu: Boolean,
-    onShowClientMenu: (Boolean) -> Unit,
-    availableClients: List<String>,
-    onClientSelected: (String?) -> Unit,
-    sortMode: PrevisionSort,
-    onSortClick: () -> Unit,
-    showClientFilter: Boolean
+private fun PrevisionListFilterRow(
+    filters: List<PrevisionListFilter>,
+    selected: PrevisionListFilter,
+    onSelect: (PrevisionListFilter) -> Unit
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 4.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
         horizontalArrangement = Arrangement.spacedBy(18.dp)
     ) {
-        items(PrevisionTimingFilter.entries) { filter ->
+        items(filters) { filter ->
             PrevisionUnderlineChip(
                 label = stringResource(filter.labelRes),
-                selected = timingFilter == filter && selectedClient == null,
-                onClick = {
-                    onClientSelected(null)
-                    onTimingFilterChange(filter)
-                }
-            )
-        }
-
-        if (showClientFilter) {
-            item {
-                Box {
-                    PrevisionUnderlineChip(
-                        label = selectedClient ?: stringResource(R.string.client),
-                        selected = selectedClient != null,
-                        onClick = { onShowClientMenu(true) }
-                    )
-                    DropdownMenu(
-                        expanded = showClientMenu,
-                        onDismissRequest = { onShowClientMenu(false) }
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.filter_all)) },
-                            onClick = { onClientSelected(null) }
-                        )
-                        availableClients.forEach { client ->
-                            DropdownMenuItem(
-                                text = {
-                                    Text(client, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                },
-                                onClick = { onClientSelected(client) }
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
-        item {
-            PrevisionUnderlineChip(
-                label = stringResource(sortMode.labelRes),
-                selected = sortMode != PrevisionSort.DATE,
-                onClick = onSortClick,
-                trailingIcon = when (sortMode) {
-                    PrevisionSort.AMOUNT_DESC -> Icons.Default.KeyboardArrowDown
-                    PrevisionSort.AMOUNT_ASC -> Icons.Default.KeyboardArrowUp
-                    PrevisionSort.DATE -> null
-                }
+                selected = filter == selected,
+                onClick = { onSelect(filter) }
             )
         }
     }
@@ -647,41 +497,27 @@ private fun PrevisionSecondaryFilters(
 private fun PrevisionUnderlineChip(
     label: String,
     selected: Boolean,
-    onClick: () -> Unit,
-    trailingIcon: androidx.compose.ui.graphics.vector.ImageVector? = null
+    onClick: () -> Unit
 ) {
     Column(
         modifier = Modifier.clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(2.dp)
-        ) {
-            Text(
-                text = label,
-                fontSize = 13.sp,
-                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-                color = if (selected) PrevisionsTheme.Primary else PrevisionsTheme.ChipInactive,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            trailingIcon?.let {
-                Icon(
-                    imageVector = it,
-                    contentDescription = null,
-                    modifier = Modifier.size(16.dp),
-                    tint = if (selected) PrevisionsTheme.Primary else PrevisionsTheme.ChipInactive
-                )
-            }
-        }
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+            color = if (selected) PrevisionsTheme.Accent else PrevisionsTheme.ChipInactive,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
         Spacer(modifier = Modifier.height(6.dp))
         Box(
             modifier = Modifier
                 .width(if (selected) 24.dp else 0.dp)
                 .height(2.dp)
                 .background(
-                    if (selected) PrevisionsTheme.Primary else Color.Transparent,
+                    if (selected) PrevisionsTheme.Accent else Color.Transparent,
                     RoundedCornerShape(1.dp)
                 )
         )
@@ -704,7 +540,7 @@ private fun PrevisionLineRow(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val iconTint = if (isIncome) PrevisionsTheme.Income else PrevisionsTheme.Expense
-    val amountColor = if (isIncome) PrevisionsTheme.Primary else PrevisionsTheme.Expense
+    val amountColor = if (isIncome) PrevisionsTheme.Income else PrevisionsTheme.Expense
     val showMenu = canMarkPaid || canEdit
 
     Row(
@@ -735,7 +571,7 @@ private fun PrevisionLineRow(
                 text = title,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = PrevisionsTheme.Primary,
+                color = PrevisionsTheme.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
@@ -778,7 +614,7 @@ private fun PrevisionLineRow(
                             modifier = Modifier.size(18.dp)
                         )
                     }
-                    DropdownMenu(
+                    AbcDropdownMenu(
                         expanded = menuExpanded,
                         onDismissRequest = { menuExpanded = false }
                     ) {

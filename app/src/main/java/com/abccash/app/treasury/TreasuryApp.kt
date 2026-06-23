@@ -3,8 +3,8 @@ package com.abccash.app.treasury
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -15,9 +15,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
@@ -34,8 +33,7 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.datastore.UserPreferences
-import com.abccash.app.treasury.remote.TreasurySyncScheduler
-import com.abccash.app.treasury.remote.TreasurySyncService
+import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.ui.*
@@ -44,72 +42,89 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
 import com.abccash.app.treasury.viewmodel.InscriptionViewModelFactory
+import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: ImageVector) {
     object Splash : Screen("splash", R.string.loading, Icons.Default.HourglassEmpty)
-    object OnboardingAdmin : Screen("onboarding_admin", R.string.settings, Icons.Default.AdminPanelSettings)
+    object Onboarding : Screen("onboarding", R.string.app_name, Icons.Default.Info)
     object Login : Screen("login", R.string.login, Icons.Default.Login)
+    object AccountSetup : Screen("account_setup", R.string.account_setup_title, Icons.Default.PersonAdd)
     object Inscription : Screen("inscription", R.string.create_account, Icons.Default.PersonAdd)
     object Dashboard : Screen("dashboard", R.string.nav_home, Icons.Default.SpaceDashboard)
     object Transactions : Screen("transactions", R.string.nav_transactions, Icons.Default.SwapVert)
     object Treasury : Screen("treasury", R.string.nav_treasury, Icons.Default.TrendingUp)
     object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
-    object PaymentEntry : Screen("payment/{invoiceId}", R.string.collections, Icons.Default.Payment)
-    object ImportInvoices : Screen("import_invoices", R.string.add, Icons.Default.FileUpload)
     object AddTransaction : Screen("add_transaction/{type}", R.string.transactions, Icons.Default.Add)
     object BankReconciliation : Screen("bank_reconciliation", R.string.bank_account, Icons.Default.AccountBalance)
+    object BankAccounts : Screen("bank_accounts", R.string.bank_accounts_title, Icons.Default.AccountBalance)
+    object BankAccountDetail : Screen("bank_account/{accountId}", R.string.bank_account_detail, Icons.Default.AccountBalance)
+    object BankConnection : Screen("bank_connection", R.string.bank_connection_title, Icons.Default.Link)
     object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
-    object AddUser : Screen("add_user", R.string.settings_users, Icons.Default.PersonAdd)
     object Subscription : Screen("subscription", R.string.plan_free, Icons.Default.Payments)
+    object ExpenseNotes : Screen("expense_notes", R.string.expense_notes_title, Icons.Default.Receipt)
+    object ExpenseNoteNew : Screen("expense_note_new", R.string.expense_note_add, Icons.Default.Add)
 }
 
-private fun plusSectionSelected(currentRoute: String?): Boolean =
-    currentRoute == Screen.Previsions.route ||
-        currentRoute == Screen.Settings.route ||
-        currentRoute == Screen.Subscription.route
+@Composable
+private fun NavBarLabel(text: String) {
+    Text(
+        text = text,
+        maxLines = 1,
+        softWrap = false,
+        overflow = TextOverflow.Ellipsis,
+        textAlign = TextAlign.Center,
+        fontSize = 10.sp,
+        lineHeight = 11.sp,
+        style = MaterialTheme.typography.labelSmall
+    )
+}
 
 @Composable
 private fun Screen.adaptiveNavLabel(itemCount: Int): String {
     val slotWidth = LocalConfiguration.current.screenWidthDp / itemCount.coerceAtLeast(1)
+    val useShort = slotWidth < 78
     return when (this) {
-        Screen.Dashboard -> when {
-            slotWidth >= 95 -> stringResource(R.string.nav_home)
-            else -> stringResource(R.string.nav_home_short)
+        Screen.Dashboard -> if (useShort) {
+            stringResource(R.string.nav_home_short)
+        } else {
+            stringResource(R.string.nav_home)
         }
-        Screen.Transactions -> when {
-            slotWidth >= 95 -> stringResource(R.string.nav_transactions)
-            else -> stringResource(R.string.nav_transactions_short)
+        Screen.Transactions -> if (useShort) {
+            stringResource(R.string.nav_transactions_short)
+        } else {
+            stringResource(R.string.nav_transactions)
         }
-        Screen.Treasury -> when {
-            slotWidth >= 95 -> stringResource(R.string.nav_treasury)
-            else -> stringResource(R.string.nav_treasury_short)
+        Screen.Treasury -> if (useShort) {
+            stringResource(R.string.nav_treasury_short)
+        } else {
+            stringResource(R.string.nav_treasury)
         }
-        Screen.Settings -> when {
-            slotWidth >= 95 -> stringResource(R.string.nav_settings)
-            else -> stringResource(R.string.nav_settings_short)
+        Screen.Previsions -> if (useShort) {
+            stringResource(R.string.nav_forecasts_short)
+        } else {
+            stringResource(R.string.nav_forecasts)
+        }
+        Screen.Settings -> if (useShort) {
+            stringResource(R.string.nav_settings_short)
+        } else {
+            stringResource(R.string.nav_settings)
         }
         else -> stringResource(titleRes)
     }
 }
 
 @Composable
-private fun plusNavLabel(itemCount: Int): String {
-    val slotWidth = LocalConfiguration.current.screenWidthDp / itemCount.coerceAtLeast(1)
-    return if (slotWidth >= 72) stringResource(R.string.nav_plus) else "+"
-}
-
-@Composable
 fun TreasuryApp(
     repository: TreasuryRepository,
     viewModel: TreasuryViewModel,
-    syncService: TreasurySyncService,
-    userPreferences: UserPreferences
+    userPreferences: UserPreferences,
+    googleBackupManager: GoogleBackupManager
 ) {
     val navController = rememberNavController()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val googleAccountEmail by userPreferences.googleAccountEmail.collectAsStateWithLifecycle(initialValue = null)
     val context = LocalContext.current
     val appSettings = remember { AppSettings(context) }
     val coroutineScope = rememberCoroutineScope()
@@ -135,38 +150,29 @@ fun TreasuryApp(
             viewModel.setSession(user.entrepriseId, user.role, permissions, user.id)
             navController.navigate(Screen.Dashboard.route) {
                 popUpTo(Screen.Splash.route) { inclusive = true }
+                launchSingleTop = true
             }
-            TreasurySyncScheduler.schedule(context)
-            viewModel.syncSilently(immediate = true)
         }
     }
 
     fun logout() {
         coroutineScope.launch {
-            TreasurySyncScheduler.cancel(context)
             userPreferences.clearUserSession()
             viewModel.clearSession()
             isAuthenticated = false
             currentUserRole = null
             currentPermissions = emptySet()
+            val currentRoute = navController.currentDestination?.route
             navController.navigate(Screen.Login.route) {
-                popUpTo(navController.graph.id) { inclusive = true }
+                if (currentRoute != null) {
+                    popUpTo(currentRoute) { inclusive = true }
+                }
+                launchSingleTop = true
             }
         }
     }
 
     AppCurrencyProvider(appSettings = appSettings) {
-        val lifecycleOwner = LocalLifecycleOwner.current
-        DisposableEffect(lifecycleOwner, isAuthenticated) {
-            val observer = LifecycleEventObserver { _, event ->
-                if (event == Lifecycle.Event.ON_RESUME && isAuthenticated) {
-                    viewModel.syncSilently(immediate = true)
-                }
-            }
-            lifecycleOwner.lifecycle.addObserver(observer)
-            onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-        }
-
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route
@@ -175,13 +181,18 @@ fun TreasuryApp(
             SplashDecisionScreen(
                 repository = repository,
                 userPreferences = userPreferences,
+                onNavigateToInscription = {
+                    navController.navigate(Screen.Onboarding.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
                 onNavigateToLogin = {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
-                onNavigateToInscription = {
-                    navController.navigate(Screen.Inscription.route) {
+                onNavigateToAccountSetup = {
+                    navController.navigate(Screen.AccountSetup.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 },
@@ -190,76 +201,51 @@ fun TreasuryApp(
                     currentUserRole = userRole
                     currentPermissions = permissions
                     viewModel.setSession(entrepriseId, userRole, permissions, userId)
-                    TreasurySyncScheduler.schedule(context)
-                    viewModel.syncSilently(immediate = true)
                     navController.navigate(Screen.Dashboard.route) {
-                        popUpTo(Screen.Splash.route) { inclusive = true }
-                    }
-                },
-                onSessionInvalid = {
-                    viewModel.clearSession()
-                    navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Splash.route) { inclusive = true }
                     }
                 }
             )
         }
 
-        composable(Screen.OnboardingAdmin.route) {
-            OnboardingAdminScreen(
-                onContinue = {
-                    coroutineScope.launch {
-                        userPreferences.setOnboardingAdminVu(true)
-                        val entrepriseId = userPreferences.currentEntrepriseId.first().orEmpty()
-                        val isAdmin = userPreferences.isAdmin.first()
-                        val role = if (isAdmin) UserRole.ADMIN else UserRole.STAFF
-                        val permissions = userPreferences.currentPermissions.first()
-                            .let { effectivePermissions(role, it) }
-                        isAuthenticated = true
-                        currentUserRole = role
-                        currentPermissions = permissions
-                        viewModel.setSession(
-                            entrepriseId,
-                            role,
-                            permissions,
-                            userPreferences.currentUserId.first().orEmpty()
-                        )
-                        navController.navigate(Screen.Dashboard.route) {
-                            popUpTo(Screen.OnboardingAdmin.route) { inclusive = true }
-                        }
+        composable(Screen.Onboarding.route) {
+            OnboardingScreen(
+                onFinish = {
+                    navController.navigate(Screen.Inscription.route) {
+                        popUpTo(Screen.Onboarding.route) { inclusive = true }
                     }
-                },
-                onLogout = ::logout
+                }
             )
         }
 
         composable(Screen.Login.route) {
             LoginScreen(
+                onLoginSuccess = { user -> enterMainApp(user) },
+                viewModel = viewModel(factory = LoginViewModelFactory(repository))
+            )
+        }
+
+        composable(Screen.AccountSetup.route) {
+            AccountSetupScreen(
                 repository = repository,
-                syncService = syncService,
-                onLoginSuccess = { user -> enterMainApp(user) }
+                onSetupComplete = { user -> enterMainApp(user) }
             )
         }
 
         composable(Screen.Inscription.route) {
-            var inscriptionAllowed by remember { mutableStateOf<Boolean?>(null) }
+            var canRegister by remember { mutableStateOf<Boolean?>(null) }
             LaunchedEffect(Unit) {
-                inscriptionAllowed = !repository.hasAnyUser()
-                if (inscriptionAllowed == false) {
+                canRegister = !repository.hasAnyUser()
+                if (canRegister == false) {
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.Inscription.route) { inclusive = true }
                     }
                 }
             }
-            if (inscriptionAllowed == true) {
+            if (canRegister == true) {
                 InscriptionScreen(
-                    onBack = {
-                        navController.navigate(Screen.Splash.route) {
-                            popUpTo(Screen.Inscription.route) { inclusive = true }
-                        }
-                    },
                     onInscriptionSuccess = { user -> enterMainApp(user) },
-                    viewModel = viewModel(factory = InscriptionViewModelFactory(repository, syncService))
+                    viewModel = viewModel(factory = InscriptionViewModelFactory(repository))
                 )
             }
         }
@@ -272,8 +258,10 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Dashboard.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
@@ -285,8 +273,10 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Transactions.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
@@ -298,8 +288,10 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Treasury.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
@@ -311,8 +303,10 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Settings.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
@@ -324,30 +318,28 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Subscription.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
-        composable(SettingsRoutes.USERS) {
-            val role = currentUserRole ?: uiState.currentUserRole
-            val permissions = currentPermissions.ifEmpty { uiState.permissions }
-            SettingsUsersScreen(
-                userRole = role,
-                permissions = permissions,
-                currentUserId = uiState.currentUserId,
-                users = uiState.users,
-                onBack = { navController.popBackStack() },
-                onNavigateToAddUser = { navController.navigate(Screen.AddUser.route) },
-                onDeleteUser = viewModel::deleteUser,
-                onChangePassword = viewModel::changePassword,
-                onResetPassword = viewModel::resetUserPassword,
-                onExportBackup = viewModel::exportBackup,
-                onRestoreBackup = viewModel::restoreBackup,
-                backupFeedback = uiState.backupFeedback,
-                onClearBackupFeedback = viewModel::clearBackupFeedback
+        composable(Screen.BankConnection.route) {
+            MainAppScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                userRole = currentUserRole ?: uiState.currentUserRole,
+                permissions = currentPermissions.ifEmpty { uiState.permissions },
+                appSettings = appSettings,
+                userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
+                startDestination = Screen.BankConnection.route,
+                onLogout = { logout() }
             )
         }
+
 
         composable(SettingsRoutes.PROFILE_USER) {
             val sessionExpiredMessage = stringResource(R.string.session_expired)
@@ -423,61 +415,101 @@ fun TreasuryApp(
             )
         }
 
-        composable(SettingsRoutes.OPTIONS_SYNC) {
-            SettingsSyncScreen(
-                syncService = syncService,
-                onBack = { navController.popBackStack() }
+        composable(SettingsRoutes.OPTIONS_BACKUP) {
+            SettingsBackupScreen(
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail ?: viewModel.googleSignedInEmail(),
+                onBack = { navController.popBackStack() },
+                onGoogleSignedIn = viewModel::onGoogleSignedIn,
+                onGoogleSignedOut = viewModel::onGoogleSignedOut,
+                onBackupToGoogle = viewModel::backupToGoogle,
+                onRestoreFromGoogle = viewModel::restoreFromGoogle,
+                onExportBackup = viewModel::exportBackup,
+                onRestoreBackup = viewModel::restoreBackup,
+                backupFeedback = uiState.backupFeedback,
+                onClearBackupFeedback = viewModel::clearBackupFeedback
             )
         }
 
-        composable(Screen.PaymentEntry.route) { backStackEntry ->
-            val invoiceId = backStackEntry.arguments?.getString("invoiceId")
-            val invoice = invoiceId?.let { viewModel.getInvoice(it) }
-            val role = currentUserRole ?: uiState.currentUserRole
-            val permissions = currentPermissions.ifEmpty { uiState.permissions }
-            val canPay = hasPermission(role, permissions, UserPermission.ADD_PAYMENTS)
-
-            when {
-                invoice != null && canPay -> {
-                    PaymentEntryScreen(
-                        invoice = invoice,
-                        onBack = { navController.popBackStack() },
-                        onSavePayment = { amount, date, method ->
-                            val saved = viewModel.addPayment(invoice.id, amount, date, method)
-                            if (saved) {
-                                navController.popBackStack()
-                            }
-                            saved
-                        }
-                    )
-                }
-                else -> {
-                    AccessDeniedScreen(
-                        message = if (invoice == null) {
-                            stringResource(R.string.invoice_not_found)
-                        } else {
-                            stringResource(R.string.no_payment_permission)
-                        },
-                        onBack = { navController.popBackStack() }
-                    )
-                }
+        composable(SettingsRoutes.OPTIONS_BANK) {
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            var showAddSheet by remember { mutableStateOf(false) }
+            var editingAccount by remember { mutableStateOf<com.abccash.app.treasury.data.BankAccount?>(null) }
+            val summaries = remember(uiState.bankAccounts, uiState.invoices, uiState.expenses) {
+                viewModel.bankAccountSummaries()
             }
+
+            BankAccountsListScreen(
+                summaries = summaries,
+                onBack = { navController.popBackStack() },
+                onAddAccount = { showAddSheet = true },
+                onOpenAccount = { accountId ->
+                    navController.navigate("bank_account/$accountId")
+                },
+                onOpenManualReconciliation = {
+                    navController.navigate(Screen.BankReconciliation.route)
+                }
+            )
+
+            BankAccountFormSheet(
+                visible = showAddSheet || editingAccount != null,
+                initialAccount = editingAccount,
+                entrepriseId = uiState.entrepriseId.orEmpty(),
+                onDismiss = {
+                    showAddSheet = false
+                    editingAccount = null
+                },
+                onSave = { account ->
+                    viewModel.saveBankAccount(account) { error ->
+                        if (error == null) {
+                            showAddSheet = false
+                            editingAccount = null
+                        }
+                    }
+                }
+            )
         }
 
-        composable(Screen.ImportInvoices.route) {
-            val role = currentUserRole ?: uiState.currentUserRole
-            if (role == UserRole.ADMIN) {
-                InvoiceImportScreen(
-                    onBack = { navController.popBackStack() },
-                    onImportInvoices = { invoices ->
-                        viewModel.importInvoices(invoices)
-                        navController.popBackStack()
-                    }
+        composable(
+            route = Screen.BankAccountDetail.route,
+            arguments = listOf(navArgument("accountId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val accountId = backStackEntry.arguments?.getString("accountId").orEmpty()
+            val account = viewModel.getBankAccount(accountId)
+            var showEditSheet by remember { mutableStateOf(false) }
+            val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+            val balance = remember(uiState, accountId) { viewModel.bankAccountBalance(accountId) }
+            val movements = remember(uiState, accountId) { viewModel.bankAccountMovements(accountId) }
+
+            if (account == null) {
+                AccessDeniedScreen(
+                    message = stringResource(R.string.bank_account_not_found),
+                    onBack = { navController.popBackStack() }
                 )
             } else {
-                AccessDeniedScreen(
-                    message = stringResource(R.string.admin_import_only),
-                    onBack = { navController.popBackStack() }
+                BankAccountDetailScreen(
+                    account = account,
+                    balance = balance,
+                    movements = movements,
+                    hasLowBalanceAlert = account.alertLowBalance?.let { balance < it } == true,
+                    onBack = { navController.popBackStack() },
+                    onEdit = { showEditSheet = true },
+                    onDelete = {
+                        viewModel.deleteBankAccount(accountId) {
+                            navController.popBackStack()
+                        }
+                    }
+                )
+                BankAccountFormSheet(
+                    visible = showEditSheet,
+                    initialAccount = account,
+                    entrepriseId = uiState.entrepriseId.orEmpty(),
+                    onDismiss = { showEditSheet = false },
+                    onSave = { updated ->
+                        viewModel.saveBankAccount(updated) { error ->
+                            if (error == null) showEditSheet = false
+                        }
+                    }
                 )
             }
         }
@@ -510,12 +542,14 @@ fun TreasuryApp(
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
                         onBack = { navController.popBackStack() },
-                        onSaveIncome = { client, amount, date, category, categoryLabel, markAsCollected, paymentMethod, onResult ->
+                        onSaveIncome = { client, _, amount, date, category, categoryLabel, markAsCollected, paymentMethod, onResult ->
                             viewModel.addIncomeTransaction(
-                                client, amount, date, category, categoryLabel, markAsCollected, paymentMethod, onResult
+                                client, amount, date, category, categoryLabel, markAsCollected, paymentMethod,
+                                clientContactId = null,
+                                onResult = onResult
                             )
                         },
-                        onSaveExpense = { _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
+                        onSaveExpense = { _, _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
                     )
                 } else {
                     AccessDeniedScreen(
@@ -531,12 +565,12 @@ fun TreasuryApp(
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
                         onBack = { navController.popBackStack() },
-                        onSaveIncome = { _, _, _, _, _, _, _, onResult -> onResult(null) },
-                        onSaveExpense = { label, amount, date, category, categoryLabel, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, onResult ->
+                        onSaveIncome = { _, _, _, _, _, _, _, _, onResult -> onResult(null) },
+                        onSaveExpense = { label, amount, date, category, categoryLabel, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, note, onResult ->
                             viewModel.addExpenseTransaction(
                                 label, amount, date, category, categoryLabel,
                                 isRecurring, recurrence, recurrenceEndDate,
-                                isPaid, paymentMethod, onResult
+                                isPaid, paymentMethod, note = note, onResult = onResult
                             )
                         }
                     )
@@ -583,34 +617,53 @@ fun TreasuryApp(
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
                 userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
                 startDestination = Screen.Previsions.route,
-                onLogout = ::logout
+                onLogout = { logout() }
             )
         }
 
-        composable(Screen.AddUser.route) {
-            val role = currentUserRole ?: uiState.currentUserRole
-            val permissions = currentPermissions.ifEmpty { uiState.permissions }
-            val canManage = hasPermission(role, permissions, UserPermission.MANAGE_USERS)
+        composable(Screen.ExpenseNotes.route) {
+            val notes = remember(uiState.expenses) { viewModel.expenseNotes() }
+            ExpenseNotesListScreen(
+                notes = notes,
+                onBack = { navController.popBackStack() },
+                onCreateNote = { navController.navigate(Screen.ExpenseNoteNew.route) },
+                onDeleteNote = { id -> viewModel.deleteExpenseNote(id) {} }
+            )
+        }
 
-            if (canManage && role == UserRole.ADMIN) {
-                NewUserScreen(
-                    onBack = { navController.popBackStack() },
-                    onSave = { name, email, phone, password, userRole, userPermissions, onResult ->
-                        viewModel.addUser(name, email, phone, password, userRole, userPermissions, onResult)
-                    }
-                )
-            } else {
-                AccessDeniedScreen(
-                    message = stringResource(R.string.admin_users_only),
-                    onBack = { navController.popBackStack() }
-                )
-            }
+        composable(Screen.ExpenseNoteNew.route) {
+            val entrepriseId = uiState.entrepriseId.orEmpty()
+            val customExpense by appSettings.customExpenseCategories(entrepriseId)
+                .collectAsStateWithLifecycle(initialValue = emptyList())
+            ExpenseNoteFormScreen(
+                customExpenseCategories = customExpense,
+                entrepriseId = entrepriseId,
+                onBack = { navController.popBackStack() },
+                onSave = { expenseId, label, amount, date, category, categoryLabel, note, receiptPath, onResult ->
+                    viewModel.addExpenseTransaction(
+                        label = label,
+                        amount = amount,
+                        date = date,
+                        category = category,
+                        categoryLabel = categoryLabel,
+                        note = note,
+                        receiptImagePath = receiptPath,
+                        isExpenseNote = true,
+                        expenseId = expenseId,
+                        isPaid = true,
+                        onResult = onResult
+                    )
+                }
+            )
         }
     }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun MainAppScaffold(
     navController: NavHostController,
@@ -619,19 +672,30 @@ private fun MainAppScaffold(
     permissions: Set<UserPermission>,
     appSettings: AppSettings,
     userPreferences: UserPreferences,
+    googleBackupManager: GoogleBackupManager,
+    googleAccountEmail: String?,
     startDestination: String,
     onLogout: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showPlusMenu by remember { mutableStateOf(false) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
     val canViewTreasury = hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
     val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpenses = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
     val isAdmin = userRole == UserRole.ADMIN
 
+    fun closeDrawer() {
+        scope.launch { drawerState.close() }
+    }
+
+    fun openDrawer() {
+        scope.launch { drawerState.open() }
+    }
+
     fun navigateToMainTab(route: String) {
-        showPlusMenu = false
+        closeDrawer()
         if (navController.currentDestination?.route != route) {
             navController.navigate(route) {
                 popUpTo(navController.graph.startDestinationId) {
@@ -643,19 +707,17 @@ private fun MainAppScaffold(
         }
     }
 
-    val plusMenuItems = buildList {
-        if (canViewTreasury || canViewInvoices || canManageExpenses || isAdmin) {
-            add(
-                PlusMenuEntry(
-                    titleRes = R.string.plus_forecasts,
-                    subtitleRes = R.string.plus_forecasts_sub,
-                    icon = Icons.Default.Event,
-                    onClick = { navigateToMainTab(Screen.Previsions.route) }
-                )
-            )
-        }
+    val drawerItems = buildList {
         add(
-            PlusMenuEntry(
+            DrawerMenuEntry(
+                titleRes = R.string.plus_expense_notes,
+                subtitleRes = R.string.plus_expense_notes_sub,
+                icon = Icons.Default.Receipt,
+                onClick = { navController.navigate(Screen.ExpenseNotes.route) }
+            )
+        )
+        add(
+            DrawerMenuEntry(
                 titleRes = R.string.plus_subscription,
                 subtitleRes = R.string.plus_subscription_sub,
                 icon = Icons.Default.Payments,
@@ -663,15 +725,15 @@ private fun MainAppScaffold(
             )
         )
         add(
-            PlusMenuEntry(
+            DrawerMenuEntry(
                 titleRes = R.string.plus_bank_connection,
                 subtitleRes = R.string.plus_bank_connection_sub,
                 icon = Icons.Default.AccountBalance,
-                onClick = { navigateToMainTab(Screen.Subscription.route) }
+                onClick = { navigateToMainTab(Screen.BankConnection.route) }
             )
         )
         add(
-            PlusMenuEntry(
+            DrawerMenuEntry(
                 titleRes = R.string.plus_settings,
                 subtitleRes = R.string.plus_settings_sub_full,
                 icon = Icons.Default.Settings,
@@ -680,19 +742,28 @@ private fun MainAppScaffold(
         )
     }
 
+    val companyName = uiState.entreprise?.nom.orEmpty()
+    val userName = uiState.users.find { it.id == uiState.currentUserId }?.nom.orEmpty()
+
     AppLockGate(appSettings = appSettings) {
-        PlusMenuBottomSheet(
-            visible = showPlusMenu,
-            items = plusMenuItems,
-            onDismiss = { showPlusMenu = false }
-        )
+        ModalNavigationDrawer(
+            drawerState = drawerState,
+            drawerContent = {
+                TreasuryNavigationDrawerContent(
+                    companyName = companyName,
+                    userName = userName,
+                    items = drawerItems,
+                    onClose = { closeDrawer() }
+                )
+            }
+        ) {
         Scaffold(
+            containerColor = Color.White,
             bottomBar = {
                 TreasuryBottomNavigation(
                     navController = navController,
                     userRole = userRole,
-                    permissions = permissions,
-                    onPlusClick = { showPlusMenu = true }
+                    permissions = permissions
                 )
             }
         ) { paddingValues ->
@@ -714,6 +785,7 @@ private fun MainAppScaffold(
                         companyName = uiState.entreprise?.nom.orEmpty(),
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
+                        bankAccounts = uiState.bankAccounts,
                         entrepriseId = uiState.entrepriseId,
                         userPreferences = userPreferences,
                         onNavigateToAddIncome = {
@@ -724,7 +796,11 @@ private fun MainAppScaffold(
                         },
                         onNavigateToSubscription = {
                             navigateToMainTab(Screen.Subscription.route)
-                        }
+                        },
+                        onNavigateToBankAccounts = {
+                            navController.navigate(Screen.BankAccounts.route)
+                        },
+                        onOpenDrawer = { openDrawer() }
                     )
                 }
                 Screen.Subscription.route -> {
@@ -736,6 +812,14 @@ private fun MainAppScaffold(
                         }
                     )
                 }
+                Screen.BankConnection.route -> {
+                    BankConnectionScreen(
+                        onBack = { navigateToMainTab(Screen.Dashboard.route) },
+                        onOpenManualReconciliation = {
+                            navController.navigate(Screen.BankReconciliation.route)
+                        }
+                    )
+                }
                 Screen.Transactions.route -> {
                     TransactionsScreen(
                         userRole = userRole,
@@ -744,11 +828,6 @@ private fun MainAppScaffold(
                         expenses = uiState.expenses,
                         selectedMonth = uiState.selectedMonth,
                         onMonthChange = viewModel::setSelectedMonth,
-                        importFeedback = uiState.importFeedback,
-                        onClearImportFeedback = viewModel::clearImportFeedback,
-                        onNavigateToImport = {
-                            navController.navigate(Screen.ImportInvoices.route)
-                        },
                         onNavigateToAddIncome = {
                             navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
                         },
@@ -761,13 +840,16 @@ private fun MainAppScaffold(
                         onRecordPayment = { invoiceId, amount, date, method, onResult ->
                             viewModel.recordPayment(invoiceId, amount, date, method, onResult)
                         },
-                        onDeleteInvoice = viewModel::deleteInvoice,
-                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid ->
-                            viewModel.updateExpense(expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid)
+                        onDeleteInvoice = { id, onResult -> viewModel.deleteInvoice(id, onResult) },
+                        onDeleteInvoices = viewModel::deleteInvoices,
+                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
+                            viewModel.updateExpense(expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
                         },
                         onStopRecurrence = viewModel::stopExpenseRecurrence,
                         onDeleteExpense = viewModel::deleteExpense,
-                        onValidateExpense = viewModel::validateForecastExpense
+                        onDeleteExpenses = viewModel::deleteExpenses,
+                        onValidateExpense = viewModel::validateForecastExpense,
+                        onOpenDrawer = { openDrawer() }
                     )
                 }
                 Screen.Treasury.route -> {
@@ -779,7 +861,8 @@ private fun MainAppScaffold(
                         onExportCsv = viewModel::buildCsvExport,
                         onNavigateToBankReconciliation = {
                             navController.navigate(Screen.BankReconciliation.route)
-                        }
+                        },
+                        onOpenDrawer = { openDrawer() }
                     )
                 }
                 Screen.Previsions.route -> {
@@ -796,18 +879,16 @@ private fun MainAppScaffold(
                         onUpdateInvoice = viewModel::updateInvoice,
                         onRecordPayment = viewModel::recordPayment,
                         onDeleteInvoice = viewModel::deleteInvoice,
-                        onUpdateExpense = viewModel::updateExpense,
+                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
+                            viewModel.updateExpense(expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
+                        },
                         onValidateForecastExpense = viewModel::validateForecastExpense,
                         onDeleteExpense = viewModel::deleteExpense,
                         onNavigateToAddIncome = {
-                            navController.navigate(
-                                TransactionType.addRoute(TransactionType.INCOME, forecast = true)
-                            )
+                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
                         },
                         onNavigateToAddExpense = {
-                            navController.navigate(
-                                TransactionType.addRoute(TransactionType.EXPENSE, forecast = true)
-                            )
+                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
                         },
                         onForecastValidated = { month ->
                             viewModel.setSelectedMonth(month)
@@ -817,20 +898,40 @@ private fun MainAppScaffold(
                                 }
                                 launchSingleTop = true
                             }
-                        }
+                        },
+                        onOpenDrawer = { openDrawer() }
                     )
                 }
                 Screen.Settings.route -> {
-                    SettingsHubScreen(
-                        userRole = userRole,
-                        permissions = permissions,
+                    LaunchedEffect(
+                        uiState.entrepriseId,
+                        uiState.invoices.size,
+                        uiState.expenses.size
+                    ) {
+                        viewModel.refreshSubscription()
+                    }
+                    val displayFirstName = userName.trim().substringBefore(" ").ifBlank { userName }
+                    SettingsScreen(
+                        userFirstName = displayFirstName,
+                        companyName = companyName,
+                        subscription = uiState.subscription,
+                        appSettings = appSettings,
+                        googleBackupManager = googleBackupManager,
+                        googleAccountEmail = googleAccountEmail,
+                        onGoogleSignedIn = viewModel::onGoogleSignedIn,
+                        onGoogleSignedOut = viewModel::onGoogleSignedOut,
+                        onUpgradeSubscription = { navigateToMainTab(Screen.Subscription.route) },
+                        onExportCsv = viewModel::buildCsvExport,
+                        onDeleteAccount = viewModel::deleteAccountAndData,
                         onNavigate = { route -> navController.navigate(route) },
-                        onLogout = onLogout
+                        onOpenDrawer = { openDrawer() },
+                        onAccountDeleted = onLogout
                     )
                 }
             }
         }
-    }
+        }
+        }
     }
 }
 
@@ -838,19 +939,23 @@ private fun MainAppScaffold(
 fun TreasuryBottomNavigation(
     navController: NavHostController,
     userRole: UserRole,
-    permissions: Set<UserPermission>,
-    onPlusClick: () -> Unit
+    permissions: Set<UserPermission>
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
     val canViewTreasury = hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
+    val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
+    val canManageExpenses = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
+    val isAdmin = userRole == UserRole.ADMIN
+    val canViewPrevisions = canViewTreasury || canViewInvoices || canManageExpenses || isAdmin
 
     val mainTabs = buildList {
         add(Screen.Dashboard)
-        if (hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES) ||
-            hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
-        ) {
+        if (canViewInvoices || canManageExpenses) {
             add(Screen.Transactions)
+        }
+        if (canViewPrevisions) {
+            add(Screen.Previsions)
         }
         if (canViewTreasury) {
             add(Screen.Treasury)
@@ -861,19 +966,12 @@ fun TreasuryBottomNavigation(
         containerColor = Color.White,
         contentColor = MaterialTheme.colorScheme.primary
     ) {
-        val itemCount = mainTabs.size + 1
+        val itemCount = mainTabs.size
         mainTabs.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
                 label = {
-                    Text(
-                        text = screen.adaptiveNavLabel(itemCount),
-                        maxLines = 1,
-                        softWrap = false,
-                        overflow = TextOverflow.Ellipsis,
-                        textAlign = TextAlign.Center,
-                        style = MaterialTheme.typography.labelSmall
-                    )
+                    NavBarLabel(screen.adaptiveNavLabel(itemCount))
                 },
                 selected = currentRoute?.startsWith(screen.route.split("/")[0]) == true,
                 onClick = {
@@ -896,27 +994,5 @@ fun TreasuryBottomNavigation(
                 )
             )
         }
-        NavigationBarItem(
-            icon = { Icon(Icons.Default.MoreHoriz, contentDescription = stringResource(R.string.nav_plus)) },
-            label = {
-                Text(
-                    text = plusNavLabel(itemCount),
-                    maxLines = 1,
-                    softWrap = false,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Center,
-                    style = MaterialTheme.typography.labelSmall
-                )
-            },
-            selected = plusSectionSelected(currentRoute),
-            onClick = onPlusClick,
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
-            )
-        )
     }
 }

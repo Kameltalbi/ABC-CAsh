@@ -13,6 +13,7 @@
     <string name="nav_settings_short">Defin.</string>
     <string name="nav_plus">Mais</string>
     <string name="nav_forecasts">Previsões</string>
+    <string name="nav_forecasts_short">Prev.</string>
 
     <!-- COMMON -->
     <string name="ok">OK</string>
@@ -228,7 +229,6 @@
     <string name="signup_admin_title">Registo de administrador</string>
     <string name="signup_admin_subtitle">Crie a sua conta para se tornar administrador da sua empresa</string>
     <string name="signup_create_button">Criar a minha conta</string>
-    <string name="signup_admin_note">Será automaticamente designado como administrador</string>
     <string name="your_name">O seu nome</string>
     <string name="company_name_placeholder">Nome da sua empresa</string>
     <string name="email_placeholder">exemplo@email.com</string>
@@ -402,6 +402,7 @@
     <string name="payment_check">Cheque</string>
     <string name="payment_transfer">Transferência</string>
     <string name="payment_cash">Numerário</string>
+    <string name="payment_card">Cartão bancário</string>
     <string name="payment_bill">Letra de câmbio</string>
 
     <!-- RECURRENCE -->
@@ -425,6 +426,7 @@
     <string name="filter_due">Vencidas</string>
     <string name="filter_partial">Parciais</string>
     <string name="filter_paid">Pagas</string>
+    <string name="filter_unpaid">Por liquidar</string>
     <string name="status_paid">Pago</string>
     <string name="status_partial">Parcial</string>
     <string name="status_due">Vencido</string>
