@@ -872,6 +872,18 @@ class TreasuryViewModel(
         }
     }
 
+    fun suggestNextInvoiceNumber(year: Int, onResult: (String) -> Unit) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult("")
+            return
+        }
+        viewModelScope.launch {
+            val settings = userPreferences.observeInvoiceSettings(entrepriseId).first()
+            onResult(repository.nextInvoiceNumber(entrepriseId, year, settings))
+        }
+    }
+
     fun addIncomeTransaction(
         clientName: String,
         amount: Double,
@@ -881,6 +893,7 @@ class TreasuryViewModel(
         markAsCollected: Boolean,
         paymentMethod: PaymentMethod = PaymentMethod.CREDIT_CARD,
         clientContactId: String? = null,
+        invoiceNumber: String = "",
         onResult: (String?) -> Unit
     ) {
         val entrepriseId = requireEntrepriseId()
@@ -889,8 +902,10 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            val number = "ENC-${date.format(DateTimeFormatter.BASIC_ISO_DATE)}-" +
-                (System.currentTimeMillis() % 10_000).toString().padStart(4, '0')
+            val settings = userPreferences.observeInvoiceSettings(entrepriseId).first()
+            val number = invoiceNumber.trim().ifBlank {
+                repository.nextInvoiceNumber(entrepriseId, date.year, settings)
+            }
             val invoice = Invoice(
                 invoiceNumber = number,
                 clientName = clientName,

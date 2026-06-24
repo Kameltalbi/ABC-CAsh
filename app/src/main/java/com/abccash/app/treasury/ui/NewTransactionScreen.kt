@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Euro
 import androidx.compose.material.icons.filled.Label
+import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,6 +35,7 @@ import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
+import com.abccash.app.treasury.data.defaultDateForMonth
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.data.TransactionType
 import java.time.LocalDate
@@ -61,10 +63,12 @@ fun NewTransactionScreen(
     forecastMode: Boolean = false,
     customIncomeCategories: List<String> = emptyList(),
     customExpenseCategories: List<String> = emptyList(),
+    onRequestSuggestedInvoiceNumber: (year: Int, onResult: (String) -> Unit) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     onSaveIncome: (
         clientName: String,
         clientContactId: String?,
+        invoiceNumber: String,
         amount: Double,
         date: LocalDate,
         category: RevenueCategory,
@@ -88,8 +92,7 @@ fun NewTransactionScreen(
         onResult: (String?) -> Unit
     ) -> Unit
 ) {
-    @Suppress("UNUSED_PARAMETER")
-    val unusedMonth = selectedMonth
+    val defaultDate = remember(selectedMonth) { defaultDateForMonth(selectedMonth) }
     @Suppress("UNUSED_PARAMETER")
     val unusedCustomIncome = customIncomeCategories
     @Suppress("UNUSED_PARAMETER")
@@ -105,7 +108,9 @@ fun NewTransactionScreen(
 
     var amountText by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
-    var date by remember { mutableStateOf(LocalDate.now()) }
+    var invoiceNumber by remember { mutableStateOf("") }
+    var invoiceNumberEdited by remember { mutableStateOf(false) }
+    var date by remember(selectedMonth) { mutableStateOf(defaultDate) }
     var selectedIncomeCategory by remember { mutableStateOf(RevenueCategory.SERVICE) }
     var selectedExpenseCategory by remember { mutableStateOf(ExpenseCategory.TAXES) }
     var paymentChannel by remember { mutableStateOf(PaymentChannel.BANK) }
@@ -148,6 +153,17 @@ fun NewTransactionScreen(
     val labelRequiredError = stringResource(R.string.label_required)
     val endDateAfterExpenseError = stringResource(R.string.end_date_after_expense)
     val subscriptionLimitError = stringResource(R.string.subscription_limit_reached)
+    val invoiceNumberLabel = stringResource(R.string.invoice_number)
+    val invoiceNumberHint = stringResource(R.string.invoice_number_auto_hint)
+
+    LaunchedEffect(date.year, isIncome) {
+        if (!isIncome) return@LaunchedEffect
+        onRequestSuggestedInvoiceNumber(date.year) { suggested ->
+            if (!invoiceNumberEdited) {
+                invoiceNumber = suggested
+            }
+        }
+    }
 
     fun mapSaveError(error: String?): String? = when (error) {
         TreasuryRepository.SUBSCRIPTION_LIMIT_REACHED -> subscriptionLimitError
@@ -211,6 +227,8 @@ fun NewTransactionScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
         ) {
+            TreasurySelectedMonthHint(selectedMonth)
+
             LargeAmountField(
                 label = amountLabel,
                 value = amountText,
@@ -226,6 +244,19 @@ fun NewTransactionScreen(
                 leadingIcon = Icons.Default.Label,
                 placeholder = labelPlaceholder
             )
+
+            if (isIncome) {
+                FormLabeledField(
+                    label = invoiceNumberLabel,
+                    value = invoiceNumber,
+                    onValueChange = {
+                        invoiceNumber = it
+                        invoiceNumberEdited = true
+                    },
+                    leadingIcon = Icons.Default.Receipt,
+                    placeholder = invoiceNumberHint
+                )
+            }
 
             TreasuryDateField(
                 label = dateLabel,
@@ -418,6 +449,7 @@ fun NewTransactionScreen(
                                     onSaveIncome(
                                         label.trim(),
                                         null,
+                                        invoiceNumber.trim(),
                                         amount,
                                         date,
                                         selectedIncomeCategory,
@@ -464,11 +496,7 @@ fun NewTransactionScreen(
                         )
                     } else {
                         Text(
-                            text = if (isIncome) {
-                                stringResource(R.string.save_invoice)
-                            } else {
-                                stringResource(R.string.save_expense)
-                            },
+                            text = stringResource(R.string.save),
                             fontSize = 15.sp,
                             fontWeight = FontWeight.SemiBold
                         )

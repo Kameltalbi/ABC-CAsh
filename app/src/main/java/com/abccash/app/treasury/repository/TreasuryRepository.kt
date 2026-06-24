@@ -780,10 +780,10 @@ class TreasuryRepository(
         
         // Count real transactions (invoices + expenses)
         val invoiceCount = invoices.count {
-            it.createdDate >= monthStart && it.createdDate <= monthEnd
+            it.dueDate >= monthStart && it.dueDate <= monthEnd
         }
         val expenseCount = expenses.count {
-            it.createdDate >= monthStart && it.createdDate <= monthEnd
+            it.date >= monthStart && it.date <= monthEnd
         }
 
         return invoiceCount + expenseCount

@@ -47,6 +47,7 @@ import com.abccash.app.treasury.viewmodel.InscriptionViewModelFactory
 import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import kotlinx.coroutines.launch
+import java.time.YearMonth
 
 sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: ImageVector) {
     object Splash : Screen("splash", R.string.loading, Icons.Default.HourglassEmpty)
@@ -524,12 +525,21 @@ fun TreasuryApp(
                         selectedMonth = uiState.selectedMonth,
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
+                        onRequestSuggestedInvoiceNumber = { year, onResult ->
+                            viewModel.suggestNextInvoiceNumber(year, onResult)
+                        },
                         onBack = { navController.popBackStack() },
-                        onSaveIncome = { client, _, amount, date, category, categoryLabel, markAsCollected, paymentMethod, onResult ->
+                        onSaveIncome = { client, _, invNumber, amount, date, category, categoryLabel, markAsCollected, paymentMethod, onResult ->
                             viewModel.addIncomeTransaction(
                                 client, amount, date, category, categoryLabel, markAsCollected, paymentMethod,
                                 clientContactId = null,
-                                onResult = onResult
+                                invoiceNumber = invNumber,
+                                onResult = { error ->
+                                    if (error == null) {
+                                        viewModel.setSelectedMonth(YearMonth.from(date))
+                                    }
+                                    onResult(error)
+                                }
                             )
                         },
                         onSaveExpense = { _, _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
@@ -548,12 +558,18 @@ fun TreasuryApp(
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
                         onBack = { navController.popBackStack() },
-                        onSaveIncome = { _, _, _, _, _, _, _, _, onResult -> onResult(null) },
+                        onSaveIncome = { _, _, _, _, _, _, _, _, _, onResult -> onResult(null) },
                         onSaveExpense = { label, amount, date, category, categoryLabel, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, note, onResult ->
                             viewModel.addExpenseTransaction(
                                 label, amount, date, category, categoryLabel,
                                 isRecurring, recurrence, recurrenceEndDate,
-                                isPaid, paymentMethod, note = note, onResult = onResult
+                                isPaid, paymentMethod, note = note,
+                                onResult = { error ->
+                                    if (error == null) {
+                                        viewModel.setSelectedMonth(YearMonth.from(date))
+                                    }
+                                    onResult(error)
+                                }
                             )
                         }
                     )
