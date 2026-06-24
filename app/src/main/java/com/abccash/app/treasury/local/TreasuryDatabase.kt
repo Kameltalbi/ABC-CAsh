@@ -19,7 +19,7 @@ import androidx.room.TypeConverters
         ContactEntity::class,
         ExpenseEntity::class
     ],
-    version = 18,
+    version = 20,
     exportSchema = false
 )
 @TypeConverters(TreasuryConverters::class)
@@ -70,7 +70,9 @@ abstract class TreasuryDatabase : RoomDatabase() {
                     MIGRATION_14_15,
                     MIGRATION_15_16,
                     MIGRATION_16_17,
-                    MIGRATION_17_18
+                    MIGRATION_17_18,
+                    MIGRATION_18_19,
+                    MIGRATION_19_20
                 )
                 .build()
     }

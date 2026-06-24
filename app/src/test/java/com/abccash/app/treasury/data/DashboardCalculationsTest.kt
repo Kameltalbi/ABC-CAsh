@@ -215,6 +215,55 @@ class DashboardCalculationsTest {
         assertEquals(YearMonth.of(2026, 6), bars.last().month)
     }
 
+    @Test
+    fun `upcoming expense payments returns next unpaid expenses sorted by due date`() {
+        val today = LocalDate.of(2026, 6, 18)
+        val expenses = listOf(
+            sampleExpense(amount = 500.0, date = today.plusDays(30), paid = false),
+            sampleExpense(amount = 100.0, date = today.plusDays(5), paid = false),
+            sampleExpense(amount = 50.0, date = today.minusDays(1), paid = false),
+            sampleExpense(amount = 999.0, date = today.plusDays(2), paid = true)
+        )
+
+        val bars = DashboardCalculations.buildUpcomingExpensePayments(
+            invoices = emptyList(),
+            expenses = expenses,
+            today = today,
+            limit = 10
+        )
+
+        assertEquals(2, bars.size)
+        assertEquals(100.0, bars[0].amount, 0.01)
+        assertEquals(today.plusDays(5), bars[0].dueDate)
+        assertEquals(500.0, bars[1].amount, 0.01)
+    }
+
+    @Test
+    fun `upcoming expense payments expands recurring monthly through summer`() {
+        val today = LocalDate.of(2026, 6, 24)
+        val expenses = listOf(
+            Expense(
+                label = "Loyer",
+                amount = 1400.0,
+                date = LocalDate.of(2026, 6, 24),
+                isRecurring = true,
+                recurrence = ExpenseRecurrence.MONTHLY,
+                recurrenceEndDate = LocalDate.of(2026, 12, 31),
+                isPaid = false
+            )
+        )
+
+        val bars = DashboardCalculations.buildUpcomingExpensePayments(
+            invoices = emptyList(),
+            expenses = expenses,
+            today = today,
+            limit = 10
+        )
+
+        assertTrue(bars.any { it.dueDate == LocalDate.of(2026, 7, 24) })
+        assertTrue(bars.any { it.dueDate == LocalDate.of(2026, 8, 24) })
+    }
+
     private fun sampleInvoice(
         paid: Double,
         total: Double,

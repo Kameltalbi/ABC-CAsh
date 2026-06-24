@@ -70,6 +70,48 @@ class EcheanceForecastTest {
     }
 
     @Test
+    fun `buildItemsForMonth includes unpaid recurring expense for selected month`() {
+        val month = YearMonth.of(2026, 6)
+        val expenses = listOf(
+            Expense(
+                label = "Loyer",
+                amount = 500.0,
+                date = LocalDate.of(2026, 6, 24),
+                isRecurring = true,
+                recurrence = ExpenseRecurrence.MONTHLY,
+                recurrenceEndDate = LocalDate.of(2026, 12, 31),
+                isPaid = false
+            )
+        )
+
+        val items = EcheanceForecast.buildItemsForMonth(month, emptyList(), expenses)
+
+        assertEquals(1, items.size)
+        assertEquals(EcheanceType.EXPENSE, items.first().type)
+        assertEquals(LocalDate.of(2026, 6, 24), items.first().dueDate)
+        assertEquals(500.0, items.first().amount, 0.01)
+    }
+
+    @Test
+    fun `buildItemsForMonth excludes paid recurring template`() {
+        val month = YearMonth.of(2026, 6)
+        val expenses = listOf(
+            Expense(
+                label = "Loyer",
+                amount = 500.0,
+                date = LocalDate.of(2026, 6, 24),
+                isRecurring = true,
+                recurrence = ExpenseRecurrence.MONTHLY,
+                isPaid = true
+            )
+        )
+
+        val items = EcheanceForecast.buildItemsForMonth(month, emptyList(), expenses)
+
+        assertTrue(items.isEmpty())
+    }
+
+    @Test
     fun `builds income and expense items grouped by month`() {
         val invoices = listOf(
             Invoice(

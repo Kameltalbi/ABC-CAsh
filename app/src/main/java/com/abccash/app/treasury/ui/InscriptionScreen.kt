@@ -32,6 +32,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abccash.app.R
 import com.abccash.app.treasury.data.User
+import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.viewmodel.InscriptionViewModel
 import com.abccash.app.ui.theme.AppColors
 
@@ -39,10 +40,16 @@ import com.abccash.app.ui.theme.AppColors
 @Composable
 fun InscriptionScreen(
     onInscriptionSuccess: (User) -> Unit,
+    googleBackupManager: GoogleBackupManager,
+    onGoogleConnected: (String?) -> Unit,
+    onRestoreFromGoogle: ((User?, String?) -> Unit) -> Unit,
     viewModel: InscriptionViewModel = viewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showPassword by remember { mutableStateOf(false) }
+    var connectedGoogleEmail by remember {
+        mutableStateOf(googleBackupManager.getSignedInEmail())
+    }
 
     val fieldColors = OutlinedTextFieldDefaults.colors(
         focusedBorderColor = MaterialTheme.colorScheme.primary,
@@ -100,6 +107,23 @@ fun InscriptionScreen(
             )
 
             Spacer(modifier = Modifier.height(28.dp))
+
+            AuthGoogleSection(
+                googleBackupManager = googleBackupManager,
+                connectedEmail = connectedGoogleEmail,
+                onRestoreFromGoogle = onRestoreFromGoogle,
+                onRestoreSuccess = onInscriptionSuccess,
+                onGoogleConnected = { email ->
+                    connectedGoogleEmail = email
+                    onGoogleConnected(email)
+                }
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            AuthSectionDivider(label = stringResource(R.string.signup_new_business))
+
+            Spacer(modifier = Modifier.height(20.dp))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),

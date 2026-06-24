@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import com.abccash.app.treasury.data.BankAccountSource
+import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.ContactType
 import com.abccash.app.treasury.data.TaxIdType
 import com.abccash.app.treasury.data.TaxIdValidationStatus
@@ -193,6 +194,8 @@ data class BankAccountEntity(
     val alertLowBalance: Double? = null,
     @ColumnInfo(defaultValue = "0")
     val isDefault: Boolean = false,
+    @ColumnInfo(defaultValue = "'BANK'")
+    val kind: TreasuryAccountKind = TreasuryAccountKind.BANK,
     @ColumnInfo(defaultValue = "'MANUAL'")
     val source: BankAccountSource = BankAccountSource.MANUAL,
     val createdDate: LocalDate

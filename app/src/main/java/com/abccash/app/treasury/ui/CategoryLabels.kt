@@ -1,12 +1,15 @@
 package com.abccash.app.treasury.ui
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
+import com.abccash.app.treasury.data.CategoryDefaults
 import com.abccash.app.treasury.data.CategorySelection
 import com.abccash.app.treasury.data.CategorySlice
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.RevenueCategory
+import com.abccash.app.treasury.datastore.AppSettings
 
 @Composable
 fun localizedCategoryLabel(slice: CategorySlice): String {
@@ -23,6 +26,21 @@ fun incomeCategoryOptions(customLabels: List<String>): List<String> =
 @Composable
 fun expenseCategoryOptions(customLabels: List<String>): List<String> =
     CategorySelection.expenseOptions(customLabels)
+
+@Composable
+fun EnsureDefaultCategories(
+    entrepriseId: String,
+    appSettings: AppSettings
+) {
+    val incomeDefaults = CategoryDefaults.incomeLabelResIds.map { stringResource(it) }
+    val expenseDefaults = CategoryDefaults.expenseLabelResIds.map { stringResource(it) }
+    LaunchedEffect(entrepriseId, incomeDefaults, expenseDefaults) {
+        if (entrepriseId.isNotBlank()) {
+            appSettings.ensureDefaultIncomeCategories(entrepriseId, incomeDefaults)
+            appSettings.ensureDefaultExpenseCategories(entrepriseId, expenseDefaults)
+        }
+    }
+}
 
 data class FormCategoryOption<T>(
     @androidx.annotation.StringRes val labelRes: Int,

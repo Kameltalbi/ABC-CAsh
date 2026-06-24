@@ -2,10 +2,12 @@ package com.abccash.app.treasury.backup
 
 import android.content.Context
 import android.content.Intent
+import com.abccash.app.BuildConfig
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.auth.api.signin.GoogleSignInAccount
 import com.google.android.gms.auth.api.signin.GoogleSignInClient
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions
+import com.google.android.gms.common.api.ApiException
 import com.google.android.gms.common.api.Scope
 import com.google.android.gms.tasks.Tasks
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential
@@ -27,11 +29,22 @@ class GoogleBackupManager(private val context: Context) {
     }
 
     fun createSignInClient(): GoogleSignInClient {
-        val options = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
+        return GoogleSignIn.getClient(context, buildSignInOptions())
+    }
+
+    private fun buildSignInOptions(): GoogleSignInOptions {
+        val builder = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
             .requestEmail()
             .requestScopes(Scope(DriveScopes.DRIVE_APPDATA))
-            .build()
-        return GoogleSignIn.getClient(context, options)
+        val webClientId = BuildConfig.GOOGLE_WEB_CLIENT_ID.trim()
+        if (webClientId.isNotBlank()) {
+            builder.requestIdToken(webClientId)
+        }
+        return builder.build()
+    }
+
+    fun handleSignInResult(data: Intent?): Result<GoogleSignInAccount> = runCatching {
+        GoogleSignIn.getSignedInAccountFromIntent(data).getResult(ApiException::class.java)
     }
 
     fun getSignInIntent(): Intent = createSignInClient().signInIntent

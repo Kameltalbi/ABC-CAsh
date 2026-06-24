@@ -12,6 +12,7 @@ data class BankAccount(
     val openingBalance: Double = 0.0,
     val alertLowBalance: Double? = null,
     val isDefault: Boolean = false,
+    val kind: TreasuryAccountKind = TreasuryAccountKind.BANK,
     val source: BankAccountSource = BankAccountSource.MANUAL,
     val createdDate: LocalDate = LocalDate.now()
 )

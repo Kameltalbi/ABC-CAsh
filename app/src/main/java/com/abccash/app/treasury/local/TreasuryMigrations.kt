@@ -216,6 +216,21 @@ val MIGRATION_17_18 = object : Migration(17, 18) {
     }
 }
 
+val MIGRATION_18_19 = object : Migration(18, 19) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.addTextColumnIfMissing("bank_accounts", "kind", "NOT NULL DEFAULT 'BANK'")
+    }
+}
+
+val MIGRATION_19_20 = object : Migration(19, 20) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        // Recurring templates must stay unpaid; older builds could mark the whole series as paid.
+        db.execSQL(
+            "UPDATE expenses SET isPaid = 0 WHERE isRecurring = 1 AND isPaid = 1"
+        )
+    }
+}
+
 private fun createQuotesTable(db: SupportSQLiteDatabase) {
     db.execSQL(
         """

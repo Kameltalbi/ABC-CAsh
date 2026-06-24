@@ -1,11 +1,14 @@
 package com.abccash.app.treasury.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.foundation.shape.CircleShape
@@ -300,157 +303,232 @@ internal fun ExpenseFormDialog(
     val parsedAmount = expenseAmount.replace(",", ".").toDoubleOrNull()
     val dateLabel = stringResource(R.string.date)
     val recurrenceEndLabel = stringResource(R.string.recurrence_end)
-    AlertDialog(
+    val endDateError = stringResource(R.string.end_date_after_expense)
+    val hasEndDateError = isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate)
+    val fieldColors = treasuryOutlinedFieldColors()
+    val fieldShape = RoundedCornerShape(12.dp)
+
+    ModalBottomSheet(
         onDismissRequest = onDismiss,
-        title = { Text(stringResource(R.string.edit_expense)) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedTextField(
-                    value = expenseLabel,
-                    onValueChange = { expenseLabel = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.label)) },
-                    singleLine = true
-                )
-                OutlinedTextField(
-                    value = expenseAmount,
-                    onValueChange = { expenseAmount = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(R.string.amount)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    suffix = { CurrencySuffix() }
-                )
-                TreasuryDateField(
-                    label = dateLabel,
-                    date = expenseDate,
-                    onDateChange = { expenseDate = it }
-                )
-                TreasuryPaymentMethodField(
-                    selectedMethod = selectedPaymentMethod,
-                    onMethodChange = { selectedPaymentMethod = it }
-                )
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Checkbox(
-                        checked = isRecurring,
-                        onCheckedChange = { isRecurring = it }
-                    )
-                    Text(stringResource(R.string.recurring_expense), fontSize = 14.sp)
-                }
-                if (isRecurring) {
-                    ExposedDropdownMenuBox(
-                        expanded = showRecurrenceMenu,
-                        onExpandedChange = { showRecurrenceMenu = it }
-                    ) {
-                        OutlinedTextField(
-                            value = selectedRecurrence.localizedLabel(),
-                            onValueChange = {},
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .menuAnchor(),
-                            label = { Text(stringResource(R.string.frequency)) },
-                            readOnly = true,
-                            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = showRecurrenceMenu) }
+        containerColor = Color.White
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 20.dp)
+                .padding(bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.edit_expense),
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFF1A1A1A)
+            )
+
+            OutlinedTextField(
+                value = expenseLabel,
+                onValueChange = { expenseLabel = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.label)) },
+                singleLine = true,
+                shape = fieldShape,
+                colors = fieldColors
+            )
+            OutlinedTextField(
+                value = expenseAmount,
+                onValueChange = { expenseAmount = it },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(stringResource(R.string.amount)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                singleLine = true,
+                suffix = { CurrencySuffix() },
+                shape = fieldShape,
+                colors = fieldColors
+            )
+            TreasuryDateField(
+                label = dateLabel,
+                date = expenseDate,
+                onDateChange = { expenseDate = it }
+            )
+            TreasuryPaymentMethodField(
+                selectedMethod = selectedPaymentMethod,
+                onMethodChange = { selectedPaymentMethod = it }
+            )
+
+            Surface(
+                shape = fieldShape,
+                color = Color(0xFFF8FAFC),
+                border = BorderStroke(1.dp, Color(0xFFE8E4DD)),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column(
+                    modifier = Modifier.padding(14.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Checkbox(
+                            checked = isRecurring,
+                            onCheckedChange = { isRecurring = it }
                         )
-                        ExposedDropdownMenu(
+                        Text(
+                            text = stringResource(R.string.recurring_expense),
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color(0xFF1A1A1A)
+                        )
+                    }
+
+                    if (isRecurring) {
+                        ExposedDropdownMenuBox(
                             expanded = showRecurrenceMenu,
-                            onDismissRequest = { showRecurrenceMenu = false }
+                            onExpandedChange = { showRecurrenceMenu = it }
                         ) {
-                            ExpenseRecurrence.entries.forEach { recurrence ->
-                                DropdownMenuItem(
-                                    text = { Text(recurrence.localizedLabel()) },
-                                    onClick = {
-                                        selectedRecurrence = recurrence
-                                        showRecurrenceMenu = false
-                                    }
+                            OutlinedTextField(
+                                value = selectedRecurrence.localizedLabel(),
+                                onValueChange = {},
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .menuAnchor(),
+                                label = { Text(stringResource(R.string.frequency)) },
+                                readOnly = true,
+                                shape = fieldShape,
+                                trailingIcon = {
+                                    ExposedDropdownMenuDefaults.TrailingIcon(expanded = showRecurrenceMenu)
+                                },
+                                colors = fieldColors
+                            )
+                            ExposedDropdownMenu(
+                                expanded = showRecurrenceMenu,
+                                onDismissRequest = { showRecurrenceMenu = false }
+                            ) {
+                                ExpenseRecurrence.entries.forEach { recurrence ->
+                                    DropdownMenuItem(
+                                        text = { Text(recurrence.localizedLabel()) },
+                                        onClick = {
+                                            selectedRecurrence = recurrence
+                                            showRecurrenceMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        if (initialExpense.recurrenceEndDate == null) {
+                            TextButton(
+                                onClick = {
+                                    val endDate = initialExpense.occurrenceDateIn(selectedMonth)
+                                        ?: selectedMonth.atEndOfMonth()
+                                    onStopRecurrence(endDate)
+                                }
+                            ) {
+                                Text(
+                                    stringResource(R.string.stop_after_month),
+                                    color = Color(0xFFF44336)
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = stringResource(
+                                    R.string.stop_recurrence_on,
+                                    initialExpense.recurrenceEndDate!!.format(
+                                        DateTimeFormatter.ofPattern("dd/MM/yyyy")
+                                    )
+                                ),
+                                fontSize = 13.sp,
+                                color = Color(0xFF64748B)
+                            )
+                        }
+
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Checkbox(
+                                checked = hasRecurrenceEnd,
+                                onCheckedChange = { hasRecurrenceEnd = it }
+                            )
+                            Text(
+                                text = stringResource(R.string.end_date),
+                                fontSize = 15.sp,
+                                color = Color(0xFF1A1A1A)
+                            )
+                        }
+
+                        if (hasRecurrenceEnd) {
+                            TreasuryDateField(
+                                label = recurrenceEndLabel,
+                                date = recurrenceEndDate,
+                                onDateChange = { recurrenceEndDate = it }
+                            )
+                            if (hasEndDateError) {
+                                Text(
+                                    text = endDateError,
+                                    color = MaterialTheme.colorScheme.error,
+                                    fontSize = 13.sp
                                 )
                             }
                         }
                     }
-
-                    if (initialExpense.recurrenceEndDate == null) {
-                        TextButton(
-                            onClick = {
-                                val endDate = initialExpense.occurrenceDateIn(selectedMonth)
-                                    ?: selectedMonth.atEndOfMonth()
-                                onStopRecurrence(endDate)
-                            }
-                        ) {
-                            Text(stringResource(R.string.stop_after_month), color = Color(0xFFF44336))
-                        }
-                    } else {
-                        Text(
-                            text = stringResource(
-                                R.string.stop_recurrence_on,
-                                initialExpense.recurrenceEndDate!!.format(DateTimeFormatter.ofPattern("dd/MM/yyyy"))
-                            ),
-                            fontSize = 12.sp,
-                            color = Color.Gray
-                        )
-                    }
-
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = hasRecurrenceEnd,
-                            onCheckedChange = { hasRecurrenceEnd = it }
-                        )
-                        Text(stringResource(R.string.end_date), fontSize = 14.sp)
-                    }
-
-                    if (hasRecurrenceEnd) {
-                        TreasuryDateField(
-                            label = recurrenceEndLabel,
-                            date = recurrenceEndDate,
-                            onDateChange = { recurrenceEndDate = it }
-                        )
-                    }
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (isPaid) {
-                            stringResource(R.string.already_paid_expense)
-                        } else {
-                            stringResource(R.string.upcoming_badge)
-                        },
-                        fontSize = 14.sp
-                    )
-                    Switch(checked = isPaid, onCheckedChange = { isPaid = it })
                 }
             }
-        },
-        confirmButton = {
-            Button(
-                onClick = {
-                    val amount = parsedAmount ?: return@Button
-                    if (isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate)) return@Button
-                    onConfirm(
-                        expenseLabel,
-                        amount,
-                        expenseDate,
-                        isRecurring,
-                        selectedRecurrence,
-                        if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
-                        isPaid,
-                        selectedPaymentMethod
-                    )
-                },
-                enabled = expenseLabel.isNotBlank() &&
-                    (parsedAmount?.let { it > 0 } == true) &&
-                    !(isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(stringResource(R.string.save))
+                Text(
+                    text = if (isPaid) {
+                        stringResource(R.string.already_paid_expense)
+                    } else {
+                        stringResource(R.string.upcoming_badge)
+                    },
+                    fontSize = 14.sp,
+                    color = Color(0xFF1A1A1A)
+                )
+                Switch(checked = isPaid, onCheckedChange = { isPaid = it })
             }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) {
-                Text(stringResource(R.string.cancel))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = onDismiss,
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    shape = fieldShape
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+                Button(
+                    onClick = {
+                        val amount = parsedAmount ?: return@Button
+                        if (hasEndDateError) return@Button
+                        onConfirm(
+                            expenseLabel,
+                            amount,
+                            expenseDate,
+                            isRecurring,
+                            selectedRecurrence,
+                            if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
+                            isPaid,
+                            selectedPaymentMethod
+                        )
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .height(48.dp),
+                    enabled = expenseLabel.isNotBlank() &&
+                        (parsedAmount?.let { it > 0 } == true) &&
+                        !hasEndDateError,
+                    shape = fieldShape
+                ) {
+                    Text(stringResource(R.string.save))
+                }
             }
         }
-    )
+    }
 }
 
 @Composable

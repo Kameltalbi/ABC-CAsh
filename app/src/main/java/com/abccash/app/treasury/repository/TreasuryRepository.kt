@@ -17,10 +17,11 @@ import com.abccash.app.treasury.data.ProductKind
 import com.abccash.app.treasury.data.Quote
 import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.affectsBankTreasury
+import com.abccash.app.treasury.data.affectsCashTreasury
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
-import com.abccash.app.treasury.data.SubscriptionPlan
+import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.local.BankAccountEntity
 import com.abccash.app.treasury.local.ContactEntity
@@ -59,6 +60,7 @@ class TreasuryRepository(
 
     companion object {
         const val SUBSCRIPTION_LIMIT_REACHED = "SUBSCRIPTION_LIMIT_REACHED"
+        const val ACCOUNT_LIMIT_REACHED = "ACCOUNT_LIMIT_REACHED"
     }
 
     suspend fun hasAnyUser(): Boolean = dao.countUsers() > 0
@@ -160,14 +162,21 @@ class TreasuryRepository(
     suspend fun getDefaultBankAccount(entrepriseId: String): BankAccount? =
         dao.findDefaultBankAccount(entrepriseId)?.toDomain()
 
+    suspend fun getDefaultAccount(entrepriseId: String, kind: TreasuryAccountKind): BankAccount? =
+        dao.findDefaultAccountByKind(entrepriseId, kind.name)?.toDomain()
+
     suspend fun getBankAccount(accountId: String): BankAccount? =
         dao.findBankAccountById(accountId)?.toDomain()
 
     suspend fun saveBankAccount(account: BankAccount): String? {
         if (account.name.isBlank()) return "Le nom du compte est requis"
+        val existing = dao.findBankAccountById(account.id)
+        if (existing == null && !canAddTreasuryAccount(account.entrepriseId)) {
+            return ACCOUNT_LIMIT_REACHED
+        }
         database.withTransaction {
             if (account.isDefault) {
-                dao.clearDefaultBankAccounts(account.entrepriseId)
+                dao.clearDefaultAccountsForKind(account.entrepriseId, account.kind.name)
             }
             dao.upsertBankAccount(account.toEntity())
         }
@@ -220,7 +229,28 @@ class TreasuryRepository(
     }
 
     suspend fun resolveBankAccountIdForBankPayment(entrepriseId: String): String? =
-        getDefaultBankAccount(entrepriseId)?.id
+        getDefaultAccount(entrepriseId, TreasuryAccountKind.BANK)?.id
+
+    suspend fun resolveCashAccountId(entrepriseId: String): String? =
+        getDefaultAccount(entrepriseId, TreasuryAccountKind.CASH)?.id
+
+    private suspend fun resolveAccountIdForPayment(entrepriseId: String, payment: Payment): String? {
+        if (payment.bankAccountId != null) return payment.bankAccountId
+        return when {
+            payment.affectsCashTreasury() -> resolveCashAccountId(entrepriseId)
+            payment.affectsBankTreasury() -> resolveBankAccountIdForBankPayment(entrepriseId)
+            else -> null
+        }
+    }
+
+    private suspend fun resolveAccountIdForExpense(expense: Expense): String? {
+        if (expense.bankAccountId != null) return expense.bankAccountId
+        return when {
+            expense.affectsCashTreasury() -> resolveCashAccountId(expense.entrepriseId)
+            expense.affectsBankTreasury() -> resolveBankAccountIdForBankPayment(expense.entrepriseId)
+            else -> null
+        }
+    }
 
     suspend fun updateUserProfile(
         userId: String,
@@ -565,8 +595,9 @@ class TreasuryRepository(
         if (payment.invoiceId.isBlank()) return "L'ID facture est obligatoire"
         if (payment.amount <= 0) return "Le montant du paiement doit être supérieur à 0"
         val entrepriseId = dao.findInvoiceById(payment.invoiceId)?.entrepriseId.orEmpty()
-        val paymentToSave = if (payment.affectsBankTreasury() && payment.bankAccountId == null) {
-            payment.copy(bankAccountId = resolveBankAccountIdForBankPayment(entrepriseId))
+        val accountId = resolveAccountIdForPayment(entrepriseId, payment)
+        val paymentToSave = if (accountId != null && payment.bankAccountId == null) {
+            payment.copy(bankAccountId = accountId)
         } else {
             payment
         }
@@ -579,8 +610,9 @@ class TreasuryRepository(
         if (expense.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
         if (!canAddTransaction(expense.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
         if (expense.amount <= 0) return "Le montant de la dépense doit être supérieur à 0"
-        val expenseToSave = if (expense.affectsBankTreasury() && expense.bankAccountId == null) {
-            expense.copy(bankAccountId = resolveBankAccountIdForBankPayment(expense.entrepriseId))
+        val accountId = resolveAccountIdForExpense(expense)
+        val expenseToSave = if (accountId != null && expense.bankAccountId == null) {
+            expense.copy(bankAccountId = accountId)
         } else {
             expense
         }
@@ -740,16 +772,23 @@ class TreasuryRepository(
     suspend fun getUserSubscription(entrepriseId: String): UserSubscription {
         val currentMonth = YearMonth.now()
         val transactionsThisMonth = countTransactionsThisMonth(entrepriseId, currentMonth)
+        val treasuryAccountsCount = dao.getBankAccountsForBackup(entrepriseId).size
         val plan = userPreferences.readSubscriptionPlan()
         return UserSubscription(
             plan = plan,
-            transactionsThisMonth = transactionsThisMonth
+            transactionsThisMonth = transactionsThisMonth,
+            treasuryAccountsCount = treasuryAccountsCount
         )
     }
 
     suspend fun canAddTransaction(entrepriseId: String): Boolean {
         val subscription = getUserSubscription(entrepriseId)
         return !subscription.isTransactionLimitReached
+    }
+
+    suspend fun canAddTreasuryAccount(entrepriseId: String): Boolean {
+        val subscription = getUserSubscription(entrepriseId)
+        return !subscription.isTreasuryAccountLimitReached
     }
 
     suspend fun deleteAccountData(entrepriseId: String): String? {
@@ -1043,6 +1082,7 @@ private fun BankAccountEntity.toDomain(): BankAccount = BankAccount(
     openingBalance = openingBalance,
     alertLowBalance = alertLowBalance,
     isDefault = isDefault,
+    kind = kind,
     source = source,
     createdDate = createdDate
 )
@@ -1056,6 +1096,7 @@ private fun BankAccount.toEntity(): BankAccountEntity = BankAccountEntity(
     openingBalance = openingBalance,
     alertLowBalance = alertLowBalance,
     isDefault = isDefault,
+    kind = kind,
     source = source,
     createdDate = createdDate
 )

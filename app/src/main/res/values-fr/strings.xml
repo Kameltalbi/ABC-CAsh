@@ -101,8 +101,10 @@
     <string name="dashboard_period_month">Mois</string>
     <string name="dashboard_overview_title">Vue d\'ensemble</string>
     <string name="dashboard_summary">Sommaire</string>
+    <string name="dashboard_summary_income">Revenus</string>
+    <string name="dashboard_summary_expense">Dépenses</string>
     <string name="dashboard_accounts">Comptes</string>
-    <string name="dashboard_expenses_7d">Dépenses — 7 derniers jours</string>
+    <string name="dashboard_upcoming_payments">10 prochains paiements à venir</string>
     <string name="dashboard_top_categories">Catégories principales</string>
     <string name="dashboard_last_used">Dernière utilisation : %1$s</string>
     <string name="dashboard_treasury_wallet">Trésorerie</string>
@@ -128,7 +130,7 @@
     <string name="no_expense_month">Aucune dépense ce mois</string>
     <string name="no_data">Aucune donnée</string>
     <string name="user_fallback">Utilisateur</string>
-    <string name="plus_settings_sub_full">Profil, catégories, devise, sécurité</string>
+    <string name="plus_settings_sub_full">Profil, comptes bancaires, catégories, sécurité</string>
     <string name="balance_evolution_30d">Évolution du Solde (30j)</string>
     <string name="balance_range">J-30 %1$s · Aujourd\'hui %2$s</string>
     <string name="displayed_month">Mois affiché : %1$s</string>
@@ -224,6 +226,15 @@
     <string name="cash_opening_hint">Les encaissements en espèces augmentent ce solde. Les dépenses en espèces le diminuent.</string>
     <string name="cash_opening_balance">Fond de caisse initial</string>
     <string name="clear_cash_opening">Effacer le fond de caisse</string>
+    <string name="treasury_account_kind_label">Type de compte</string>
+    <string name="treasury_account_kind_bank">Banque</string>
+    <string name="treasury_account_kind_cash">Caisse</string>
+    <string name="treasury_cash_account_name">Nom de la caisse</string>
+    <string name="treasury_cash_account_name_hint">ex. Caisse principale</string>
+    <string name="treasury_cash_account_set_default">Compte caisse par défaut pour les paiements espèces</string>
+    <string name="treasury_accounts_usage">%1$d / %2$d comptes</string>
+    <string name="treasury_accounts_usage_hint">Gratuit : 2 comptes (banque + caisse). Pro : jusqu\'à 5.</string>
+    <string name="treasury_accounts_limit_reached">Limite de comptes atteinte. Passez au Pro pour jusqu\'à 5 comptes.</string>
     <string name="bank_account">Compte bancaire</string>
     <string name="bank_accounts_title">Comptes bancaires</string>
     <string name="bank_account_detail">Détail du compte</string>
@@ -243,13 +254,13 @@
     <string name="bank_account_movements_count">%1$d opérations</string>
     <string name="bank_account_low_balance_alert">Solde sous le seuil d\'alerte</string>
     <string name="bank_accounts_empty">Aucun compte bancaire</string>
-    <string name="bank_accounts_empty_hint">Ajoutez un compte manuel pour suivre les soldes par compte. Les encaissements et dépenses bancaires sont affectés au compte par défaut.</string>
+    <string name="bank_accounts_empty_hint">Ajoutez un compte bancaire ou une caisse pour suivre les soldes. Les paiements banque et caisse sont affectés au compte par défaut de chaque type.</string>
     <string name="bank_accounts_dsp2_hint">La synchronisation automatique via DSP2 / open banking sera disponible dans une prochaine mise à jour.</string>
     <string name="bank_account_not_found">Compte bancaire introuvable</string>
     <string name="bank_account_delete_title">Supprimer le compte ?</string>
     <string name="bank_account_delete_message">Supprimer le compte « %1$s » ? Les opérations restent en trésorerie mais ne seront plus liées à ce compte.</string>
     <string name="settings_bank_accounts">Comptes bancaires</string>
-    <string name="settings_bank_accounts_sub">Soldes, historique et alertes par compte</string>
+    <string name="settings_bank_accounts_sub">Comptes banque et caisse, soldes et historique</string>
 
     <string name="plus_invoices">Factures</string>
     <string name="plus_invoices_sub">Liste, création, PDF et paiements</string>
@@ -479,8 +490,10 @@
     <string name="subscription_stay_free">Rester en Gratuit</string>
     <string name="subscription_free_feature_core">Revenus, dépenses et prévisions</string>
     <string name="subscription_free_feature_limit">30 éléments créés par mois</string>
+    <string name="subscription_free_feature_accounts">Jusqu\'à 2 comptes trésorerie</string>
     <string name="subscription_free_feature_csv">Export CSV</string>
     <string name="subscription_pro_feature_unlimited">Transactions et prévisions illimitées</string>
+    <string name="subscription_pro_feature_accounts">Jusqu\'à 5 comptes trésorerie</string>
     <string name="subscription_pro_feature_backup">Sauvegarde automatique Google Drive</string>
     <string name="subscription_pro_feature_csv">Export CSV pour votre comptable</string>
     <string name="subscription_pro_feature_support">Support prioritaire</string>
@@ -514,7 +527,7 @@
     <string name="category_taxes">Impôts et taxes</string>
     <string name="category_subscription">Abonnements</string>
     <string name="built_in_categories">Catégories intégrées</string>
-    <string name="custom_categories">Catégories personnalisées</string>
+    <string name="custom_categories">Vos catégories</string>
     <string name="new_category">Nouvelle catégorie</string>
 
     <!-- ERRORS -->
@@ -530,7 +543,7 @@
     <string name="add_category_in_settings">Ajoutez des catégories dans Paramètres avant de saisir une transaction.</string>
     <string name="edit_category">Modifier la catégorie</string>
     <string name="delete_category_confirm">Supprimer la catégorie « %1$s » ?</string>
-    <string name="no_custom_categories">Aucune catégorie personnalisée</string>
+    <string name="no_custom_categories">Aucune catégorie pour le moment</string>
     <string name="category_custom_tag">Personnalisée</string>
 
     <!-- TREASURY SCREEN -->
@@ -559,7 +572,7 @@
     <string name="signup_admin_title">Bienvenue</string>
     <string name="signup_admin_subtitle">Quelques infos pour démarrer votre trésorerie</string>
     <string name="signup_create_button">Commencer</string>
-    <string name="signup_solo_note">Vos données restent sur cet appareil. Connectez Google dans Paramètres pour sauvegarder automatiquement.</string>
+    <string name="signup_solo_note">Vos données restent sur cet appareil. Connectez Google ci-dessus pour sauvegarder et restaurer sur un nouveau téléphone.</string>
     <string name="settings_backup_sub">Sauvegarde Google Drive ou fichier JSON manuel</string>
     <string name="google_backup_title">Sauvegarde Google</string>
     <string name="google_backup_sub">Connectez votre compte Google pour ne pas perdre vos données et les retrouver sur un nouveau téléphone.</string>
@@ -569,6 +582,10 @@
     <string name="google_restore">Restaurer</string>
     <string name="google_account_connected">Connecté : %1$s</string>
     <string name="google_sign_in_failed">Connexion Google échouée</string>
+    <string name="google_sign_in_cancelled">Connexion Google annulée</string>
+    <string name="google_sign_in_config_error">La connexion Google n’est pas configurée pour cette application. Réessayez plus tard ou contactez le support.</string>
+    <string name="google_sign_in_or_restore_hint">Connecte Google Drive pour la sauvegarde. Restaure vos données si une sauvegarde existe déjà.</string>
+    <string name="google_no_backup_found">Aucune sauvegarde trouvée sur Google Drive</string>
     <string name="google_restore_failed">Impossible de restaurer depuis Google</string>
     <string name="google_restore_existing">Restaurer mes données avec Google</string>
     <string name="google_restore_existing_hint">Si vous utilisez déjà ABC Cash sur un autre téléphone</string>

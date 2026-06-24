@@ -152,6 +152,40 @@ class AppSettings(private val context: Context) {
         return PasswordHasher.verify(pin, stored)
     }
 
+    suspend fun ensureDefaultIncomeCategories(entrepriseId: String, defaults: List<String>) {
+        if (entrepriseId.isBlank()) return
+        context.userDataStore.edit { prefs ->
+            if (prefs[incomeDefaultsMergedKey(entrepriseId)] == true) return@edit
+            val key = customIncomeKey(entrepriseId)
+            val current = decodeList(prefs[key]).toMutableList()
+            defaults.forEach { label ->
+                val trimmed = label.trim()
+                if (trimmed.isNotBlank() && current.none { it.equals(trimmed, ignoreCase = true) }) {
+                    current.add(trimmed)
+                }
+            }
+            prefs[key] = encodeList(current)
+            prefs[incomeDefaultsMergedKey(entrepriseId)] = true
+        }
+    }
+
+    suspend fun ensureDefaultExpenseCategories(entrepriseId: String, defaults: List<String>) {
+        if (entrepriseId.isBlank()) return
+        context.userDataStore.edit { prefs ->
+            if (prefs[expenseDefaultsMergedKey(entrepriseId)] == true) return@edit
+            val key = customExpenseKey(entrepriseId)
+            val current = decodeList(prefs[key]).toMutableList()
+            defaults.forEach { label ->
+                val trimmed = label.trim()
+                if (trimmed.isNotBlank() && current.none { it.equals(trimmed, ignoreCase = true) }) {
+                    current.add(trimmed)
+                }
+            }
+            prefs[key] = encodeList(current)
+            prefs[expenseDefaultsMergedKey(entrepriseId)] = true
+        }
+    }
+
     suspend fun addCustomIncomeCategory(entrepriseId: String, label: String) {
         val trimmed = label.trim()
         if (trimmed.isBlank()) return
@@ -258,6 +292,12 @@ class AppSettings(private val context: Context) {
 
     private fun customExpenseKey(entrepriseId: String) =
         stringPreferencesKey("custom_expense_categories_$entrepriseId")
+
+    private fun incomeDefaultsMergedKey(entrepriseId: String) =
+        booleanPreferencesKey("income_defaults_merged_$entrepriseId")
+
+    private fun expenseDefaultsMergedKey(entrepriseId: String) =
+        booleanPreferencesKey("expense_defaults_merged_$entrepriseId")
 
     private fun encodeList(items: List<String>): String =
         items.joinToString("\u001F")

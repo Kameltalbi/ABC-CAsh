@@ -36,6 +36,17 @@ fun rememberFormatMoneyWhole(): (Double) -> String {
 }
 
 @Composable
+fun rememberFormatDashboardSummary(): (Double) -> String {
+    val currency = LocalAppCurrency.current
+    return remember(currency) {
+        { amount ->
+            val decimals = minOf(currency.decimalPlaces, 2)
+            "${AppCurrencyFormatter.formatNumber(amount, decimals)} ${currency.symbol}"
+        }
+    }
+}
+
+@Composable
 fun rememberFormatTreasuryChartAmount(): (Double) -> String {
     val currency = LocalAppCurrency.current
     return remember(currency) {

@@ -98,7 +98,7 @@ fun TransactionsScreen(
     onStopRecurrence: (String, LocalDate) -> Unit,
     onDeleteExpense: (String) -> Unit,
     onDeleteExpenses: (Collection<String>) -> Unit = {},
-    onValidateExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit = { _, _, _, onResult -> onResult(null) },
+    onValidateExpense: (String, LocalDate, PaymentMethod, LocalDate, (String?) -> Unit) -> Unit = { _, _, _, _, onResult -> onResult(null) },
     onOpenDrawer: () -> Unit = {}
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
@@ -471,7 +471,8 @@ fun TransactionsScreen(
             dueDate = expense.occurrenceDateIn(selectedMonth) ?: expense.date,
             onDismiss = { expenseToValidate = null },
             onConfirm = { paymentDate, method ->
-                onValidateExpense(expense.id, paymentDate, method) { error ->
+                val occurrenceDueDate = expense.occurrenceDateIn(selectedMonth) ?: expense.date
+                onValidateExpense(expense.id, paymentDate, method, occurrenceDueDate) { error ->
                     if (error == null) expenseToValidate = null
                 }
             }

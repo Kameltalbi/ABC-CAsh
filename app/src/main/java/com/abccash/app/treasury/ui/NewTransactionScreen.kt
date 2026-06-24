@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
+import com.abccash.app.treasury.data.CategorySelection
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.defaultDateForMonth
@@ -92,28 +93,34 @@ fun NewTransactionScreen(
         onResult: (String?) -> Unit
     ) -> Unit
 ) {
-    val defaultDate = remember(selectedMonth) { defaultDateForMonth(selectedMonth) }
-    @Suppress("UNUSED_PARAMETER")
-    val unusedCustomIncome = customIncomeCategories
-    @Suppress("UNUSED_PARAMETER")
-    val unusedCustomExpense = customExpenseCategories
-    @Suppress("UNUSED_PARAMETER")
-    val unusedForecastMode = forecastMode
-
     val isIncome = type == TransactionType.INCOME
     val today = remember { LocalDate.now() }
 
-    val incomeOptions = defaultIncomeFormOptions()
-    val expenseOptions = defaultExpenseFormOptions()
+    val defaultDate = remember(selectedMonth, forecastMode) {
+        if (forecastMode) {
+            val monthDefault = defaultDateForMonth(selectedMonth)
+            when {
+                monthDefault.isAfter(today) -> monthDefault
+                YearMonth.from(today) == selectedMonth ->
+                    today.plusDays(1).coerceAtMost(selectedMonth.atEndOfMonth())
+                else -> selectedMonth.atDay(1)
+            }
+        } else {
+            defaultDateForMonth(selectedMonth)
+        }
+    }
+
+    val incomeCategoryOptionsList = incomeCategoryOptions(customIncomeCategories)
+    val expenseCategoryOptionsList = expenseCategoryOptions(customExpenseCategories)
 
     var amountText by remember { mutableStateOf("") }
     var label by remember { mutableStateOf("") }
     var invoiceNumber by remember { mutableStateOf("") }
     var invoiceNumberEdited by remember { mutableStateOf(false) }
-    var date by remember(selectedMonth) { mutableStateOf(defaultDate) }
-    var selectedIncomeCategory by remember { mutableStateOf(RevenueCategory.SERVICE) }
-    var selectedExpenseCategory by remember { mutableStateOf(ExpenseCategory.TAXES) }
-    var paymentChannel by remember { mutableStateOf(PaymentChannel.BANK) }
+    var date by remember(selectedMonth, forecastMode) { mutableStateOf(defaultDate) }
+    var selectedIncomeCategoryLabel by remember { mutableStateOf("") }
+    var selectedExpenseCategoryLabel by remember { mutableStateOf("") }
+    var paymentChannel by remember(type) { mutableStateOf(PaymentChannel.BANK) }
     var isRecurring by remember { mutableStateOf(false) }
     var selectedRecurrence by remember { mutableStateOf(ExpenseRecurrence.MONTHLY) }
     var showRecurrenceMenu by remember { mutableStateOf(false) }
@@ -126,13 +133,32 @@ fun NewTransactionScreen(
     val amountFocus = remember { FocusRequester() }
     val snackbarHostState = remember { SnackbarHostState() }
 
-    val incomeCategoryLabel = incomeOptions.firstOrNull { it.value == selectedIncomeCategory }
-        ?.let { stringResource(it.labelRes) }.orEmpty()
-    val expenseCategoryLabel = expenseOptions.firstOrNull { it.value == selectedExpenseCategory }
-        ?.let { stringResource(it.labelRes) }.orEmpty()
+    LaunchedEffect(incomeCategoryOptionsList) {
+        if (
+            selectedIncomeCategoryLabel.isBlank() ||
+            selectedIncomeCategoryLabel !in incomeCategoryOptionsList
+        ) {
+            selectedIncomeCategoryLabel = incomeCategoryOptionsList.firstOrNull().orEmpty()
+        }
+    }
+    LaunchedEffect(expenseCategoryOptionsList) {
+        if (
+            selectedExpenseCategoryLabel.isBlank() ||
+            selectedExpenseCategoryLabel !in expenseCategoryOptionsList
+        ) {
+            selectedExpenseCategoryLabel = expenseCategoryOptionsList.firstOrNull().orEmpty()
+        }
+    }
 
-    val isForecastDate = date.isAfter(today)
-    val isRealized = !isForecastDate
+    val isForecastEntry = remember(forecastMode, isRecurring, date, today) {
+        forecastMode || isRecurring || date.isAfter(today)
+    }
+    val expenseSavesAsPaid = remember(forecastMode, isRecurring, date, today) {
+        !forecastMode && !isRecurring && !date.isAfter(today)
+    }
+    val incomeMarkAsCollected = remember(forecastMode, date, today) {
+        !forecastMode && !date.isAfter(today)
+    }
 
     val (scanState, scanActions) = rememberReceiptScan(snackbarHostState) { result ->
         result.amount?.let { amount ->
@@ -210,7 +236,7 @@ fun NewTransactionScreen(
                     }
                     Spacer(modifier = Modifier.width(12.dp))
                     Text(
-                        text = type.localizedTitle(),
+                        text = type.localizedTitle(forecastMode),
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF1A1A1A)
@@ -265,26 +291,26 @@ fun NewTransactionScreen(
             )
 
             Text(
-                text = if (isForecastDate) {
+                text = if (isForecastEntry) {
                     stringResource(R.string.transaction_date_forecast_hint)
                 } else {
                     stringResource(R.string.transaction_date_real_hint)
                 },
                 fontSize = 12.sp,
-                color = if (isForecastDate) Color(0xFFFF9800) else Color(0xFF64748B),
+                color = if (isForecastEntry) Color(0xFFFF9800) else Color(0xFF64748B),
                 lineHeight = 16.sp
             )
 
             if (isIncome) {
                 EnumCategoryDropdownField(
                     label = incomeCategoryField,
-                    value = incomeCategoryLabel,
+                    value = selectedIncomeCategoryLabel,
                     expanded = showIncomeCategoryMenu,
                     onExpandedChange = { showIncomeCategoryMenu = it },
-                    options = incomeOptions.map { stringResource(it.labelRes) },
+                    options = incomeCategoryOptionsList,
                     onSelect = { index ->
-                        incomeOptions.getOrNull(index)?.let { option ->
-                            selectedIncomeCategory = option.value
+                        incomeCategoryOptionsList.getOrNull(index)?.let { label ->
+                            selectedIncomeCategoryLabel = label
                         }
                         showIncomeCategoryMenu = false
                     }
@@ -292,13 +318,13 @@ fun NewTransactionScreen(
             } else {
                 EnumCategoryDropdownField(
                     label = expenseCategoryField,
-                    value = expenseCategoryLabel,
+                    value = selectedExpenseCategoryLabel,
                     expanded = showExpenseCategoryMenu,
                     onExpandedChange = { showExpenseCategoryMenu = it },
-                    options = expenseOptions.map { stringResource(it.labelRes) },
+                    options = expenseCategoryOptionsList,
                     onSelect = { index ->
-                        expenseOptions.getOrNull(index)?.let { option ->
-                            selectedExpenseCategory = option.value
+                        expenseCategoryOptionsList.getOrNull(index)?.let { label ->
+                            selectedExpenseCategoryLabel = label
                         }
                         showExpenseCategoryMenu = false
                     }
@@ -439,6 +465,8 @@ fun NewTransactionScreen(
                         when {
                             amount == null || amount <= 0 -> saveError = invalidAmountError
                             label.isBlank() -> saveError = labelRequiredError
+                            isIncome && selectedIncomeCategoryLabel.isBlank() -> saveError = categoryRequiredError
+                            !isIncome && selectedExpenseCategoryLabel.isBlank() -> saveError = categoryRequiredError
                             !isIncome && isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(date) ->
                                 saveError = endDateAfterExpenseError
                             else -> {
@@ -446,31 +474,39 @@ fun NewTransactionScreen(
                                 isSaving = true
                                 val method = paymentChannel.toPaymentMethod()
                                 if (isIncome) {
+                                    val resolved = CategorySelection.resolveIncome(
+                                        selectedIncomeCategoryLabel,
+                                        customIncomeCategories
+                                    )
                                     onSaveIncome(
                                         label.trim(),
                                         null,
                                         invoiceNumber.trim(),
                                         amount,
                                         date,
-                                        selectedIncomeCategory,
-                                        "",
-                                        isRealized,
+                                        resolved.revenueCategory ?: RevenueCategory.OTHER,
+                                        resolved.customLabel.orEmpty(),
+                                        incomeMarkAsCollected,
                                         method
                                     ) { error ->
                                         isSaving = false
                                         if (error == null) onBack() else saveError = mapSaveError(error)
                                     }
                                 } else {
+                                    val resolved = CategorySelection.resolveExpense(
+                                        selectedExpenseCategoryLabel,
+                                        customExpenseCategories
+                                    )
                                     onSaveExpense(
                                         label.trim(),
                                         amount,
                                         date,
-                                        selectedExpenseCategory,
-                                        "",
+                                        resolved.expenseCategory ?: ExpenseCategory.OTHER,
+                                        resolved.customLabel.orEmpty(),
                                         isRecurring,
                                         if (isRecurring) selectedRecurrence else null,
                                         if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
-                                        isRealized,
+                                        expenseSavesAsPaid,
                                         method,
                                         ""
                                     ) { error ->
@@ -486,7 +522,10 @@ fun NewTransactionScreen(
                         .height(50.dp),
                     enabled = !isSaving,
                     shape = RoundedCornerShape(12.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1A1A1A))
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White
+                    )
                 ) {
                     if (isSaving) {
                         CircularProgressIndicator(

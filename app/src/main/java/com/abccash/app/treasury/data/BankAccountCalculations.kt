@@ -4,25 +4,63 @@ import java.time.LocalDate
 
 object BankAccountCalculations {
 
+    fun defaultAccountId(accounts: List<BankAccount>, kind: TreasuryAccountKind): String? =
+        accounts.firstOrNull { it.isDefault && it.kind == kind }?.id
+            ?: accounts.firstOrNull { it.kind == kind }?.id
+
     fun belongsToAccount(
         bankAccountId: String?,
         account: BankAccount,
-        defaultAccountId: String?
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
     ): Boolean {
         if (bankAccountId != null) return bankAccountId == account.id
-        return account.isDefault || account.id == defaultAccountId
+        val defaultId = when (account.kind) {
+            TreasuryAccountKind.BANK -> defaultBankAccountId
+            TreasuryAccountKind.CASH -> defaultCashAccountId
+        }
+        return account.isDefault || account.id == defaultId
+    }
+
+    private fun paymentMatchesAccount(
+        payment: Payment,
+        account: BankAccount,
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
+    ): Boolean {
+        val matchesKind = when (account.kind) {
+            TreasuryAccountKind.BANK -> payment.affectsBankTreasury()
+            TreasuryAccountKind.CASH -> payment.affectsCashTreasury()
+        }
+        if (!matchesKind) return false
+        return belongsToAccount(payment.bankAccountId, account, defaultBankAccountId, defaultCashAccountId)
+    }
+
+    private fun expenseMatchesAccount(
+        expense: Expense,
+        account: BankAccount,
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
+    ): Boolean {
+        val matchesKind = when (account.kind) {
+            TreasuryAccountKind.BANK -> expense.affectsBankTreasury()
+            TreasuryAccountKind.CASH -> expense.affectsCashTreasury()
+        }
+        if (!matchesKind) return false
+        return belongsToAccount(expense.bankAccountId, account, defaultBankAccountId, defaultCashAccountId)
     }
 
     fun balance(
         account: BankAccount,
         invoices: List<Invoice>,
         expenses: List<Expense>,
-        defaultAccountId: String?
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
     ): Double {
         var total = account.openingBalance
         invoices.flatMap { invoice ->
             invoice.payments
-                .filter { it.affectsBankTreasury() && belongsToAccount(it.bankAccountId, account, defaultAccountId) }
+                .filter { paymentMatchesAccount(it, account, defaultBankAccountId, defaultCashAccountId) }
                 .map { payment ->
                     BankAccountMovement(
                         id = payment.id,
@@ -36,7 +74,7 @@ object BankAccountCalculations {
         }.forEach { total += it.amount }
 
         expenses
-            .filter { it.affectsBankTreasury() && belongsToAccount(it.bankAccountId, account, defaultAccountId) }
+            .filter { expenseMatchesAccount(it, account, defaultBankAccountId, defaultCashAccountId) }
             .forEach { total -= it.amount }
 
         return total
@@ -46,11 +84,12 @@ object BankAccountCalculations {
         account: BankAccount,
         invoices: List<Invoice>,
         expenses: List<Expense>,
-        defaultAccountId: String?
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
     ): List<BankAccountMovement> {
         val income = invoices.flatMap { invoice ->
             invoice.payments
-                .filter { it.affectsBankTreasury() && belongsToAccount(it.bankAccountId, account, defaultAccountId) }
+                .filter { paymentMatchesAccount(it, account, defaultBankAccountId, defaultCashAccountId) }
                 .map { payment ->
                     BankAccountMovement(
                         id = payment.id,
@@ -63,7 +102,7 @@ object BankAccountCalculations {
                 }
         }
         val outcome = expenses
-            .filter { it.affectsBankTreasury() && belongsToAccount(it.bankAccountId, account, defaultAccountId) }
+            .filter { expenseMatchesAccount(it, account, defaultBankAccountId, defaultCashAccountId) }
             .map { expense ->
                 BankAccountMovement(
                     id = expense.id,
@@ -82,10 +121,11 @@ object BankAccountCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>
     ): List<BankAccountSummary> {
-        val defaultId = accounts.firstOrNull { it.isDefault }?.id ?: accounts.firstOrNull()?.id
+        val defaultBankId = defaultAccountId(accounts, TreasuryAccountKind.BANK)
+        val defaultCashId = defaultAccountId(accounts, TreasuryAccountKind.CASH)
         return accounts.map { account ->
-            val accountMovements = movements(account, invoices, expenses, defaultId)
-            val accountBalance = balance(account, invoices, expenses, defaultId)
+            val accountMovements = movements(account, invoices, expenses, defaultBankId, defaultCashId)
+            val accountBalance = balance(account, invoices, expenses, defaultBankId, defaultCashId)
             BankAccountSummary(
                 account = account,
                 balance = accountBalance,
@@ -99,8 +139,9 @@ object BankAccountCalculations {
         account: BankAccount,
         invoices: List<Invoice>,
         expenses: List<Expense>,
-        defaultAccountId: String?
-    ): LocalDate? = movements(account, invoices, expenses, defaultAccountId)
+        defaultBankAccountId: String?,
+        defaultCashAccountId: String?
+    ): LocalDate? = movements(account, invoices, expenses, defaultBankAccountId, defaultCashAccountId)
         .firstOrNull()
         ?.date
 }

@@ -21,8 +21,8 @@ data class MonthFinancialSummary(
     val total: Double get() = income - expenses
 }
 
-data class DailyExpenseBar(
-    val date: LocalDate,
+data class UpcomingPaymentBar(
+    val dueDate: LocalDate,
     val amount: Double,
     val label: String
 )
@@ -544,23 +544,32 @@ object DashboardCalculations {
         expenses = TreasuryCalculations.monthlyPaidExpenses(expenses, month)
     )
 
-    fun buildDailyExpensesLast7Days(
+    fun buildUpcomingExpensePayments(
+        invoices: List<Invoice>,
         expenses: List<Expense>,
         today: LocalDate = LocalDate.now(),
+        limit: Int = 10,
         locale: Locale = AppLocale.current()
-    ): List<DailyExpenseBar> {
+    ): List<UpcomingPaymentBar> {
         val formatter = DateTimeFormatter.ofPattern("dd/MM", locale)
-        return (6 downTo 0).map { offset ->
-            val day = today.minusDays(offset.toLong())
-            val amount = expenses
-                .filter { it.isPaid && expenseOccursOn(it, day) }
-                .sumOf { it.amount }
-            DailyExpenseBar(
-                date = day,
-                amount = amount,
-                label = day.format(formatter)
-            )
-        }
+        return EcheanceForecast.buildItems(
+            invoices = invoices,
+            expenses = expenses,
+            from = today,
+            to = today.plusYears(2)
+        )
+            .asSequence()
+            .filter { it.type == EcheanceType.EXPENSE && !it.dueDate.isBefore(today) }
+            .sortedBy { it.dueDate }
+            .take(limit)
+            .map { item ->
+                UpcomingPaymentBar(
+                    dueDate = item.dueDate,
+                    amount = item.amount,
+                    label = item.dueDate.format(formatter)
+                )
+            }
+            .toList()
     }
 
     fun expenseWeekTrendPercent(

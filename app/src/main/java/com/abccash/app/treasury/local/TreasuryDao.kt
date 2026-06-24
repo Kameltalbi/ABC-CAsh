@@ -175,8 +175,11 @@ interface TreasuryDao {
     @Query("SELECT * FROM bank_accounts WHERE id = :id LIMIT 1")
     suspend fun findBankAccountById(id: String): BankAccountEntity?
 
-    @Query("SELECT * FROM bank_accounts WHERE entrepriseId = :entrepriseId AND isDefault = 1 LIMIT 1")
+    @Query("SELECT * FROM bank_accounts WHERE entrepriseId = :entrepriseId AND isDefault = 1 AND kind = 'BANK' LIMIT 1")
     suspend fun findDefaultBankAccount(entrepriseId: String): BankAccountEntity?
+
+    @Query("SELECT * FROM bank_accounts WHERE entrepriseId = :entrepriseId AND isDefault = 1 AND kind = :kind LIMIT 1")
+    suspend fun findDefaultAccountByKind(entrepriseId: String, kind: String): BankAccountEntity?
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsertBankAccount(account: BankAccountEntity)
@@ -184,6 +187,10 @@ interface TreasuryDao {
     @Query("DELETE FROM bank_accounts WHERE id = :id")
     suspend fun deleteBankAccountById(id: String)
 
+    @Query("UPDATE bank_accounts SET isDefault = 0 WHERE entrepriseId = :entrepriseId AND kind = :kind")
+    suspend fun clearDefaultAccountsForKind(entrepriseId: String, kind: String)
+
+    @Deprecated("Use clearDefaultAccountsForKind")
     @Query("UPDATE bank_accounts SET isDefault = 0 WHERE entrepriseId = :entrepriseId")
     suspend fun clearDefaultBankAccounts(entrepriseId: String)
 

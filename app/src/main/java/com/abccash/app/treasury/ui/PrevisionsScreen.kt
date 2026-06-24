@@ -80,7 +80,7 @@ fun PrevisionsScreen(
         ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?
     ) -> Unit,
     onDeleteExpense: (String) -> Unit,
-    onValidateForecastExpense: (String, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit,
+    onValidateForecastExpense: (String, LocalDate, PaymentMethod, LocalDate, (String?) -> Unit) -> Unit,
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
     onForecastValidated: (YearMonth) -> Unit,
@@ -222,7 +222,7 @@ fun PrevisionsScreen(
             dueDate = dueDate,
             onDismiss = { expenseToMarkPaid = null },
             onConfirm = { paymentDate, method ->
-                onValidateForecastExpense(expense.id, paymentDate, method) { error ->
+                onValidateForecastExpense(expense.id, paymentDate, method, dueDate) { error ->
                     if (error == null) {
                         expenseToMarkPaid = null
                         onForecastValidated(YearMonth.from(paymentDate))

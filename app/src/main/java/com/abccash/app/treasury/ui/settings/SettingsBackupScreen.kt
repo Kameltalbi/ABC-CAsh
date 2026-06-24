@@ -23,8 +23,7 @@ import androidx.compose.ui.unit.sp
 import android.net.Uri
 import com.abccash.app.R
 import com.abccash.app.treasury.backup.GoogleBackupManager
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
+import com.abccash.app.treasury.ui.googleSignInErrorMessage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -57,15 +56,21 @@ fun SettingsBackupScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         isGoogleLoading = false
-        runCatching {
-            GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)
-        }.onSuccess { account ->
-            signedInEmail = account.email
-            onGoogleSignedIn(account.email)
-            backupError = null
-        }.onFailure {
-            backupError = context.getString(R.string.google_sign_in_failed)
+        if (result.resultCode != android.app.Activity.RESULT_OK) {
+            if (result.resultCode != android.app.Activity.RESULT_CANCELED) {
+                backupError = context.getString(R.string.google_sign_in_failed)
+            }
+            return@rememberLauncherForActivityResult
         }
+        googleBackupManager.handleSignInResult(result.data)
+            .onSuccess { account ->
+                signedInEmail = account.email
+                onGoogleSignedIn(account.email)
+                backupError = null
+            }
+            .onFailure { error ->
+                backupError = googleSignInErrorMessage(context, error)
+            }
     }
 
     val exportLauncher = rememberLauncherForActivityResult(

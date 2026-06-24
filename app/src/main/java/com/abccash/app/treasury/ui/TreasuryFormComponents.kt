@@ -1,13 +1,14 @@
 package com.abccash.app.treasury.ui
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -30,6 +31,26 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 val AbcCashFabShape = RoundedCornerShape(16.dp)
+private val TreasuryFieldShape = RoundedCornerShape(12.dp)
+private val TreasuryFieldBorder = Color(0xFFE8E4DD)
+private val TreasuryFieldText = Color(0xFF1A1A1A)
+private val TreasuryFieldLabel = Color(0xFF64748B)
+
+@Composable
+fun treasuryOutlinedFieldColors() = OutlinedTextFieldDefaults.colors(
+    focusedContainerColor = Color.White,
+    unfocusedContainerColor = Color.White,
+    disabledContainerColor = Color.White,
+    focusedBorderColor = TreasuryFieldBorder,
+    unfocusedBorderColor = TreasuryFieldBorder,
+    disabledBorderColor = TreasuryFieldBorder,
+    focusedTextColor = TreasuryFieldText,
+    unfocusedTextColor = TreasuryFieldText,
+    disabledTextColor = TreasuryFieldText,
+    focusedLabelColor = TreasuryFieldLabel,
+    unfocusedLabelColor = TreasuryFieldLabel,
+    disabledLabelColor = TreasuryFieldLabel
+)
 
 @Composable
 fun AbcCashFab(
@@ -116,6 +137,7 @@ fun TreasuryDateField(
     enabled: Boolean = true
 ) {
     var showPicker by remember { mutableStateOf(false) }
+    val interactionSource = remember { MutableInteractionSource() }
 
     TreasuryDatePickerDialog(
         visible = showPicker,
@@ -127,39 +149,41 @@ fun TreasuryDateField(
         }
     )
 
-    Box(
+    OutlinedTextField(
+        value = date.format(TreasuryFormDateFormatter),
+        onValueChange = {},
         modifier = modifier
             .fillMaxWidth()
             .then(
                 if (enabled) {
-                    Modifier.clickable { showPicker = true }
+                    Modifier.clickable(
+                        interactionSource = interactionSource,
+                        indication = null
+                    ) { showPicker = true }
                 } else {
                     Modifier
                 }
-            )
-    ) {
-        OutlinedTextField(
-            value = date.format(TreasuryFormDateFormatter),
-            onValueChange = {},
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(label) },
-            readOnly = true,
-            enabled = false,
-            trailingIcon = {
+            ),
+        label = { Text(label) },
+        readOnly = true,
+        enabled = enabled,
+        singleLine = true,
+        shape = TreasuryFieldShape,
+        interactionSource = interactionSource,
+        trailingIcon = {
+            IconButton(
+                onClick = { if (enabled) showPicker = true },
+                enabled = enabled
+            ) {
                 Icon(
                     Icons.Default.CalendarToday,
-                    contentDescription = null,
-                    tint = if (enabled) Color(0xFF64748B) else Color(0xFFBDBDBD)
+                    contentDescription = label,
+                    tint = if (enabled) MaterialTheme.colorScheme.primary else Color(0xFFBDBDBD)
                 )
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledContainerColor = Color.White,
-                disabledBorderColor = Color(0xFFE8E4DD),
-                disabledTextColor = Color(0xFF1A1A1A),
-                disabledLabelColor = Color(0xFF64748B)
-            )
-        )
-    }
+            }
+        },
+        colors = treasuryOutlinedFieldColors()
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -186,13 +210,11 @@ fun TreasuryPaymentMethodField(
                     .menuAnchor(),
                 label = { Text(fieldLabel) },
                 readOnly = true,
+                shape = TreasuryFieldShape,
                 trailingIcon = {
                     ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded)
                 },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color.White,
-                    unfocusedContainerColor = Color.White
-                )
+                colors = treasuryOutlinedFieldColors()
             )
             ExposedDropdownMenu(
                 expanded = expanded,

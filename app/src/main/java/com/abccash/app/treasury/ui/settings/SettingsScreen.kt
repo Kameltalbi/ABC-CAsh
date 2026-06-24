@@ -12,11 +12,13 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -34,8 +36,7 @@ import com.abccash.app.treasury.data.SubscriptionPlan
 import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
-import com.google.android.gms.auth.api.signin.GoogleSignIn
-import com.google.android.gms.common.api.ApiException
+import com.abccash.app.treasury.ui.googleSignInErrorMessage
 import kotlinx.coroutines.launch
 
 // Palette alignée ABC Cash — bleu principal, pas de violet.
@@ -85,7 +86,12 @@ fun SettingsScreen(
     var isDeleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
-    val expandedSections = remember { mutableStateMapOf<String, Boolean>() }
+    val expandedSections = remember {
+        mutableStateMapOf(
+            "categories" to true,
+            "app" to true
+        )
+    }
 
     fun toggleSection(key: String) {
         expandedSections[key] = !(expandedSections[key] ?: false)
@@ -95,15 +101,21 @@ fun SettingsScreen(
         contract = ActivityResultContracts.StartActivityForResult()
     ) { result ->
         isGoogleLoading = false
-        runCatching {
-            GoogleSignIn.getSignedInAccountFromIntent(result.data).getResult(ApiException::class.java)
-        }.onSuccess { account ->
-            signedInEmail = account.email
-            onGoogleSignedIn(account.email)
-            googleError = null
-        }.onFailure {
-            googleError = context.getString(R.string.google_sign_in_failed)
+        if (result.resultCode != android.app.Activity.RESULT_OK) {
+            if (result.resultCode != android.app.Activity.RESULT_CANCELED) {
+                googleError = context.getString(R.string.google_sign_in_failed)
+            }
+            return@rememberLauncherForActivityResult
         }
+        googleBackupManager.handleSignInResult(result.data)
+            .onSuccess { account ->
+                signedInEmail = account.email
+                onGoogleSignedIn(account.email)
+                googleError = null
+            }
+            .onFailure { error ->
+                googleError = googleSignInErrorMessage(context, error)
+            }
     }
 
     val csvExportLauncher = rememberLauncherForActivityResult(
@@ -220,11 +232,52 @@ fun SettingsScreen(
                         }
                     )
                     HorizontalDivider(color = SettingsProgressTrack)
+                }
+            }
+
+            item {
+                CollapsibleSettingsSection(
+                    title = stringResource(R.string.settings_section_categories),
+                    expanded = expandedSections["categories"] ?: true,
+                    onToggle = { toggleSection("categories") }
+                ) {
                     SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_manage_categories),
-                        supporting = stringResource(R.string.settings_income_categories_sub),
-                        leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = AppColors.BrandBlue) },
+                        headline = stringResource(R.string.settings_income_categories),
+                        supporting = stringResource(R.string.settings_manage_categories),
+                        leadingIcon = {
+                            Icon(Icons.Default.TrendingUp, contentDescription = null, tint = AppColors.BrandBlue)
+                        },
                         onClick = { onNavigate(SettingsRoutes.CATEGORIES_INCOME) }
+                    )
+                    HorizontalDivider(color = SettingsProgressTrack)
+                    SettingsInfoListItem(
+                        headline = stringResource(R.string.settings_expense_categories),
+                        supporting = stringResource(R.string.settings_manage_categories),
+                        leadingIcon = {
+                            Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = AppColors.BrandBlue)
+                        },
+                        onClick = { onNavigate(SettingsRoutes.CATEGORIES_EXPENSE) }
+                    )
+                }
+            }
+
+            item {
+                CollapsibleSettingsSection(
+                    title = stringResource(R.string.settings_section_app),
+                    expanded = expandedSections["app"] ?: true,
+                    onToggle = { toggleSection("app") }
+                ) {
+                    SettingsInfoListItem(
+                        headline = stringResource(R.string.settings_bank_accounts),
+                        supporting = stringResource(R.string.settings_bank_accounts_sub),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.AccountBalance,
+                                contentDescription = null,
+                                tint = AppColors.BrandBlue
+                            )
+                        },
+                        onClick = { onNavigate(SettingsRoutes.OPTIONS_BANK) }
                     )
                 }
             }

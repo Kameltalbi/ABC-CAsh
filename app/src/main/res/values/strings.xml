@@ -101,8 +101,10 @@
     <string name="dashboard_period_month">Month</string>
     <string name="dashboard_overview_title">Overview</string>
     <string name="dashboard_summary">Summary</string>
+    <string name="dashboard_summary_income">Income</string>
+    <string name="dashboard_summary_expense">Expenses</string>
     <string name="dashboard_accounts">Accounts</string>
-    <string name="dashboard_expenses_7d">Expenses — last 7 days</string>
+    <string name="dashboard_upcoming_payments">Next 10 upcoming payments</string>
     <string name="dashboard_top_categories">Top categories</string>
     <string name="dashboard_last_used">Last used: %1$s</string>
     <string name="dashboard_treasury_wallet">Treasury</string>
@@ -128,7 +130,7 @@
     <string name="no_expense_month">No expenses this month</string>
     <string name="no_data">No data</string>
     <string name="user_fallback">User</string>
-    <string name="plus_settings_sub_full">Profile, categories, currency, security</string>
+    <string name="plus_settings_sub_full">Profile, bank accounts, categories, security</string>
     <string name="plus_internal_transfer">Internal transfer</string>
     <string name="plus_internal_transfer_sub">Bank → Cash or Cash → Bank</string>
     <string name="internal_transfer_title">Internal Transfer</string>
@@ -233,7 +235,15 @@
     <string name="cash_opening_hint">Encashments paid in cash increase this balance. Expenses paid in cash decrease it.</string>
     <string name="cash_opening_balance">Opening cash balance</string>
     <string name="clear_cash_opening">Clear opening balance</string>
-    <string name="bank_account">Bank account</string>
+    <string name="treasury_account_kind_label">Account type</string>
+    <string name="treasury_account_kind_bank">Bank</string>
+    <string name="treasury_account_kind_cash">Cash</string>
+    <string name="treasury_cash_account_name">Cash account name</string>
+    <string name="treasury_cash_account_name_hint">e.g. Petty cash</string>
+    <string name="treasury_cash_account_set_default">Default cash account for cash payments</string>
+    <string name="treasury_accounts_usage">%1$d / %2$d accounts</string>
+    <string name="treasury_accounts_usage_hint">Free: 2 accounts (bank + cash). Pro: up to 5.</string>
+    <string name="treasury_accounts_limit_reached">Account limit reached. Upgrade to Pro for up to 5 accounts.</string>
     <string name="bank_accounts_title">Bank accounts</string>
     <string name="bank_account_detail">Account detail</string>
     <string name="bank_account_add">Add account</string>
@@ -252,13 +262,14 @@
     <string name="bank_account_movements_count">%1$d movements</string>
     <string name="bank_account_low_balance_alert">Balance below alert threshold</string>
     <string name="bank_accounts_empty">No bank accounts yet</string>
-    <string name="bank_accounts_empty_hint">Add a manual account to track balances per account. Bank payments and transfers are assigned to the default account.</string>
+    <string name="bank_accounts_empty_hint">Add a bank or cash account to track balances. Bank and cash payments are routed to the default account of each type.</string>
     <string name="bank_accounts_dsp2_hint">Automatic sync via PSD2 / open banking will be available in a future update.</string>
     <string name="bank_account_not_found">Bank account not found</string>
     <string name="bank_account_delete_title">Delete account?</string>
     <string name="bank_account_delete_message">Delete account \"%1$s\"? Movements stay in treasury but will no longer be linked to this account.</string>
+    <string name="bank_account">Bank account</string>
     <string name="settings_bank_accounts">Bank accounts</string>
-    <string name="settings_bank_accounts_sub">Balances, history and alerts per account</string>
+    <string name="settings_bank_accounts_sub">Bank and cash accounts, balances and history</string>
 
     <string name="plus_invoices">Invoices</string>
     <string name="plus_invoices_sub">List, create, PDF and payments</string>
@@ -488,8 +499,10 @@
     <string name="subscription_stay_free">Keep Free plan</string>
     <string name="subscription_free_feature_core">Income, expenses and forecasts</string>
     <string name="subscription_free_feature_limit">30 items created per month</string>
+    <string name="subscription_free_feature_accounts">Up to 2 treasury accounts</string>
     <string name="subscription_free_feature_csv">CSV export</string>
     <string name="subscription_pro_feature_unlimited">Unlimited transactions and forecasts</string>
+    <string name="subscription_pro_feature_accounts">Up to 5 treasury accounts</string>
     <string name="subscription_pro_feature_backup">Automatic Google Drive backup</string>
     <string name="subscription_pro_feature_csv">CSV export for your accountant</string>
     <string name="subscription_pro_feature_support">Priority support</string>
@@ -523,7 +536,7 @@
     <string name="category_taxes">Taxes</string>
     <string name="category_subscription">Subscriptions</string>
     <string name="built_in_categories">Built-in categories</string>
-    <string name="custom_categories">Custom categories</string>
+    <string name="custom_categories">Your categories</string>
     <string name="new_category">New category</string>
 
     <!-- ERRORS -->
@@ -539,7 +552,7 @@
     <string name="add_category_in_settings">Add categories in Settings before recording a transaction.</string>
     <string name="edit_category">Edit category</string>
     <string name="delete_category_confirm">Delete category \"%1$s\"?</string>
-    <string name="no_custom_categories">No custom categories yet</string>
+    <string name="no_custom_categories">No categories yet</string>
     <string name="category_custom_tag">Custom</string>
 
     <!-- TREASURY SCREEN -->
@@ -568,7 +581,7 @@
     <string name="signup_admin_title">Welcome</string>
     <string name="signup_admin_subtitle">Enter your details to start tracking your treasury</string>
     <string name="signup_create_button">Get started</string>
-    <string name="signup_solo_note">Your data stays on this device. Connect Google in Settings to back up automatically.</string>
+    <string name="signup_solo_note">Your data stays on this device. Connect Google above to back up and restore on a new phone.</string>
     <string name="settings_backup_sub">Google Drive backup or manual JSON file</string>
     <string name="google_backup_title">Google backup</string>
     <string name="google_backup_sub">Sign in with Google to save your treasury and restore it on a new phone.</string>
@@ -578,6 +591,10 @@
     <string name="google_restore">Restore</string>
     <string name="google_account_connected">Connected: %1$s</string>
     <string name="google_sign_in_failed">Google sign-in failed</string>
+    <string name="google_sign_in_cancelled">Google sign-in cancelled</string>
+    <string name="google_sign_in_config_error">Google sign-in is not configured for this app. Contact support or try again later.</string>
+    <string name="google_sign_in_or_restore_hint">Connects Google Drive for backup. Restores your data automatically if a backup exists.</string>
+    <string name="google_no_backup_found">No backup found on Google Drive</string>
     <string name="google_restore_failed">Could not restore from Google</string>
     <string name="google_restore_existing">Restore my data with Google</string>
     <string name="google_restore_existing_hint">If you already use ABC Cash on another phone</string>

@@ -63,24 +63,27 @@ class TreasuryViewModel(
     fun bankAccountMovements(accountId: String): List<BankAccountMovement> {
         val state = _uiState.value
         val account = state.bankAccounts.firstOrNull { it.id == accountId } ?: return emptyList()
-        val defaultId = state.bankAccounts.firstOrNull { it.isDefault }?.id
-            ?: state.bankAccounts.firstOrNull()?.id
-        return BankAccountCalculations.movements(account, state.invoices, state.expenses, defaultId)
+        val defaultBankId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.BANK)
+        val defaultCashId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.CASH)
+        return BankAccountCalculations.movements(account, state.invoices, state.expenses, defaultBankId, defaultCashId)
     }
 
     fun bankAccountBalance(accountId: String): Double {
         val state = _uiState.value
         val account = state.bankAccounts.firstOrNull { it.id == accountId } ?: return 0.0
-        val defaultId = state.bankAccounts.firstOrNull { it.isDefault }?.id
-            ?: state.bankAccounts.firstOrNull()?.id
-        return BankAccountCalculations.balance(account, state.invoices, state.expenses, defaultId)
+        val defaultBankId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.BANK)
+        val defaultCashId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.CASH)
+        return BankAccountCalculations.balance(account, state.invoices, state.expenses, defaultBankId, defaultCashId)
     }
 
     fun saveBankAccount(account: BankAccount, onResult: (String?) -> Unit) {
         viewModelScope.launch {
             val error = repository.saveBankAccount(account)
             onResult(error)
-            if (error == null) scheduleGoogleBackup()
+            if (error == null) {
+                refreshSubscription()
+                scheduleGoogleBackup()
+            }
         }
     }
 
@@ -378,7 +381,7 @@ class TreasuryViewModel(
                 return@launch
             }
             if (json.isNullOrBlank()) {
-                onResult(null, "Aucune sauvegarde trouvée sur Google")
+                onResult(null, GOOGLE_NO_BACKUP)
                 return@launch
             }
             repository.importInitialBackup(json)
@@ -1203,6 +1206,7 @@ class TreasuryViewModel(
         expenseId: String,
         paymentDate: LocalDate,
         paymentMethod: PaymentMethod,
+        occurrenceDueDate: LocalDate = paymentDate,
         onResult: (String?) -> Unit = {}
     ) {
         val existing = _uiState.value.expenses.find { it.id == expenseId }
@@ -1211,13 +1215,39 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            repository.updateExpense(
-                existing.copy(
-                    isPaid = true,
-                    paymentMethod = paymentMethod,
-                    date = if (existing.isRecurring) existing.date else paymentDate
+            if (existing.isRecurring) {
+                repository.addExpense(
+                    existing.copy(
+                        id = java.util.UUID.randomUUID().toString(),
+                        isRecurring = false,
+                        recurrence = null,
+                        recurrenceEndDate = null,
+                        isPaid = true,
+                        date = paymentDate,
+                        paymentMethod = paymentMethod
+                    )
                 )
-            )
+                val nextDue = existing.nextOccurrenceAfter(occurrenceDueDate)
+                if (nextDue == null) {
+                    repository.deleteExpense(expenseId)
+                } else {
+                    repository.updateExpense(
+                        existing.copy(
+                            date = nextDue,
+                            isPaid = false,
+                            paymentMethod = null
+                        )
+                    )
+                }
+            } else {
+                repository.updateExpense(
+                    existing.copy(
+                        isPaid = true,
+                        paymentMethod = paymentMethod,
+                        date = paymentDate
+                    )
+                )
+            }
             onResult(null)
             scheduleGoogleBackup()
         }
@@ -1464,6 +1494,10 @@ class TreasuryViewModel(
             onResult(error)
             if (error == null) scheduleGoogleBackup()
         }
+    }
+
+    companion object {
+        const val GOOGLE_NO_BACKUP = "GOOGLE_NO_BACKUP"
     }
 }
 

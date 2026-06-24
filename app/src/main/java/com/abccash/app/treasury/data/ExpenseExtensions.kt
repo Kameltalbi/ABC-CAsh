@@ -44,6 +44,20 @@ fun Expense.occurrenceDateIn(month: YearMonth): LocalDate? {
     return month.atDay(day)
 }
 
+fun Expense.nextOccurrenceAfter(settledDate: LocalDate): LocalDate? {
+    if (!isRecurring) return null
+    val recurrenceType = recurrence ?: return null
+    val candidate = when (recurrenceType) {
+        ExpenseRecurrence.WEEKLY -> settledDate.plusWeeks(1)
+        else -> settledDate.plusMonths((recurrenceType.monthsInterval ?: 1).toLong())
+    }
+    if (recurrenceEndDate != null && candidate.isAfter(recurrenceEndDate)) return null
+    return candidate
+}
+
+fun Expense.savesAsForecast(forecastMode: Boolean, today: LocalDate = LocalDate.now()): Boolean =
+    forecastMode || isRecurring || date.isAfter(today)
+
 fun List<Expense>.forMonth(month: YearMonth): List<Expense> {
     return filter { it.appliesToMonth(month) }
         .sortedByDescending { it.occurrenceDateIn(month) }

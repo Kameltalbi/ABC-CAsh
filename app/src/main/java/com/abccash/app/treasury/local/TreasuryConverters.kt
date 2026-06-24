@@ -10,6 +10,7 @@ import com.abccash.app.treasury.data.ProductKind
 import com.abccash.app.treasury.data.ProductUnit
 import com.abccash.app.treasury.data.TaxIdType
 import com.abccash.app.treasury.data.TaxIdValidationStatus
+import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.OtherTaxMode
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.QuoteStatus
@@ -128,6 +129,14 @@ class TreasuryConverters {
     @TypeConverter
     fun toOtherTaxMode(value: String?): OtherTaxMode? =
         value?.let { runCatching { OtherTaxMode.valueOf(it) }.getOrNull() } ?: OtherTaxMode.PERCENTAGE
+
+    @TypeConverter
+    fun fromTreasuryAccountKind(value: TreasuryAccountKind?): String? = value?.name
+
+    @TypeConverter
+    fun toTreasuryAccountKind(value: String?): TreasuryAccountKind? =
+        value?.let { runCatching { TreasuryAccountKind.valueOf(it) }.getOrNull() }
+            ?: TreasuryAccountKind.BANK
 
     @TypeConverter
     fun fromUserPermissions(value: Set<UserPermission>?): String? = value?.joinToString(",") { it.name }

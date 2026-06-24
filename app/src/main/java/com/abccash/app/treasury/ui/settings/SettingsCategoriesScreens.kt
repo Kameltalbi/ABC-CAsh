@@ -143,7 +143,7 @@ private fun CustomCategoriesScreen(
                 .padding(horizontal = 16.dp)
         ) {
             Text(
-                text = stringResource(R.string.custom_categories),
+                text = stringResource(R.string.settings_manage_categories),
                 fontWeight = FontWeight.Bold,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)

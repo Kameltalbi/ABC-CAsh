@@ -173,6 +173,10 @@ fun TreasuryApp(
     }
 
     AppCurrencyProvider(appSettings = appSettings) {
+        EnsureDefaultCategories(
+            entrepriseId = uiState.entrepriseId.orEmpty(),
+            appSettings = appSettings
+        )
         NavHost(
             navController = navController,
             startDestination = Screen.Splash.route
@@ -245,6 +249,9 @@ fun TreasuryApp(
             if (canRegister == true) {
                 InscriptionScreen(
                     onInscriptionSuccess = { user -> enterMainApp(user) },
+                    googleBackupManager = googleBackupManager,
+                    onGoogleConnected = viewModel::onGoogleSignedIn,
+                    onRestoreFromGoogle = viewModel::restoreInitialFromGoogle,
                     viewModel = viewModel(factory = InscriptionViewModelFactory(repository))
                 )
             }
@@ -419,14 +426,30 @@ fun TreasuryApp(
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             var showAddSheet by remember { mutableStateOf(false) }
             var editingAccount by remember { mutableStateOf<com.abccash.app.treasury.data.BankAccount?>(null) }
+            var saveError by remember { mutableStateOf<String?>(null) }
+            val subscription = uiState.subscription
+            val accountsLimit = subscription.plan.treasuryAccountsLimit
+            val accountsUsed = subscription.treasuryAccountsCount
+            val canAddAccount = !subscription.isTreasuryAccountLimitReached
+            val accountLimitError = stringResource(R.string.treasury_accounts_limit_reached)
             val summaries = remember(uiState.bankAccounts, uiState.invoices, uiState.expenses) {
                 viewModel.bankAccountSummaries()
             }
 
             BankAccountsListScreen(
                 summaries = summaries,
+                accountsUsed = accountsUsed,
+                accountsLimit = accountsLimit,
+                canAddAccount = canAddAccount,
                 onBack = { navController.popBackStack() },
-                onAddAccount = { showAddSheet = true },
+                onAddAccount = {
+                    if (canAddAccount) {
+                        saveError = null
+                        showAddSheet = true
+                    } else {
+                        saveError = accountLimitError
+                    }
+                },
                 onOpenAccount = { accountId ->
                     navController.navigate("bank_account/$accountId")
                 },
@@ -439,15 +462,23 @@ fun TreasuryApp(
                 visible = showAddSheet || editingAccount != null,
                 initialAccount = editingAccount,
                 entrepriseId = uiState.entrepriseId.orEmpty(),
+                errorMessage = saveError,
                 onDismiss = {
                     showAddSheet = false
                     editingAccount = null
+                    saveError = null
                 },
                 onSave = { account ->
                     viewModel.saveBankAccount(account) { error ->
                         if (error == null) {
                             showAddSheet = false
                             editingAccount = null
+                            saveError = null
+                        } else {
+                            saveError = when (error) {
+                                TreasuryRepository.ACCOUNT_LIMIT_REACHED -> accountLimitError
+                                else -> error
+                            }
                         }
                     }
                 }
@@ -760,7 +791,7 @@ private fun MainAppScaffold(
                             navigateToMainTab(Screen.Subscription.route)
                         },
                         onNavigateToBankAccounts = {
-                            navController.navigate(Screen.BankAccounts.route)
+                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
                         },
                         onOpenDrawer = { openDrawer() }
                     )
@@ -837,10 +868,10 @@ private fun MainAppScaffold(
                         onValidateForecastExpense = viewModel::validateForecastExpense,
                         onDeleteExpense = viewModel::deleteExpense,
                         onNavigateToAddIncome = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
+                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME, forecast = true))
                         },
                         onNavigateToAddExpense = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
+                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE, forecast = true))
                         },
                         onForecastValidated = { month ->
                             viewModel.setSelectedMonth(month)

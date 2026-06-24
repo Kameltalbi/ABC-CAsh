@@ -31,7 +31,7 @@ class BankAccountCalculationsTest {
             expense("x2", 30.0, PaymentMethod.CASH, null)
         )
 
-        val balance = BankAccountCalculations.balance(accountA, invoices, expenses, defaultAccountId = "a")
+        val balance = BankAccountCalculations.balance(accountA, invoices, expenses, defaultBankAccountId = "a", defaultCashAccountId = null)
 
         assertEquals(1120.0, balance, 0.001)
     }
@@ -50,8 +50,8 @@ class BankAccountCalculationsTest {
             expense("x1", 40.0, PaymentMethod.CREDIT_CARD, null)
         )
 
-        val defaultBalance = BankAccountCalculations.balance(accountA, invoices, expenses, defaultAccountId = "a")
-        val secondaryBalance = BankAccountCalculations.balance(accountB, invoices, expenses, defaultAccountId = "a")
+        val defaultBalance = BankAccountCalculations.balance(accountA, invoices, expenses, defaultBankAccountId = "a", defaultCashAccountId = null)
+        val secondaryBalance = BankAccountCalculations.balance(accountB, invoices, expenses, defaultBankAccountId = "a", defaultCashAccountId = null)
 
         assertEquals(1060.0, defaultBalance, 0.001)
         assertEquals(500.0, secondaryBalance, 0.001)

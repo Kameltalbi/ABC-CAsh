@@ -7,10 +7,11 @@ enum class SubscriptionPlan(
     val id: String,
     @StringRes val nameRes: Int,
     val priceUsd: Double,
-    val transactionsPerMonth: Int?
+    val transactionsPerMonth: Int?,
+    val treasuryAccountsLimit: Int
 ) {
-    FREE("free", R.string.plan_free, 0.0, 30),
-    PRO("pro", R.string.plan_pro, 4.99, null);
+    FREE("free", R.string.plan_free, 0.0, 30, 2),
+    PRO("pro", R.string.plan_pro, 4.99, null, 5);
 
     val isFree: Boolean get() = this == FREE
     val hasTransactionLimit: Boolean get() = transactionsPerMonth != null
@@ -27,6 +28,7 @@ data class UserSubscription(
     val startDate: Long = System.currentTimeMillis(),
     val endDate: Long? = null,
     val transactionsThisMonth: Int = 0,
+    val treasuryAccountsCount: Int = 0,
     val monthResetDate: Long = System.currentTimeMillis()
 ) {
     val isActive: Boolean get() = endDate == null || endDate > System.currentTimeMillis()
@@ -37,6 +39,12 @@ data class UserSubscription(
             Int.MAX_VALUE
         }
 
+    val remainingTreasuryAccounts: Int get() =
+        (plan.treasuryAccountsLimit - treasuryAccountsCount).coerceAtLeast(0)
+
     val isTransactionLimitReached: Boolean get() =
         plan.hasTransactionLimit && transactionsThisMonth >= plan.transactionsPerMonth!!
+
+    val isTreasuryAccountLimitReached: Boolean get() =
+        treasuryAccountsCount >= plan.treasuryAccountsLimit
 }

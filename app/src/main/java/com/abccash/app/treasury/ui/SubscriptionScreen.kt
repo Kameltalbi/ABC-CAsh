@@ -253,10 +253,12 @@ private fun PlanFeatures(
         SubscriptionPlan.FREE -> listOf(
             R.string.subscription_free_feature_core,
             R.string.subscription_free_feature_limit,
+            R.string.subscription_free_feature_accounts,
             R.string.subscription_free_feature_csv
         )
         SubscriptionPlan.PRO -> listOf(
             R.string.subscription_pro_feature_unlimited,
+            R.string.subscription_pro_feature_accounts,
             R.string.subscription_pro_feature_backup,
             R.string.subscription_pro_feature_csv,
             R.string.subscription_pro_feature_support

@@ -28,6 +28,9 @@ import com.abccash.app.treasury.data.*
 @Composable
 fun BankAccountsListScreen(
     summaries: List<BankAccountSummary>,
+    accountsUsed: Int,
+    accountsLimit: Int,
+    canAddAccount: Boolean,
     onBack: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenAccount: (String) -> Unit,
@@ -50,10 +53,12 @@ fun BankAccountsListScreen(
             )
         },
         floatingActionButton = {
-            AbcCashFab(
-                onClick = onAddAccount,
-                contentDescription = stringResource(R.string.bank_account_add)
-            )
+            if (canAddAccount) {
+                AbcCashFab(
+                    onClick = onAddAccount,
+                    contentDescription = stringResource(R.string.bank_account_add)
+                )
+            }
         }
     ) { padding ->
         LazyColumn(
@@ -63,6 +68,9 @@ fun BankAccountsListScreen(
             contentPadding = PaddingValues(16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
+            item {
+                TreasuryAccountsUsageCard(accountsUsed = accountsUsed, accountsLimit = accountsLimit)
+            }
             item {
                 Dsp2ComingSoonCard()
             }
@@ -105,6 +113,29 @@ fun BankAccountsListScreen(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun TreasuryAccountsUsageCard(accountsUsed: Int, accountsLimit: Int) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF5F8FF))
+    ) {
+        Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Text(
+                stringResource(R.string.treasury_accounts_usage, accountsUsed, accountsLimit),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
+            Text(
+                stringResource(R.string.treasury_accounts_usage_hint),
+                fontSize = 12.sp,
+                color = Color(0xFF64748B),
+                lineHeight = 16.sp
+            )
         }
     }
 }
@@ -162,11 +193,23 @@ private fun BankAccountListCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(summary.account.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    if (summary.account.bankName.isNotBlank()) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Text(summary.account.name, fontWeight = FontWeight.Bold, fontSize = 16.sp)
+                        AssistChip(
+                            onClick = {},
+                            enabled = false,
+                            label = {
+                                Text(
+                                    stringResource(summary.account.kind.labelRes),
+                                    fontSize = 11.sp
+                                )
+                            }
+                        )
+                    }
+                    if (summary.account.kind == TreasuryAccountKind.BANK && summary.account.bankName.isNotBlank()) {
                         Text(summary.account.bankName, fontSize = 12.sp, color = Color(0xFF64748B))
                     }
-                    if (summary.account.ibanLast4.isNotBlank()) {
+                    if (summary.account.kind == TreasuryAccountKind.BANK && summary.account.ibanLast4.isNotBlank()) {
                         Text(
                             "•••• ${summary.account.ibanLast4}",
                             fontSize = 12.sp,
@@ -381,12 +424,22 @@ fun BankAccountFormSheet(
     visible: Boolean,
     initialAccount: BankAccount?,
     entrepriseId: String,
+    errorMessage: String? = null,
     onDismiss: () -> Unit,
     onSave: (BankAccount) -> Unit
 ) {
     if (!visible) return
 
-    var name by remember(initialAccount) { mutableStateOf(initialAccount?.name.orEmpty()) }
+    var kind by remember(initialAccount) {
+        mutableStateOf(initialAccount?.kind ?: TreasuryAccountKind.BANK)
+    }
+    var name by remember(initialAccount, kind) {
+        mutableStateOf(
+            initialAccount?.name.orEmpty().ifBlank {
+                if (kind == TreasuryAccountKind.CASH) "" else ""
+            }
+        )
+    }
     var bankName by remember(initialAccount) { mutableStateOf(initialAccount?.bankName.orEmpty()) }
     var ibanLast4 by remember(initialAccount) { mutableStateOf(initialAccount?.ibanLast4.orEmpty()) }
     var openingText by remember(initialAccount) {
@@ -413,28 +466,68 @@ fun BankAccountFormSheet(
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold
             )
+            if (initialAccount == null) {
+                Text(
+                    text = stringResource(R.string.treasury_account_kind_label),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color(0xFF64748B)
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    FilterChip(
+                        selected = kind == TreasuryAccountKind.BANK,
+                        onClick = { kind = TreasuryAccountKind.BANK },
+                        label = { Text(stringResource(R.string.treasury_account_kind_bank)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    FilterChip(
+                        selected = kind == TreasuryAccountKind.CASH,
+                        onClick = { kind = TreasuryAccountKind.CASH },
+                        label = { Text(stringResource(R.string.treasury_account_kind_cash)) },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
             OutlinedTextField(
                 value = name,
                 onValueChange = { name = it },
-                label = { Text(stringResource(R.string.bank_account_name)) },
+                label = {
+                    Text(
+                        if (kind == TreasuryAccountKind.CASH) {
+                            stringResource(R.string.treasury_cash_account_name)
+                        } else {
+                            stringResource(R.string.bank_account_name)
+                        }
+                    )
+                },
+                placeholder = {
+                    if (kind == TreasuryAccountKind.CASH) {
+                        Text(stringResource(R.string.treasury_cash_account_name_hint))
+                    }
+                },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            OutlinedTextField(
-                value = bankName,
-                onValueChange = { bankName = it },
-                label = { Text(stringResource(R.string.bank_account_bank_name)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
-            OutlinedTextField(
-                value = ibanLast4,
-                onValueChange = { if (it.length <= 4) ibanLast4 = it.filter { c -> c.isDigit() } },
-                label = { Text(stringResource(R.string.bank_account_iban_last4)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
-            )
+            if (kind == TreasuryAccountKind.BANK) {
+                OutlinedTextField(
+                    value = bankName,
+                    onValueChange = { bankName = it },
+                    label = { Text(stringResource(R.string.bank_account_bank_name)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = ibanLast4,
+                    onValueChange = { if (it.length <= 4) ibanLast4 = it.filter { c -> c.isDigit() } },
+                    label = { Text(stringResource(R.string.bank_account_iban_last4)) },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
+                )
+            }
             OutlinedTextField(
                 value = openingText,
                 onValueChange = { openingText = it },
@@ -455,7 +548,16 @@ fun BankAccountFormSheet(
             )
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Checkbox(checked = isDefault, onCheckedChange = { isDefault = it })
-                Text(stringResource(R.string.bank_account_set_default))
+                Text(
+                    if (kind == TreasuryAccountKind.CASH) {
+                        stringResource(R.string.treasury_cash_account_set_default)
+                    } else {
+                        stringResource(R.string.bank_account_set_default)
+                    }
+                )
+            }
+            errorMessage?.let { message ->
+                Text(message, color = Color(0xFFDC2626), fontSize = 13.sp)
             }
             Button(
                 onClick = {
@@ -464,11 +566,12 @@ fun BankAccountFormSheet(
                     onSave(
                         (initialAccount ?: BankAccount(entrepriseId = entrepriseId, name = "")).copy(
                             name = name.trim(),
-                            bankName = bankName.trim(),
-                            ibanLast4 = ibanLast4,
+                            bankName = if (kind == TreasuryAccountKind.BANK) bankName.trim() else "",
+                            ibanLast4 = if (kind == TreasuryAccountKind.BANK) ibanLast4 else "",
                             openingBalance = opening,
                             alertLowBalance = alert,
                             isDefault = isDefault,
+                            kind = kind,
                             entrepriseId = entrepriseId
                         )
                     )
