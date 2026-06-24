@@ -6,6 +6,7 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
+import java.io.File
 
 @Database(
     entities = [
@@ -44,10 +45,23 @@ abstract class TreasuryDatabase : RoomDatabase() {
             return try {
                 buildDatabase(context)
             } catch (error: Exception) {
-                Log.e(TAG, "Database open failed, recreating empty database", error)
+                Log.e(TAG, "Database open failed, archiving corrupt database", error)
                 synchronized(this) { INSTANCE = null }
-                context.deleteDatabase(DB_NAME)
+                archiveCorruptDatabase(context)
                 buildDatabase(context)
+            }
+        }
+
+        private fun archiveCorruptDatabase(context: Context) {
+            val timestamp = System.currentTimeMillis()
+            listOf(DB_NAME, "$DB_NAME-shm", "$DB_NAME-wal").forEach { name ->
+                val file = context.getDatabasePath(name)
+                if (!file.exists()) return@forEach
+                val archived = File(file.parent, "$name.corrupt.$timestamp")
+                if (!file.renameTo(archived)) {
+                    Log.w(TAG, "Could not archive $name, deleting instead")
+                    file.delete()
+                }
             }
         }
 

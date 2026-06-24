@@ -104,6 +104,14 @@ object TreasuryCalculations {
 
     // --- Legacy / cumul global ---
 
+    /** Sum of opening balances entered when creating bank/cash accounts. */
+    fun manualOpeningBalance(accounts: List<BankAccount>): Double =
+        accounts.sumOf { it.openingBalance }
+
+    @Deprecated(
+        "Use manualOpeningBalance(bankAccounts) from account setup instead",
+        ReplaceWith("manualOpeningBalance(accounts)")
+    )
     fun openingBalanceAtYearStart(
         invoices: List<Invoice>,
         expenses: List<Expense>,
@@ -141,11 +149,13 @@ object TreasuryCalculations {
             monthlyUnpaidExpenses(expenses, YearMonth.of(year, month))
         }
 
-    fun yearlyForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, year: Int): Double =
-        yearlyCollections(invoices, year) +
-            yearlyPendingIncome(invoices, year) -
-            yearlyPaidExpenses(expenses, year) -
-            yearlyPendingExpenses(expenses, year)
+    fun yearlyForecastBalance(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int,
+        openingBalance: Double = 0.0
+    ): Double =
+        yearlyRows(invoices, expenses, year, openingBalance).lastOrNull()?.forecastBalance ?: openingBalance
 
     fun yearlyBankForecastBalance(invoices: List<Invoice>, expenses: List<Expense>, year: Int): Double =
         yearlyBankCollections(invoices, year) +
@@ -166,8 +176,13 @@ object TreasuryCalculations {
         val totalExpenses: Double get() = expenses + pendingExpenses
     }
 
-    fun yearlyRows(invoices: List<Invoice>, expenses: List<Expense>, year: Int): List<MonthlyTreasuryRow> {
-        var cumulativeBalance = openingBalanceAtYearStart(invoices, expenses, year)
+    fun yearlyRows(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int,
+        openingBalance: Double = 0.0
+    ): List<MonthlyTreasuryRow> {
+        var cumulativeBalance = openingBalance
         return (1..12).map { monthNumber ->
             val month = YearMonth.of(year, monthNumber)
             val collected = monthlyCollections(invoices, month)
@@ -186,6 +201,8 @@ object TreasuryCalculations {
             )
         }
     }
+
+    fun MonthlyTreasuryRow.monthlyForecastNet(): Double = totalIncome - totalExpenses
 
     fun openingBalanceBeforeMonth(
         invoices: List<Invoice>,

@@ -257,6 +257,7 @@
     <string name="bank_account_bank_name">Bank name</string>
     <string name="bank_account_iban_last4">Last 4 digits of IBAN</string>
     <string name="bank_account_opening_balance">Opening balance</string>
+    <string name="bank_account_opening_balance_hint">Cash in the account when you start (used for the Treasury page)</string>
     <string name="bank_account_alert_threshold_label">Low balance alert (optional)</string>
     <string name="bank_account_alert_threshold">Alert below %1$s</string>
     <string name="bank_account_set_default">Default account for bank movements</string>
@@ -563,6 +564,20 @@
     <string name="symbol_required">Symbol is required</string>
     <string name="decimals_range">Decimals must be between 0 and 4</string>
     <string name="session_expired">Session expired. Please sign in again</string>
+    <string name="session_inactive">Session inactive</string>
+    <string name="connect_google_account">Connect your Google account</string>
+    <string name="export_data_failed">Unable to export data</string>
+    <string name="google_backup_success">Google backup completed</string>
+    <string name="google_drive_error">Google Drive error</string>
+    <string name="google_delete_backup_failed">Could not delete Google Drive backup</string>
+    <string name="google_data_restored">Data restored from Google</string>
+    <string name="backup_restored_success">Backup restored successfully</string>
+    <string name="expense_not_found">Expense not found</string>
+    <string name="payment_not_found">Payment not found</string>
+    <string name="invalid_payment_amount_max">Invalid amount (max %1$s)</string>
+    <string name="admin_only_collection_adjustment">Only an administrator can create a collection adjustment</string>
+    <string name="import_invoices_result">%1$d invoice(s) imported</string>
+    <string name="import_invoices_result_with_skipped">%1$d invoice(s) imported, %2$d duplicate(s) skipped</string>
     <string name="invoice_not_found">Invoice not found</string>
     <string name="no_payment_permission">You do not have permission to record a payment</string>
     <string name="category_builtin_tag">Built-in</string>
@@ -590,6 +605,8 @@
     <string name="treasury_next_90_days">Next 90 days</string>
     <string name="treasury_chart_realized">Realized</string>
     <string name="treasury_chart_forecast">Forecast (incl. pending)</string>
+    <string name="treasury_opening_balance_accounts">Opening balance (accounts)</string>
+    <string name="treasury_opening_balance_accounts_hint">Sum of opening balances set when creating bank/cash accounts</string>
     <string name="treasury_no_upcoming">No upcoming due dates</string>
     <string name="export_csv">Export CSV</string>
     <string name="bank_reconciliation_cd">Bank reconciliation</string>

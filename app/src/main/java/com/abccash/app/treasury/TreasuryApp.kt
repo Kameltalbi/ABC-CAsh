@@ -423,6 +423,7 @@ fun TreasuryApp(
         }
 
         composable(SettingsRoutes.OPTIONS_BANK) {
+            val context = LocalContext.current
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             var showAddSheet by remember { mutableStateOf(false) }
             var editingAccount by remember { mutableStateOf<com.abccash.app.treasury.data.BankAccount?>(null) }
@@ -475,10 +476,7 @@ fun TreasuryApp(
                             editingAccount = null
                             saveError = null
                         } else {
-                            saveError = when (error) {
-                                TreasuryRepository.ACCOUNT_LIMIT_REACHED -> accountLimitError
-                                else -> error
-                            }
+                            saveError = context.resolveTreasuryMessage(error) ?: error
                         }
                     }
                 }
@@ -852,6 +850,7 @@ private fun MainAppScaffold(
                         permissions = permissions,
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
+                        bankAccounts = uiState.bankAccounts,
                         onExportCsv = viewModel::buildCsvExport,
                         onNavigateToBankReconciliation = {
                             navController.navigate(Screen.BankReconciliation.route)

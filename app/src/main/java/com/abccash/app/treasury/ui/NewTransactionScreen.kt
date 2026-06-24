@@ -37,7 +37,6 @@ import com.abccash.app.treasury.data.CategorySelection
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.defaultDateForMonth
-import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.data.TransactionType
 import com.abccash.app.treasury.export.ReceiptImageStorage
 import java.time.LocalDate
@@ -187,7 +186,6 @@ fun NewTransactionScreen(
     val invalidAmountError = stringResource(R.string.invalid_amount)
     val labelRequiredError = stringResource(R.string.label_required)
     val endDateAfterExpenseError = stringResource(R.string.end_date_after_expense)
-    val subscriptionLimitError = stringResource(R.string.subscription_limit_reached)
     val invoiceNumberLabel = stringResource(R.string.invoice_number)
     val invoiceNumberHint = stringResource(R.string.invoice_number_auto_hint)
 
@@ -200,10 +198,6 @@ fun NewTransactionScreen(
         }
     }
 
-    fun mapSaveError(error: String?): String? = when (error) {
-        TreasuryRepository.SUBSCRIPTION_LIMIT_REACHED -> subscriptionLimitError
-        else -> error
-    }
     val amountLabel = stringResource(R.string.amount)
     val dateLabel = stringResource(R.string.date)
     val titleLabel = stringResource(R.string.label)
@@ -453,7 +447,7 @@ fun NewTransactionScreen(
                 scanState.successMessage?.let { ReceiptScanSuccessBanner(it) }
             }
 
-            saveError?.let { Text(it, color = Color(0xFFF44336), fontSize = 13.sp) }
+            saveError?.let { Text(resolveTreasuryMessage(it) ?: it, color = Color(0xFFF44336), fontSize = 13.sp) }
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -501,7 +495,7 @@ fun NewTransactionScreen(
                                         method
                                     ) { error ->
                                         isSaving = false
-                                        if (error == null) onBack() else saveError = mapSaveError(error)
+                                        if (error == null) onBack() else saveError = error
                                     }
                                 } else {
                                     val resolved = CategorySelection.resolveExpense(
@@ -526,7 +520,7 @@ fun NewTransactionScreen(
                                         receiptPath
                                     ) { error ->
                                         isSaving = false
-                                        if (error == null) onBack() else saveError = mapSaveError(error)
+                                        if (error == null) onBack() else saveError = error
                                     }
                                 }
                             }

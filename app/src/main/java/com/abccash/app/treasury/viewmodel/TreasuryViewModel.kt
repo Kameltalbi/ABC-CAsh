@@ -36,7 +36,7 @@ data class TreasuryUiState(
     val contacts: List<Contact> = emptyList(),
     val products: List<Product> = emptyList(),
     val selectedMonth: YearMonth = YearMonth.now(),
-    val importFeedback: String? = null,
+    val importFeedback: ImportFeedback? = null,
     val backupFeedback: String? = null,
     val subscription: UserSubscription = UserSubscription()
 )
@@ -286,14 +286,14 @@ class TreasuryViewModel(
     fun deleteAccountAndData(deleteDriveBackup: Boolean, onResult: (String?) -> Unit) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée")
+            onResult(TreasuryMessage.SESSION_EXPIRED)
             return
         }
         viewModelScope.launch {
             if (deleteDriveBackup && googleBackupManager.isSignedIn()) {
                 googleBackupManager.deleteBackup()
                     .onFailure { error ->
-                        onResult(error.message ?: "Impossible de supprimer la sauvegarde Google Drive")
+                        onResult(error.message ?: TreasuryMessage.GOOGLE_DELETE_BACKUP_FAILED)
                         return@launch
                     }
             }
@@ -325,52 +325,52 @@ class TreasuryViewModel(
     fun backupToGoogle(onResult: (String?) -> Unit) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session inactive")
+            onResult(TreasuryMessage.SESSION_INACTIVE)
             return
         }
         if (!googleBackupManager.isSignedIn()) {
-            onResult("Connectez votre compte Google")
+            onResult(TreasuryMessage.CONNECT_GOOGLE)
             return
         }
         viewModelScope.launch {
             val json = repository.exportBackup(entrepriseId)
             if (json == null) {
-                onResult("Impossible d'exporter les données")
+                onResult(TreasuryMessage.EXPORT_DATA_FAILED)
                 return@launch
             }
             googleBackupManager.uploadBackup(json)
                 .onSuccess {
                     userPreferences.setGoogleLastBackupAt(Instant.now().toString())
-                    _uiState.update { it.copy(backupFeedback = "Sauvegarde Google réussie") }
+                    _uiState.update { it.copy(backupFeedback = TreasuryMessage.GOOGLE_BACKUP_SUCCESS) }
                     onResult(null)
                 }
-                .onFailure { onResult(it.message ?: "Erreur Google Drive") }
+                .onFailure { onResult(it.message ?: TreasuryMessage.GOOGLE_DRIVE_ERROR) }
         }
     }
 
     fun restoreFromGoogle(onResult: (String?) -> Unit) {
         if (!googleBackupManager.isSignedIn()) {
-            onResult("Connectez votre compte Google")
+            onResult(TreasuryMessage.CONNECT_GOOGLE)
             return
         }
         viewModelScope.launch {
             val jsonResult = googleBackupManager.downloadBackup()
             val json = jsonResult.getOrElse {
-                onResult(it.message ?: "Erreur Google Drive")
+                onResult(it.message ?: TreasuryMessage.GOOGLE_DRIVE_ERROR)
                 return@launch
             }
             if (json.isNullOrBlank()) {
-                onResult("Aucune sauvegarde trouvée sur Google")
+                onResult(TreasuryMessage.GOOGLE_NO_BACKUP)
                 return@launch
             }
             val entrepriseId = requireEntrepriseId()
             if (entrepriseId == null) {
-                onResult("Session inactive")
+                onResult(TreasuryMessage.SESSION_INACTIVE)
                 return@launch
             }
             val error = repository.restoreBackup(entrepriseId, json)
             if (error == null) {
-                _uiState.update { it.copy(backupFeedback = "Données restaurées depuis Google") }
+                _uiState.update { it.copy(backupFeedback = TreasuryMessage.GOOGLE_DATA_RESTORED) }
             }
             onResult(error)
         }
@@ -378,17 +378,17 @@ class TreasuryViewModel(
 
     fun restoreInitialFromGoogle(onResult: (User?, String?) -> Unit) {
         if (!googleBackupManager.isSignedIn()) {
-            onResult(null, "Connectez votre compte Google")
+            onResult(null, TreasuryMessage.CONNECT_GOOGLE)
             return
         }
         viewModelScope.launch {
             val jsonResult = googleBackupManager.downloadBackup()
             val json = jsonResult.getOrElse {
-                onResult(null, it.message ?: "Erreur Google Drive")
+                onResult(null, it.message ?: TreasuryMessage.GOOGLE_DRIVE_ERROR)
                 return@launch
             }
             if (json.isNullOrBlank()) {
-                onResult(null, GOOGLE_NO_BACKUP)
+                onResult(null, TreasuryMessage.GOOGLE_NO_BACKUP)
                 return@launch
             }
             repository.importInitialBackup(json)
@@ -396,7 +396,7 @@ class TreasuryViewModel(
                     googleBackupManager.getSignedInEmail()?.let { userPreferences.saveGoogleAccount(it) }
                     onResult(user, null)
                 }
-                .onFailure { onResult(null, it.message ?: "Restauration impossible") }
+                .onFailure { onResult(null, it.message ?: TreasuryMessage.RESTORE_IMPOSSIBLE) }
         }
     }
 
@@ -436,7 +436,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -477,7 +477,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -509,7 +509,7 @@ class TreasuryViewModel(
     fun validateExistingInvoice(invoiceId: String, onResult: (String?) -> Unit = {}) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -533,12 +533,12 @@ class TreasuryViewModel(
     ) {
         val existing = getInvoice(invoiceId)
         if (existing == null) {
-            onResult("Facture introuvable")
+            onResult(TreasuryMessage.INVOICE_NOT_FOUND)
             return
         }
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -721,7 +721,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -760,7 +760,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -790,7 +790,7 @@ class TreasuryViewModel(
     fun validateExistingQuote(quoteId: String, onResult: (String?) -> Unit = {}) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -820,7 +820,7 @@ class TreasuryViewModel(
     fun convertQuoteToInvoice(quoteId: String, onResult: (String?) -> Unit = {}) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -853,7 +853,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -908,7 +908,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -969,7 +969,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -1037,7 +1037,7 @@ class TreasuryViewModel(
         onResult: (String?) -> Unit
     ) {
         val entrepriseId = requireEntrepriseId() ?: run {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -1060,11 +1060,11 @@ class TreasuryViewModel(
     ) {
         val invoice = getInvoice(invoiceId)
         if (invoice == null) {
-            onResult("Encaissement introuvable")
+            onResult(TreasuryMessage.PAYMENT_NOT_FOUND)
             return
         }
         if (amount <= 0 || amount > invoice.remainingAmount) {
-            onResult("Montant invalide (max ${invoice.remainingAmount})")
+            onResult(TreasuryMessage.invalidPaymentAmount(invoice.remainingAmount))
             return
         }
         viewModelScope.launch {
@@ -1085,14 +1085,8 @@ class TreasuryViewModel(
         val entrepriseId = requireEntrepriseId() ?: return
         viewModelScope.launch {
             val stats = repository.importInvoices(entrepriseId, invoices)
-            val message = buildString {
-                append("${stats.imported} facture(s) importée(s)")
-                if (stats.skippedDuplicates > 0) {
-                    append(", ${stats.skippedDuplicates} doublon(s) ignoré(s)")
-                }
-            }
             _uiState.update {
-                it.copy(importFeedback = message)
+                it.copy(importFeedback = ImportFeedback(stats.imported, stats.skippedDuplicates))
             }
             scheduleGoogleBackup()
         }
@@ -1112,7 +1106,7 @@ class TreasuryViewModel(
     ) {
         val existing = getInvoice(invoiceId)
         if (existing == null) {
-            onResult("Facture introuvable")
+            onResult(TreasuryMessage.INVOICE_NOT_FOUND)
             return
         }
         viewModelScope.launch {
@@ -1218,7 +1212,7 @@ class TreasuryViewModel(
     ) {
         val existing = _uiState.value.expenses.find { it.id == expenseId }
         if (existing == null) {
-            onResult("Dépense introuvable")
+            onResult(TreasuryMessage.EXPENSE_NOT_FOUND)
             return
         }
         viewModelScope.launch {
@@ -1313,7 +1307,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         viewModelScope.launch {
@@ -1385,13 +1379,13 @@ class TreasuryViewModel(
     fun restoreBackup(json: String, onResult: (String?) -> Unit) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée")
+            onResult(TreasuryMessage.SESSION_EXPIRED)
             return
         }
         viewModelScope.launch {
             val error = repository.restoreBackup(entrepriseId, json)
             if (error == null) {
-                _uiState.update { it.copy(backupFeedback = "Sauvegarde restaurée avec succès") }
+                _uiState.update { it.copy(backupFeedback = TreasuryMessage.BACKUP_RESTORED_SUCCESS) }
                 scheduleGoogleBackup()
             }
             onResult(error)
@@ -1453,7 +1447,7 @@ class TreasuryViewModel(
     ) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
-            onResult("Session expirée, reconnectez-vous")
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
             return
         }
         val gap = bankBalance - calculatedBalance
@@ -1462,7 +1456,7 @@ class TreasuryViewModel(
             return
         }
         if (gap > 0 && userRole != UserRole.ADMIN) {
-            onResult("Seul l'administrateur peut créer un ajustement d'encaissement")
+            onResult(TreasuryMessage.ADMIN_ONLY_COLLECTION_ADJUSTMENT)
             return
         }
         viewModelScope.launch {
@@ -1505,10 +1499,6 @@ class TreasuryViewModel(
             onResult(error)
             if (error == null) scheduleGoogleBackup()
         }
-    }
-
-    companion object {
-        const val GOOGLE_NO_BACKUP = "GOOGLE_NO_BACKUP"
     }
 }
 

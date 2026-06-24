@@ -161,6 +161,7 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankBalance: Double?,
+        bankAccounts: List<BankAccount> = emptyList(),
         focusMonth: YearMonth = YearMonth.now(),
         viewMode: DashboardViewMode = DashboardViewMode.YEAR,
         today: LocalDate = LocalDate.now()
@@ -168,6 +169,7 @@ object DashboardCalculations {
         invoices = invoices,
         expenses = expenses,
         bankBalance = bankBalance,
+        bankAccounts = bankAccounts,
         focusMonth = focusMonth,
         viewMode = viewMode,
         today = today
@@ -177,19 +179,21 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankBalance: Double?,
+        bankAccounts: List<BankAccount> = emptyList(),
         focusMonth: YearMonth = YearMonth.now(),
         viewMode: DashboardViewMode = DashboardViewMode.YEAR,
         today: LocalDate = LocalDate.now()
     ): DashboardData {
         val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
+        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
 
         val calculatedBank = when (viewMode) {
             DashboardViewMode.YEAR -> {
-                TreasuryCalculations.yearlyForecastBalance(invoices, expenses, focusMonth.year)
+                TreasuryCalculations.yearlyForecastBalance(invoices, expenses, focusMonth.year, openingBalance)
             }
             DashboardViewMode.MONTH -> {
                 val year = focusMonth.year
-                var balance = TreasuryCalculations.openingBalanceAtYearStart(invoices, expenses, year)
+                var balance = openingBalance
                 for (m in 1..focusMonth.monthValue) {
                     val currentMonth = YearMonth.of(year, m)
                     balance += (TreasuryCalculations.monthlyCollections(invoices, currentMonth) +

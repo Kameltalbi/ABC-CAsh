@@ -15,6 +15,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -107,6 +109,7 @@ fun ModernDashboardScreen(
             invoices = visibleInvoices,
             expenses = visibleExpenses,
             bankBalance = bankBalance,
+            bankAccounts = bankAccounts,
             focusMonth = focusMonth,
             viewMode = DashboardViewMode.MONTH
         ).expenseByCategory.take(4)
@@ -354,6 +357,14 @@ private fun DashboardSectionCard(
     }
 }
 
+/** Charts and month comparisons always read left (older) → right (newer), even in RTL locales. */
+@Composable
+private fun ChronologicalLtr(content: @Composable () -> Unit) {
+    CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Ltr) {
+        content()
+    }
+}
+
 @Composable
 private fun SummaryComparisonCard(
     current: MonthFinancialSummary,
@@ -391,33 +402,35 @@ private fun SummaryComparisonCard(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(IntrinsicSize.Min),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                MonthSummaryColumn(
-                    modifier = Modifier.weight(1f),
-                    summary = previous,
-                    formatAmount = formatAmount,
-                    showIncome = showIncome,
-                    showExpenses = showExpenses
-                )
-                VerticalDivider(
+            ChronologicalLtr {
+                Row(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                    thickness = 1.dp,
-                    color = DashboardTheme.SummaryArcTrack
-                )
-                MonthSummaryColumn(
-                    modifier = Modifier.weight(1f),
-                    summary = current,
-                    formatAmount = formatAmount,
-                    showIncome = showIncome,
-                    showExpenses = showExpenses
-                )
+                        .fillMaxWidth()
+                        .height(IntrinsicSize.Min),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    MonthSummaryColumn(
+                        modifier = Modifier.weight(1f),
+                        summary = previous,
+                        formatAmount = formatAmount,
+                        showIncome = showIncome,
+                        showExpenses = showExpenses
+                    )
+                    VerticalDivider(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        thickness = 1.dp,
+                        color = DashboardTheme.SummaryArcTrack
+                    )
+                    MonthSummaryColumn(
+                        modifier = Modifier.weight(1f),
+                        summary = current,
+                        formatAmount = formatAmount,
+                        showIncome = showIncome,
+                        showExpenses = showExpenses
+                    )
+                }
             }
         }
     }
@@ -772,14 +785,15 @@ private fun UpcomingPaymentsChart(
     } else {
         val chartPlotHeight = 88.dp
         val amountLabelHeight = 18.dp
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(chartPlotHeight + amountLabelHeight + 28.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.Bottom
-        ) {
-            bars.forEach { bar ->
+        ChronologicalLtr {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(chartPlotHeight + amountLabelHeight + 28.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
+            ) {
+                bars.forEach { bar ->
                 val heightFraction = (bar.amount / maxAmount).toFloat().coerceIn(0.04f, 1f)
                 val barHeight = (chartPlotHeight * heightFraction).coerceAtLeast(4.dp)
                 Column(
@@ -824,6 +838,7 @@ private fun UpcomingPaymentsChart(
                         maxLines = 1
                     )
                 }
+                }
             }
         }
     }
@@ -844,14 +859,15 @@ private fun MonthlyIncomeExpenseBarChart(
 
     if (barCount == 0) return
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .height(160.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.Bottom
-    ) {
-        bars.forEach { bar ->
+    ChronologicalLtr {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .height(160.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            bars.forEach { bar ->
             Column(
                 modifier = Modifier
                     .weight(1f)
@@ -902,6 +918,7 @@ private fun MonthlyIncomeExpenseBarChart(
                     textAlign = TextAlign.Center,
                     maxLines = 1
                 )
+            }
             }
         }
     }

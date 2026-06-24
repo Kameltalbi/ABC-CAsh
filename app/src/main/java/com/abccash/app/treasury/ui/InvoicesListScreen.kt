@@ -26,6 +26,7 @@ import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.Contact
 import com.abccash.app.treasury.data.DocumentPdfTemplate
 import com.abccash.app.treasury.data.Entreprise
+import com.abccash.app.treasury.data.ImportFeedback
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.LocalAppCurrency
 import com.abccash.app.treasury.data.InvoiceKpis
@@ -64,7 +65,7 @@ fun InvoicesListScreen(
     invoices: List<Invoice>,
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
-    importFeedback: String? = null,
+    importFeedback: ImportFeedback? = null,
     onClearImportFeedback: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     onNavigateToImport: () -> Unit,
@@ -360,10 +361,10 @@ fun InvoicesListScreen(
                 )
             }
 
-            importFeedback?.let { message ->
+            importFeedback?.let { feedback ->
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = message,
+                    text = formatImportFeedback(feedback),
                     fontSize = 12.sp,
                     color = Color(0xFF4CAF50)
                 )
@@ -497,7 +498,7 @@ internal fun InvoiceFormDialog(
         mutableStateOf(defaultDueDate)
     }
     var localError by remember(initialInvoice, selectedMonth) { mutableStateOf<String?>(null) }
-    val displayError = errorMessage ?: localError
+    val displayError = (errorMessage ?: localError)?.let { resolveTreasuryMessage(it) ?: it }
     val parsedAmount = totalAmount.replace(",", ".").toDoubleOrNull()
     val minAmount = initialInvoice?.paidAmount ?: 0.0
     val amountTooLow = parsedAmount != null && parsedAmount < minAmount
@@ -883,7 +884,11 @@ internal fun PartialPaymentDialog(
                     onMethodChange = { selectedMethod = it }
                 )
                 errorMessage?.let {
-                    Text(text = it, color = Color(0xFFF44336), fontSize = 12.sp)
+                    Text(
+                        text = resolveTreasuryMessage(it) ?: it,
+                        color = Color(0xFFF44336),
+                        fontSize = 12.sp
+                    )
                 }
             }
         },

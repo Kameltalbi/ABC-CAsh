@@ -164,6 +164,50 @@ class TreasuryCalculationsTest {
         assertEquals(550.0, rows[11].forecastBalance, 0.001)
     }
 
+    @Test
+    fun `yearly rows use manual opening balance from accounts`() {
+        val year = 2026
+        val accounts = listOf(
+            BankAccount(entrepriseId = "e", name = "Main", openingBalance = 4750.0)
+        )
+        val invoices = listOf(
+            sampleInvoiceWithPayment(20037.298, LocalDate.of(2026, 1, 20))
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Charges",
+                amount = 15290.026,
+                date = LocalDate.of(2026, 1, 10),
+                isPaid = true
+            )
+        )
+        val opening = TreasuryCalculations.manualOpeningBalance(accounts)
+        val jan = TreasuryCalculations.yearlyRows(invoices, expenses, year, opening)[0]
+
+        assertEquals(4750.0, opening, 0.001)
+        assertEquals(9497.272, jan.forecastBalance, 0.01)
+        assertEquals(4747.272, jan.totalIncome - jan.totalExpenses, 0.01)
+    }
+
+    @Test
+    fun `yearly rows start at zero when no account opening balance`() {
+        val year = 2026
+        val invoices = listOf(
+            sampleInvoiceWithPayment(20037.298, LocalDate.of(2026, 1, 20))
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Charges",
+                amount = 15290.026,
+                date = LocalDate.of(2026, 1, 10),
+                isPaid = true
+            )
+        )
+        val jan = TreasuryCalculations.yearlyRows(invoices, expenses, year, openingBalance = 0.0)[0]
+
+        assertEquals(4747.272, jan.forecastBalance, 0.01)
+    }
+
     private fun sampleInvoiceWithPayment(amount: Double, date: LocalDate): Invoice =
         Invoice(
             invoiceNumber = "F1",

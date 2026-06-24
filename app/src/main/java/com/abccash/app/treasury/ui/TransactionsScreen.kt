@@ -281,6 +281,12 @@ fun TransactionsScreen(
                 )
             }
 
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .monthSwipeNavigation(selectedMonth, onMonthChange)
+            ) {
             if (filteredRows.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -351,6 +357,7 @@ fun TransactionsScreen(
                         HorizontalDivider(color = TransactionsTheme.Divider, thickness = 1.dp)
                     }
                 }
+            }
             }
         }
     }
@@ -539,7 +546,7 @@ fun TransactionsScreen(
         AlertDialog(
             onDismissRequest = { deleteError = null },
             title = { Text(stringResource(R.string.error_generic)) },
-            text = { Text(message) },
+            text = { Text(resolveTreasuryMessage(message) ?: message) },
             confirmButton = {
                 TextButton(onClick = { deleteError = null }) {
                     Text(stringResource(R.string.ok))

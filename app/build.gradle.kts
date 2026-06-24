@@ -23,8 +23,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 54
-        versionName = "1.20.8"
+        versionCode = 57
+        versionName = "1.20.11"
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
@@ -89,7 +89,6 @@ android {
 dependencies {
     val roomVersion = "2.6.1"
     val lifecycleVersion = "2.8.7"
-    val koinVersion = "3.5.3"
 
     implementation("androidx.appcompat:appcompat:1.7.0")
     implementation("androidx.core:core-ktx:1.15.0")
@@ -116,11 +115,6 @@ dependencies {
     
     // DataStore for preferences
     implementation("androidx.datastore:datastore-preferences:1.1.1")
-    
-    // Koin for Dependency Injection
-    implementation("io.insert-koin:koin-android:$koinVersion")
-    implementation("io.insert-koin:koin-androidx-compose:$koinVersion")
-
     implementation("com.google.mlkit:text-recognition:16.0.1")
     implementation("androidx.biometric:biometric:1.1.0")
     implementation("androidx.fragment:fragment-ktx:1.8.5")

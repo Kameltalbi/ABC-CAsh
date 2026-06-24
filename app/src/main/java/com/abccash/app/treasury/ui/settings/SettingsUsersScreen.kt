@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import android.net.Uri
 import com.abccash.app.R
+import com.abccash.app.treasury.ui.resolveTreasuryMessage
 import com.abccash.app.treasury.ui.AbcCashFab
 import com.abccash.app.treasury.data.User
 import com.abccash.app.treasury.data.UserPermission
@@ -247,10 +248,10 @@ fun SettingsUsersScreen(
                                     color = Color.Gray
                                 )
                                 backupFeedback?.let {
-                                    Text(it, fontSize = 12.sp, color = Color(0xFF4CAF50))
+                                    Text(resolveTreasuryMessage(it) ?: it, fontSize = 12.sp, color = Color(0xFF4CAF50))
                                 }
                                 backupError?.let {
-                                    Text(it, fontSize = 12.sp, color = Color(0xFFF44336))
+                                    Text(resolveTreasuryMessage(it) ?: it, fontSize = 12.sp, color = Color(0xFFF44336))
                                 }
                                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                     OutlinedButton(

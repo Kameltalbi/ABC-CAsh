@@ -21,7 +21,7 @@ import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.data.User
-import com.abccash.app.treasury.viewmodel.TreasuryViewModel
+import com.abccash.app.treasury.data.TreasuryMessage
 import com.google.android.gms.auth.api.signin.GoogleSignInStatusCodes
 import com.google.android.gms.common.api.ApiException
 
@@ -73,8 +73,8 @@ fun AuthGoogleSection(
                     isRestoring = false
                     when {
                         user != null -> onRestoreSuccess(user)
-                        error == TreasuryViewModel.GOOGLE_NO_BACKUP -> Unit
-                        error != null -> googleError = error
+                        error == TreasuryMessage.GOOGLE_NO_BACKUP -> Unit
+                        error != null -> googleError = context.resolveTreasuryMessage(error) ?: error
                         else -> googleError = restoreFailedMessage
                     }
                 }

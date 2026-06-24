@@ -343,6 +343,12 @@ fun PrevisionsScreen(
                 color = PrevisionsTheme.Divider
             )
 
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth()
+                    .monthSwipeNavigation(selectedMonth, onMonthChange)
+            ) {
             if (filteredItems.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
@@ -424,6 +430,7 @@ fun PrevisionsScreen(
                         HorizontalDivider(color = PrevisionsTheme.Divider, thickness = 1.dp)
                     }
                 }
+            }
             }
         }
     }

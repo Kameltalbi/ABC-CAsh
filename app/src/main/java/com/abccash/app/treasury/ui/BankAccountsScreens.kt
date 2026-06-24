@@ -211,7 +211,7 @@ private fun BankAccountListCard(
                     }
                     if (summary.account.kind == TreasuryAccountKind.BANK && summary.account.ibanLast4.isNotBlank()) {
                         Text(
-                            "â€¢â€¢â€¢â€¢ ${summary.account.ibanLast4}",
+                            "•••• ${summary.account.ibanLast4}",
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -404,7 +404,7 @@ private fun BankAccountMovementRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(movement.label, fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 Text(
-                    "${AppLocale.dayMonth(movement.date)} Â· ${movement.method.localizedLabel()}",
+                    "${AppLocale.dayMonth(movement.date)} · ${movement.method.localizedLabel()}",
                     fontSize = 12.sp,
                     color = Color(0xFF64748B)
                 )
@@ -450,13 +450,20 @@ fun BankAccountFormSheet(
     }
     var isDefault by remember(initialAccount) { mutableStateOf(initialAccount?.isDefault ?: false) }
 
-    ModalBottomSheet(onDismissRequest = onDismiss) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(rememberScrollState())
+                .imePadding()
+                .navigationBarsPadding()
                 .padding(horizontal = 20.dp)
-                .padding(bottom = 32.dp),
+                .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             Text(
@@ -511,6 +518,16 @@ fun BankAccountFormSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+            OutlinedTextField(
+                value = openingText,
+                onValueChange = { openingText = it },
+                label = { Text(stringResource(R.string.bank_account_opening_balance)) },
+                supportingText = { Text(stringResource(R.string.bank_account_opening_balance_hint)) },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                suffix = { CurrencySuffix() }
+            )
             if (kind == TreasuryAccountKind.BANK) {
                 OutlinedTextField(
                     value = bankName,
@@ -528,15 +545,6 @@ fun BankAccountFormSheet(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number)
                 )
             }
-            OutlinedTextField(
-                value = openingText,
-                onValueChange = { openingText = it },
-                label = { Text(stringResource(R.string.bank_account_opening_balance)) },
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                suffix = { CurrencySuffix() }
-            )
             OutlinedTextField(
                 value = alertText,
                 onValueChange = { alertText = it },
@@ -557,7 +565,7 @@ fun BankAccountFormSheet(
                 )
             }
             errorMessage?.let { message ->
-                Text(message, color = Color(0xFFDC2626), fontSize = 13.sp)
+                Text(resolveTreasuryMessage(message) ?: message, color = Color(0xFFDC2626), fontSize = 13.sp)
             }
             Button(
                 onClick = {

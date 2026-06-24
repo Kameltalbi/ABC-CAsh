@@ -186,7 +186,7 @@ fun BankReconciliationScreen(
             }
 
             saveError?.let {
-                Text(text = it, color = Color(0xFFF44336), fontSize = 13.sp)
+                Text(text = resolveTreasuryMessage(it) ?: it, color = Color(0xFFF44336), fontSize = 13.sp)
             }
 
             Button(

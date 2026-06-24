@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.locale.AppLocale
+import com.abccash.app.treasury.data.BankAccount
 import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.EcheanceItem
 import com.abccash.app.treasury.data.EcheanceType
@@ -66,6 +67,7 @@ fun TreasuryBalanceScreen(
     permissions: Set<UserPermission>,
     invoices: List<Invoice>,
     expenses: List<Expense>,
+    bankAccounts: List<BankAccount> = emptyList(),
     onExportCsv: (Int) -> String?,
     onNavigateToBankReconciliation: () -> Unit,
     onOpenDrawer: () -> Unit = {}
@@ -118,16 +120,18 @@ fun TreasuryBalanceScreen(
     val formatChartAmount = rememberFormatTreasuryChartAmount()
     val shortDateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
 
-    val yearTotals = remember(invoices, expenses, displayYear) {
-        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, displayYear)
+    val yearTotals = remember(invoices, expenses, bankAccounts, displayYear) {
+        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, displayYear, openingBalance)
         val yearEndForecast = rows.lastOrNull()?.forecastBalance
-            ?: TreasuryCalculations.yearlyForecastBalance(invoices, expenses, displayYear)
+            ?: TreasuryCalculations.yearlyForecastBalance(invoices, expenses, displayYear, openingBalance)
         TreasuryYearTotals(
             collected = TreasuryCalculations.yearlyCollections(invoices, displayYear),
             pendingIncome = TreasuryCalculations.yearlyPendingIncome(invoices, displayYear),
             expenses = TreasuryCalculations.yearlyPaidExpenses(expenses, displayYear),
             pendingExpenses = TreasuryCalculations.yearlyPendingExpenses(expenses, displayYear),
             balance = yearEndForecast,
+            openingFromAccounts = openingBalance,
             rows = rows
         )
     }
@@ -222,10 +226,25 @@ fun TreasuryBalanceScreen(
             modifier = Modifier.fillMaxWidth()
         )
 
+        if (yearTotals.openingFromAccounts != 0.0) {
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_opening_balance_accounts),
+                amount = formatWhole(yearTotals.openingFromAccounts),
+                subtitle = stringResource(R.string.treasury_opening_balance_accounts_hint),
+                amountColor = if (yearTotals.openingFromAccounts >= 0) {
+                    TreasuryScreenTheme.Positive
+                } else {
+                    TreasuryScreenTheme.Negative
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
         TreasuryTimelineChart(
             rows = yearTotals.rows,
             formatChartAmount = formatChartAmount,
-            formatWhole = formatWhole
+            formatWhole = formatWhole,
+            yearEndForecast = yearTotals.balance
         )
 
         TreasuryUpcomingSection(
@@ -343,7 +362,8 @@ private fun TreasuryKpiCard(
 private fun TreasuryTimelineChart(
     rows: List<TreasuryCalculations.MonthlyTreasuryRow>,
     formatChartAmount: (Double) -> String,
-    formatWhole: (Double) -> String
+    formatWhole: (Double) -> String,
+    yearEndForecast: Double
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -364,6 +384,11 @@ private fun TreasuryTimelineChart(
             ChartLegendDot(
                 color = AppColors.BrandBlue,
                 label = stringResource(R.string.treasury_chart_forecast)
+            )
+            Text(
+                text = stringResource(R.string.treasury_cumulative_formula),
+                fontSize = 11.sp,
+                color = TreasuryScreenTheme.Muted
             )
 
             val balances = rows.map { it.forecastBalance }
@@ -447,15 +472,12 @@ private fun TreasuryTimelineChart(
                 }
             }
 
-            val lastForecast = rows.lastOrNull()?.forecastBalance
-            if (lastForecast != null) {
-                Text(
-                    text = stringResource(R.string.treasury_december_end, formatWhole(lastForecast)),
-                    fontSize = 12.sp,
-                    color = TreasuryScreenTheme.Muted,
-                    modifier = Modifier.padding(top = 4.dp)
-                )
-            }
+            Text(
+                text = stringResource(R.string.treasury_december_end, formatWhole(yearEndForecast)),
+                fontSize = 12.sp,
+                color = TreasuryScreenTheme.Muted,
+                modifier = Modifier.padding(top = 4.dp)
+            )
         }
     }
 }
@@ -466,6 +488,7 @@ private data class TreasuryYearTotals(
     val expenses: Double,
     val pendingExpenses: Double,
     val balance: Double,
+    val openingFromAccounts: Double,
     val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
 )
 
