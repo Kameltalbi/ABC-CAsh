@@ -615,7 +615,7 @@
     <string name="onboarding_tour_entry_title">Revenus &amp; dépenses</string>
     <string name="onboarding_tour_entry_desc">Saisissez un encaissement ou une dépense en quelques secondes. Choisissez la catégorie et la date — passé ou aujourd\'hui dans le Flux, dates futures dans les Prévisions. Joignez une photo de reçu pour les dépenses.</string>
     <string name="onboarding_tour_forecasts_title">Prévisions</string>
-    <string name="onboarding_tour_forecasts_desc">L\'onglet Prévisions liste les encaissements et dépenses pas encore réglés. C\'est votre vision du mois à venir.</string>
+    <string name="onboarding_tour_forecasts_desc">L\'onglet Prévisions liste les encaissements et dépenses pas encore réglés. C\'est votre vision de trésorerie pour les mois à venir.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
     <string name="onboarding_tour_transactions_desc">Les encaissements réalisés et dépenses payées apparaissent dans Transactions — vos mouvements réels de trésorerie.</string>
     <string name="onboarding_tour_treasury_title">Trésorerie</string>

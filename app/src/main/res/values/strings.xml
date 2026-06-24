@@ -624,7 +624,7 @@
     <string name="onboarding_tour_entry_title">Income &amp; expenses</string>
     <string name="onboarding_tour_entry_desc">Add money in or out in seconds. Choose a category and date — past or today goes to Transactions, future dates go to Forecasts. Attach a receipt photo for expenses.</string>
     <string name="onboarding_tour_forecasts_title">Forecasts</string>
-    <string name="onboarding_tour_forecasts_desc">The Forecasts tab lists upcoming income and expenses not yet settled. This is your cash outlook for the month.</string>
+    <string name="onboarding_tour_forecasts_desc">The Forecasts tab lists upcoming income and expenses not yet settled. This is your cash outlook for the coming months.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
     <string name="onboarding_tour_transactions_desc">Settled income and paid expenses appear in Transactions — your real cash movements, month by month.</string>
     <string name="onboarding_tour_treasury_title">Treasury</string>

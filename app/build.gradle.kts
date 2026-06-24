@@ -23,8 +23,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 49
-        versionName = "1.20.3"
+        versionCode = 50
+        versionName = "1.20.4"
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
