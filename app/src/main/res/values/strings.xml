@@ -100,6 +100,7 @@
     <string name="dashboard_period_year">Year</string>
     <string name="dashboard_period_month">Month</string>
     <string name="dashboard_overview_title">Overview</string>
+    <string name="dashboard_header_label">Dashboard</string>
     <string name="dashboard_summary">Summary</string>
     <string name="dashboard_summary_income">Income</string>
     <string name="dashboard_summary_expense">Expenses</string>

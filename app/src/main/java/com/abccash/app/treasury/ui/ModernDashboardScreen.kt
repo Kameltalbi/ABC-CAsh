@@ -176,7 +176,7 @@ fun ModernDashboardScreen(
                 .padding(padding)
         ) {
             FastBudgetHeader(
-                title = stringResource(R.string.dashboard_overview_title),
+                companyName = companyName,
                 notificationCount = notificationCount,
                 onOpenDrawer = onOpenDrawer
             )
@@ -238,7 +238,7 @@ fun ModernDashboardScreen(
 
 @Composable
 private fun FastBudgetHeader(
-    title: String,
+    companyName: String,
     notificationCount: Int,
     onOpenDrawer: () -> Unit = {}
 ) {
@@ -259,16 +259,27 @@ private fun FastBudgetHeader(
         ) {
             Row(
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Text(
-                    text = title,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = stringResource(R.string.dashboard_header_label),
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.White.copy(alpha = 0.82f),
+                    maxLines = 1
                 )
+                if (companyName.isNotBlank()) {
+                    Text(
+                        text = companyName,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
+                    )
+                }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 BadgedBox(
