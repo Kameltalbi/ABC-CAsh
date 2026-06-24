@@ -358,7 +358,7 @@ private fun ChangePasswordDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 errorMessage?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    Text(resolveTreasuryMessage(it) ?: it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                 }
             }
         },
@@ -411,7 +411,7 @@ private fun ResetPasswordDialog(
                     modifier = Modifier.fillMaxWidth()
                 )
                 errorMessage?.let {
-                    Text(it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
+                    Text(resolveTreasuryMessage(it) ?: it, color = MaterialTheme.colorScheme.error, fontSize = 12.sp)
                 }
             }
         },

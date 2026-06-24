@@ -6,14 +6,12 @@ import com.abccash.app.treasury.data.ContactType
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.InvoiceDocumentStatus
-import com.abccash.app.treasury.data.ProductKind
-import com.abccash.app.treasury.data.ProductUnit
+import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.TaxIdType
 import com.abccash.app.treasury.data.TaxIdValidationStatus
 import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.OtherTaxMode
 import com.abccash.app.treasury.data.PaymentMethod
-import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
@@ -93,20 +91,6 @@ class TreasuryConverters {
     @TypeConverter
     fun toQuoteStatus(value: String?): QuoteStatus? =
         value?.let { runCatching { QuoteStatus.valueOf(it) }.getOrNull() } ?: QuoteStatus.DRAFT
-
-    @TypeConverter
-    fun fromProductKind(value: ProductKind?): String? = value?.name
-
-    @TypeConverter
-    fun toProductKind(value: String?): ProductKind? =
-        value?.let { runCatching { ProductKind.valueOf(it) }.getOrNull() } ?: ProductKind.SERVICE
-
-    @TypeConverter
-    fun fromProductUnit(value: ProductUnit?): String? = value?.name
-
-    @TypeConverter
-    fun toProductUnit(value: String?): ProductUnit? =
-        value?.let { runCatching { ProductUnit.valueOf(it) }.getOrNull() } ?: ProductUnit.PIECE
 
     @TypeConverter
     fun fromTaxIdType(value: TaxIdType?): String? = value?.name

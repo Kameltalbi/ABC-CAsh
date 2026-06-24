@@ -14,8 +14,6 @@ import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.InvoiceDocumentStatus
 import com.abccash.app.treasury.data.OtherTaxMode
-import com.abccash.app.treasury.data.ProductKind
-import com.abccash.app.treasury.data.ProductUnit
 import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
@@ -130,29 +128,6 @@ data class QuoteEntity(
     val convertedInvoiceId: String? = null,
     @ColumnInfo(defaultValue = "''")
     val notes: String = ""
-)
-
-@Entity(
-    tableName = "products",
-    indices = [Index(value = ["entrepriseId"])]
-)
-data class ProductEntity(
-    @PrimaryKey val id: String,
-    @ColumnInfo(defaultValue = "''")
-    val entrepriseId: String,
-    val name: String,
-    val unitPriceExclTax: Double,
-    @ColumnInfo(defaultValue = "'SERVICE'")
-    val kind: ProductKind = ProductKind.SERVICE,
-    @ColumnInfo(defaultValue = "'PIECE'")
-    val unit: ProductUnit = ProductUnit.PIECE,
-    @ColumnInfo(defaultValue = "'OTHER'")
-    val category: RevenueCategory = RevenueCategory.OTHER,
-    @ColumnInfo(defaultValue = "''")
-    val categoryLabel: String = "",
-    @ColumnInfo(defaultValue = "1")
-    val isActive: Boolean = true,
-    val createdDate: LocalDate
 )
 
 @Entity(

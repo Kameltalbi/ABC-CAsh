@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.abccash.app.R
 import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.User
+import com.abccash.app.treasury.ui.resolveTreasuryMessage
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -59,7 +60,7 @@ fun SettingsUserProfileScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            error?.let { Text(resolveTreasuryMessage(it) ?: it, color = MaterialTheme.colorScheme.error) }
             if (success) {
                 Text(stringResource(R.string.profile_saved), color = Color(0xFF4CAF50))
             }
@@ -144,7 +145,7 @@ fun SettingsCompanyProfileScreen(
                     style = MaterialTheme.typography.bodySmall
                 )
             }
-            error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
+            error?.let { Text(resolveTreasuryMessage(it) ?: it, color = MaterialTheme.colorScheme.error) }
             if (success) {
                 Text(stringResource(R.string.company_saved), color = Color(0xFF4CAF50))
             }

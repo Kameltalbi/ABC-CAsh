@@ -34,7 +34,6 @@ data class TreasuryUiState(
     val expenses: List<Expense> = emptyList(),
     val bankAccounts: List<BankAccount> = emptyList(),
     val contacts: List<Contact> = emptyList(),
-    val products: List<Product> = emptyList(),
     val selectedMonth: YearMonth = YearMonth.now(),
     val importFeedback: ImportFeedback? = null,
     val backupFeedback: String? = null,
@@ -176,17 +175,6 @@ class TreasuryViewModel(
                 _uiState.update { it.copy(contacts = contacts) }
             }
         }
-        viewModelScope.launch {
-            _entrepriseId.flatMapLatest { id ->
-                if (id == null) {
-                    kotlinx.coroutines.flow.flowOf(emptyList())
-                } else {
-                    repository.observeProducts(id)
-                }
-            }.collect { products ->
-                _uiState.update { it.copy(products = products) }
-            }
-        }
     }
 
     fun contactSummaries(type: ContactType): List<ContactSummary> {
@@ -223,22 +211,6 @@ class TreasuryViewModel(
     fun deleteContact(contactId: String, onResult: () -> Unit) {
         viewModelScope.launch {
             repository.deleteContact(contactId)
-            onResult()
-            scheduleGoogleBackup()
-        }
-    }
-
-    fun saveProduct(product: Product, onResult: (String?) -> Unit) {
-        viewModelScope.launch {
-            val error = repository.saveProduct(product)
-            onResult(error)
-            if (error == null) scheduleGoogleBackup()
-        }
-    }
-
-    fun deleteProduct(productId: String, onResult: () -> Unit = {}) {
-        viewModelScope.launch {
-            repository.deleteProduct(productId)
             onResult()
             scheduleGoogleBackup()
         }

@@ -4,6 +4,7 @@ import com.abccash.app.treasury.data.BankAccount
 import com.abccash.app.treasury.data.BankAccountSource
 import com.abccash.app.treasury.data.Contact
 import com.abccash.app.treasury.data.TaxIdValidationStatus
+import com.abccash.app.treasury.data.TreasuryMessage
 import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.Expense
@@ -13,8 +14,6 @@ import com.abccash.app.treasury.data.InvoiceLineItemCodec
 import com.abccash.app.treasury.data.InvoiceNumberGenerator
 import com.abccash.app.treasury.data.InvoiceSettings
 import com.abccash.app.treasury.data.Payment
-import com.abccash.app.treasury.data.Product
-import com.abccash.app.treasury.data.ProductKind
 import com.abccash.app.treasury.data.Quote
 import com.abccash.app.treasury.data.QuoteStatus
 import com.abccash.app.treasury.data.affectsBankTreasury
@@ -30,7 +29,6 @@ import com.abccash.app.treasury.local.EntrepriseEntity
 import com.abccash.app.treasury.local.ExpenseEntity
 import com.abccash.app.treasury.local.InvoiceEntity
 import com.abccash.app.treasury.local.PaymentEntity
-import com.abccash.app.treasury.local.ProductEntity
 import com.abccash.app.treasury.local.QuoteEntity
 import androidx.room.RoomDatabase
 import androidx.room.withTransaction
@@ -96,16 +94,16 @@ class TreasuryRepository(
         telephone: String,
         plainPassword: String
     ): String? {
-        if (plainPassword.length < 6) return "Le mot de passe doit contenir au moins 6 caractères"
-        val entity = dao.findFirstUser() ?: return "Aucun compte trouvé"
+        if (plainPassword.length < 6) return TreasuryMessage.PASSWORD_MIN_LENGTH
+        val entity = dao.findFirstUser() ?: return TreasuryMessage.NO_ACCOUNT_FOUND
         val normalizedEmail = normalizeEmail(email)
-        if (normalizedEmail.isBlank()) return "L'e-mail est obligatoire"
+        if (normalizedEmail.isBlank()) return TreasuryMessage.EMAIL_REQUIRED
         val existing = dao.findUserByEmail(normalizedEmail)
-        if (existing != null && existing.id != entity.id) return "Cet e-mail est déjà utilisé"
+        if (existing != null && existing.id != entity.id) return TreasuryMessage.EMAIL_TAKEN
         val phone = normalizePhone(telephone)
         if (phone.isNotBlank()) {
             val phoneOwner = dao.findUserByTelephone(phone)
-            if (phoneOwner != null && phoneOwner.id != entity.id) return "Ce numéro est déjà utilisé"
+            if (phoneOwner != null && phoneOwner.id != entity.id) return TreasuryMessage.PHONE_TAKEN
         }
         dao.upsertUser(
             entity.copy(
@@ -170,7 +168,7 @@ class TreasuryRepository(
         dao.findBankAccountById(accountId)?.toDomain()
 
     suspend fun saveBankAccount(account: BankAccount): String? {
-        if (account.name.isBlank()) return "Le nom du compte est requis"
+        if (account.name.isBlank()) return TreasuryMessage.BANK_ACCOUNT_NAME_REQUIRED
         val existing = dao.findBankAccountById(account.id)
         if (existing == null && !canAddTreasuryAccount(account.entrepriseId)) {
             return ACCOUNT_LIMIT_REACHED
@@ -195,7 +193,7 @@ class TreasuryRepository(
         dao.findContactById(contactId)?.toDomain()
 
     suspend fun saveContact(contact: Contact): String? {
-        if (contact.name.isBlank() && contact.legalName.isBlank()) return "Le nom est requis"
+        if (contact.name.isBlank() && contact.legalName.isBlank()) return TreasuryMessage.CONTACT_NAME_REQUIRED
         val resolvedName = contact.name.ifBlank { contact.legalName }
         val resolvedLegal = contact.legalName.ifBlank { resolvedName }
         val billingAddress = contact.billingAddressFormatted
@@ -212,21 +210,6 @@ class TreasuryRepository(
 
     suspend fun deleteContact(contactId: String) {
         dao.deleteContactById(contactId)
-    }
-
-    fun observeProducts(entrepriseId: String): Flow<List<Product>> =
-        dao.observeProducts(entrepriseId).map { entities -> entities.map { it.toDomain() } }
-
-    suspend fun saveProduct(product: Product): String? {
-        if (product.name.isBlank()) return "Le nom du produit est obligatoire"
-        if (product.unitPriceExclTax <= 0) return "Le prix doit être supérieur à 0"
-        if (product.categoryLabel.isBlank()) return "La catégorie est obligatoire"
-        dao.upsertProduct(product.toEntity())
-        return null
-    }
-
-    suspend fun deleteProduct(productId: String) {
-        dao.deactivateProduct(productId)
     }
 
     suspend fun resolveBankAccountIdForBankPayment(entrepriseId: String): String? =
@@ -259,16 +242,16 @@ class TreasuryRepository(
         email: String,
         telephone: String
     ): String? {
-        val user = dao.findUserById(userId) ?: return "Utilisateur introuvable"
+        val user = dao.findUserById(userId) ?: return TreasuryMessage.USER_NOT_FOUND
         val normalizedEmail = normalizeEmail(email)
         val normalizedPhone = normalizePhone(telephone)
-        if (nom.isBlank()) return "Le nom est obligatoire"
-        if (normalizedEmail.isBlank()) return "L'email est obligatoire"
+        if (nom.isBlank()) return TreasuryMessage.NAME_REQUIRED
+        if (normalizedEmail.isBlank()) return TreasuryMessage.EMAIL_REQUIRED
         val emailTaken = dao.findUserByEmail(normalizedEmail)
-        if (emailTaken != null && emailTaken.id != userId) return "Cet email est déjà utilisé"
+        if (emailTaken != null && emailTaken.id != userId) return TreasuryMessage.EMAIL_TAKEN
         if (normalizedPhone.isNotBlank()) {
             val phoneTaken = dao.findUserByTelephone(normalizedPhone)
-            if (phoneTaken != null && phoneTaken.id != userId) return "Ce téléphone est déjà utilisé"
+            if (phoneTaken != null && phoneTaken.id != userId) return TreasuryMessage.PHONE_TAKEN
         }
         dao.upsertUser(
             user.copy(
@@ -287,8 +270,8 @@ class TreasuryRepository(
         telephone: String,
         adresse: String
     ): String? {
-        val entity = dao.findEntrepriseById(entrepriseId) ?: return "Entreprise introuvable"
-        if (nom.isBlank()) return "Le nom de l'entreprise est obligatoire"
+        val entity = dao.findEntrepriseById(entrepriseId) ?: return TreasuryMessage.COMPANY_NOT_FOUND
+        if (nom.isBlank()) return TreasuryMessage.COMPANY_NAME_REQUIRED
         dao.upsertEntreprise(
             entity.copy(
                 nom = nom.trim(),
@@ -301,26 +284,26 @@ class TreasuryRepository(
     }
 
     suspend fun addInvoice(invoice: Invoice): String? {
-        if (invoice.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (invoice.entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
         if (!canAddTransaction(invoice.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
-        if (invoice.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (invoice.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
-        if (invoice.paidAmount < 0) return "Le montant payé ne peut pas être négatif"
+        if (invoice.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (invoice.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
+        if (invoice.paidAmount < 0) return TreasuryMessage.PAID_AMOUNT_NEGATIVE
         if (invoice.totalAmount < invoice.paidAmount) {
-            return "Le montant total ne peut pas être inférieur au montant déjà encaissé"
+            return TreasuryMessage.TOTAL_BELOW_PAID
         }
         return when (invoice.documentStatus) {
             InvoiceDocumentStatus.DRAFT -> {
                 if (invoice.invoiceNumber.isNotBlank()) {
-                    return "Un brouillon ne doit pas avoir de numéro de facture"
+                    return TreasuryMessage.DRAFT_MUST_NOT_HAVE_INVOICE_NUMBER
                 }
                 dao.upsertInvoice(invoice.toEntity())
                 null
             }
             InvoiceDocumentStatus.VALIDATED -> {
-                if (invoice.invoiceNumber.isBlank()) return "Le numéro de facture est obligatoire"
+                if (invoice.invoiceNumber.isBlank()) return TreasuryMessage.INVOICE_NUMBER_REQUIRED
                 if (invoiceExists(invoice.entrepriseId, invoice.invoiceNumber)) {
-                    return "Ce numéro de facture existe déjà"
+                    return TreasuryMessage.INVOICE_NUMBER_EXISTS
                 }
                 dao.upsertInvoice(invoice.toEntity())
                 null
@@ -335,14 +318,14 @@ class TreasuryRepository(
         invoiceId: String,
         settings: InvoiceSettings
     ): String? {
-        val entity = dao.findInvoiceById(invoiceId) ?: return "Facture introuvable"
+        val entity = dao.findInvoiceById(invoiceId) ?: return TreasuryMessage.INVOICE_NOT_FOUND
         if (entity.documentStatus == InvoiceDocumentStatus.VALIDATED) {
-            return "Cette facture est déjà validée"
+            return TreasuryMessage.INVOICE_ALREADY_VALIDATED
         }
         val payments = dao.getPaymentsForInvoices(listOf(invoiceId))
         val invoice = entity.toDomain(payments.map { it.toDomain() })
-        if (invoice.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (invoice.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (invoice.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (invoice.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
 
         val number = InvoiceNumberGenerator.nextNumber(
             prefix = settings.prefix,
@@ -354,7 +337,7 @@ class TreasuryRepository(
             documentStatus = InvoiceDocumentStatus.VALIDATED
         )
         if (invoiceExists(validated.entrepriseId, number)) {
-            return "Ce numéro de facture existe déjà"
+            return TreasuryMessage.INVOICE_NUMBER_EXISTS
         }
         dao.upsertInvoice(validated.toEntity())
         return null
@@ -401,14 +384,14 @@ class TreasuryRepository(
     }
 
     suspend fun updateInvoice(invoice: Invoice): String? {
-        val existingEntity = dao.findInvoiceById(invoice.id) ?: return "Facture introuvable"
+        val existingEntity = dao.findInvoiceById(invoice.id) ?: return TreasuryMessage.INVOICE_NOT_FOUND
         val existing = existingEntity.toDomain(
             dao.getPaymentsForInvoices(listOf(invoice.id)).map { it.toDomain() }
         )
-        if (invoice.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (invoice.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (invoice.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (invoice.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
         if (invoice.totalAmount < invoice.paidAmount) {
-            return "Le montant total ne peut pas être inférieur au montant déjà encaissé"
+            return TreasuryMessage.TOTAL_BELOW_PAID
         }
 
         val invoiceToSave = when (existing.documentStatus) {
@@ -428,7 +411,7 @@ class TreasuryRepository(
                 normalizeInvoiceNumber(invoiceToSave.invoiceNumber)
             )
             if (duplicate != null && duplicate.id != invoiceToSave.id) {
-                return "Ce numéro de facture existe déjà"
+                return TreasuryMessage.INVOICE_NUMBER_EXISTS
             }
         }
 
@@ -437,8 +420,8 @@ class TreasuryRepository(
     }
 
     suspend fun deleteInvoice(invoiceId: String): String? {
-        if (invoiceId.isBlank()) return "L'ID facture est obligatoire"
-        if (dao.findInvoiceById(invoiceId) == null) return "Facture introuvable"
+        if (invoiceId.isBlank()) return TreasuryMessage.INVOICE_ID_REQUIRED
+        if (dao.findInvoiceById(invoiceId) == null) return TreasuryMessage.INVOICE_NOT_FOUND
         dao.deleteInvoiceById(invoiceId)
         return null
     }
@@ -447,21 +430,21 @@ class TreasuryRepository(
         addQuote(quote.copy(status = QuoteStatus.DRAFT, quoteNumber = ""))
 
     suspend fun addQuote(quote: Quote): String? {
-        if (quote.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
-        if (quote.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (quote.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (quote.entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
+        if (quote.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (quote.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
         return when (quote.status) {
             QuoteStatus.DRAFT -> {
                 if (quote.quoteNumber.isNotBlank()) {
-                    return "Un brouillon ne doit pas avoir de numéro de devis"
+                    return TreasuryMessage.DRAFT_MUST_NOT_HAVE_QUOTE_NUMBER
                 }
                 dao.upsertQuote(quote.toEntity())
                 null
             }
             QuoteStatus.SENT -> {
-                if (quote.quoteNumber.isBlank()) return "Le numéro de devis est obligatoire"
+                if (quote.quoteNumber.isBlank()) return TreasuryMessage.QUOTE_NUMBER_REQUIRED
                 if (quoteExists(quote.entrepriseId, quote.quoteNumber)) {
-                    return "Ce numéro de devis existe déjà"
+                    return TreasuryMessage.QUOTE_NUMBER_EXISTS
                 }
                 dao.upsertQuote(quote.toEntity())
                 null
@@ -474,11 +457,11 @@ class TreasuryRepository(
     }
 
     suspend fun validateQuote(quoteId: String, settings: InvoiceSettings): String? {
-        val entity = dao.findQuoteById(quoteId) ?: return "Devis introuvable"
-        if (entity.status != QuoteStatus.DRAFT) return "Ce devis est déjà validé"
+        val entity = dao.findQuoteById(quoteId) ?: return TreasuryMessage.QUOTE_NOT_FOUND
+        if (entity.status != QuoteStatus.DRAFT) return TreasuryMessage.QUOTE_ALREADY_VALIDATED
         val quote = entity.toDomain()
-        if (quote.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (quote.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (quote.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (quote.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
 
         val number = InvoiceNumberGenerator.nextNumber(
             prefix = settings.quotePrefix,
@@ -487,7 +470,7 @@ class TreasuryRepository(
         )
         val validated = quote.copy(quoteNumber = number, status = QuoteStatus.SENT)
         if (quoteExists(validated.entrepriseId, number)) {
-            return "Ce numéro de devis existe déjà"
+            return TreasuryMessage.QUOTE_NUMBER_EXISTS
         }
         dao.upsertQuote(validated.toEntity())
         return null
@@ -501,10 +484,10 @@ class TreasuryRepository(
         )
 
     suspend fun updateQuote(quote: Quote): String? {
-        val existingEntity = dao.findQuoteById(quote.id) ?: return "Devis introuvable"
+        val existingEntity = dao.findQuoteById(quote.id) ?: return TreasuryMessage.QUOTE_NOT_FOUND
         val existing = existingEntity.toDomain()
-        if (quote.clientName.isBlank()) return "Le nom du client est obligatoire"
-        if (quote.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
+        if (quote.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
+        if (quote.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
 
         val quoteToSave = when (existing.status) {
             QuoteStatus.DRAFT -> quote.copy(quoteNumber = "", status = QuoteStatus.DRAFT)
@@ -518,7 +501,7 @@ class TreasuryRepository(
         if (quoteToSave.status != QuoteStatus.DRAFT && quoteToSave.quoteNumber.isNotBlank()) {
             val duplicate = dao.findQuoteByNumber(quoteToSave.entrepriseId, quoteToSave.quoteNumber)
             if (duplicate != null && duplicate.id != quoteToSave.id) {
-                return "Ce numéro de devis existe déjà"
+                return TreasuryMessage.QUOTE_NUMBER_EXISTS
             }
         }
 
@@ -527,34 +510,34 @@ class TreasuryRepository(
     }
 
     suspend fun updateQuoteStatus(quoteId: String, status: QuoteStatus): String? {
-        val entity = dao.findQuoteById(quoteId) ?: return "Devis introuvable"
-        if (entity.status == QuoteStatus.DRAFT) return "Validez le devis avant de changer son statut"
-        if (entity.status == QuoteStatus.CONVERTED) return "Un devis converti ne peut plus être modifié"
-        if (status == QuoteStatus.DRAFT) return "Statut invalide"
+        val entity = dao.findQuoteById(quoteId) ?: return TreasuryMessage.QUOTE_NOT_FOUND
+        if (entity.status == QuoteStatus.DRAFT) return TreasuryMessage.QUOTE_VALIDATE_BEFORE_STATUS
+        if (entity.status == QuoteStatus.CONVERTED) return TreasuryMessage.QUOTE_CONVERTED_LOCKED
+        if (status == QuoteStatus.DRAFT) return TreasuryMessage.INVALID_STATUS
         if (status in listOf(QuoteStatus.ACCEPTED, QuoteStatus.REFUSED) && entity.status != QuoteStatus.SENT) {
-            return "Seuls les devis envoyés peuvent être acceptés ou refusés"
+            return TreasuryMessage.QUOTE_SENT_ONLY_ACCEPT_REFUSE
         }
         dao.upsertQuote(entity.copy(status = status))
         return null
     }
 
     suspend fun deleteQuote(quoteId: String): String? {
-        if (quoteId.isBlank()) return "L'ID devis est obligatoire"
-        val entity = dao.findQuoteById(quoteId) ?: return "Devis introuvable"
+        if (quoteId.isBlank()) return TreasuryMessage.QUOTE_ID_REQUIRED
+        val entity = dao.findQuoteById(quoteId) ?: return TreasuryMessage.QUOTE_NOT_FOUND
         if (entity.status != QuoteStatus.DRAFT) {
-            return "Seuls les brouillons peuvent être supprimés"
+            return TreasuryMessage.DRAFT_ONLY_DELETE
         }
         dao.deleteQuoteById(quoteId)
         return null
     }
 
     suspend fun convertQuoteToInvoice(quoteId: String, settings: InvoiceSettings): String? {
-        val entity = dao.findQuoteById(quoteId) ?: return "Devis introuvable"
+        val entity = dao.findQuoteById(quoteId) ?: return TreasuryMessage.QUOTE_NOT_FOUND
         val quote = entity.toDomain()
         if (quote.status != QuoteStatus.ACCEPTED) {
-            return "Seuls les devis acceptés peuvent être convertis en facture"
+            return TreasuryMessage.QUOTE_ACCEPTED_ONLY_CONVERT
         }
-        if (quote.convertedInvoiceId != null) return "Ce devis a déjà été converti"
+        if (quote.convertedInvoiceId != null) return TreasuryMessage.QUOTE_ALREADY_CONVERTED
 
         val invoiceNumber = InvoiceNumberGenerator.nextNumber(
             prefix = settings.prefix,
@@ -593,8 +576,8 @@ class TreasuryRepository(
         quoteNumber.trim().uppercase(Locale.ROOT)
 
     suspend fun addPayment(payment: Payment): String? {
-        if (payment.invoiceId.isBlank()) return "L'ID facture est obligatoire"
-        if (payment.amount <= 0) return "Le montant du paiement doit être supérieur à 0"
+        if (payment.invoiceId.isBlank()) return TreasuryMessage.INVOICE_ID_REQUIRED
+        if (payment.amount <= 0) return TreasuryMessage.PAYMENT_AMOUNT_POSITIVE
         val entrepriseId = dao.findInvoiceById(payment.invoiceId)?.entrepriseId.orEmpty()
         val accountId = resolveAccountIdForPayment(entrepriseId, payment)
         val paymentToSave = if (accountId != null && payment.bankAccountId == null) {
@@ -607,10 +590,10 @@ class TreasuryRepository(
     }
 
     suspend fun addExpense(expense: Expense): String? {
-        if (expense.label.isBlank()) return "Le libellé de la dépense est obligatoire"
-        if (expense.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (expense.label.isBlank()) return TreasuryMessage.EXPENSE_LABEL_REQUIRED
+        if (expense.entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
         if (!canAddTransaction(expense.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
-        if (expense.amount <= 0) return "Le montant de la dépense doit être supérieur à 0"
+        if (expense.amount <= 0) return TreasuryMessage.EXPENSE_AMOUNT_POSITIVE
         val accountId = resolveAccountIdForExpense(expense)
         val expenseToSave = if (accountId != null && expense.bankAccountId == null) {
             expense.copy(bankAccountId = accountId)
@@ -626,18 +609,18 @@ class TreasuryRepository(
     }
 
     suspend fun deleteExpense(expenseId: String): String? {
-        if (expenseId.isBlank()) return "L'ID dépense est obligatoire"
+        if (expenseId.isBlank()) return TreasuryMessage.EXPENSE_ID_REQUIRED
         dao.deleteExpenseById(expenseId)
         return null
     }
 
     suspend fun addUser(user: User): String? {
-        if (user.nom.isBlank()) return "Le nom est obligatoire"
-        if (user.email.isBlank()) return "L'email est obligatoire"
-        if (user.telephone.isBlank()) return "Le téléphone est obligatoire"
-        if (user.passwordHash.length < 6) return "Le mot de passe doit contenir au moins 6 caractères"
-        if (isEmailTaken(user.email)) return "Cet email est déjà utilisé"
-        if (isTelephoneTaken(user.telephone)) return "Ce téléphone est déjà utilisé"
+        if (user.nom.isBlank()) return TreasuryMessage.NAME_REQUIRED
+        if (user.email.isBlank()) return TreasuryMessage.EMAIL_REQUIRED
+        if (user.telephone.isBlank()) return TreasuryMessage.PHONE_REQUIRED
+        if (user.passwordHash.length < 6) return TreasuryMessage.PASSWORD_MIN_LENGTH
+        if (isEmailTaken(user.email)) return TreasuryMessage.EMAIL_TAKEN
+        if (isTelephoneTaken(user.telephone)) return TreasuryMessage.PHONE_TAKEN
         dao.upsertUser(
             user.copy(
                 email = normalizeEmail(user.email),
@@ -656,21 +639,21 @@ class TreasuryRepository(
         dao.findUserById(userId)?.toDomain()
 
     suspend fun changePassword(userId: String, currentPassword: String, newPassword: String): String? {
-        val user = dao.findUserById(userId) ?: return "Utilisateur introuvable"
+        val user = dao.findUserById(userId) ?: return TreasuryMessage.USER_NOT_FOUND
         if (!PasswordHasher.verify(currentPassword, user.passwordHash)) {
-            return "Mot de passe actuel incorrect"
+            return TreasuryMessage.CURRENT_PASSWORD_WRONG
         }
         if (newPassword.length < 6) {
-            return "Le nouveau mot de passe doit contenir au moins 6 caractères"
+            return TreasuryMessage.NEW_PASSWORD_MIN_LENGTH
         }
         dao.upsertUser(user.copy(passwordHash = PasswordHasher.hash(newPassword)))
         return null
     }
 
     suspend fun resetUserPassword(userId: String, newPassword: String): String? {
-        val user = dao.findUserById(userId) ?: return "Utilisateur introuvable"
+        val user = dao.findUserById(userId) ?: return TreasuryMessage.USER_NOT_FOUND
         if (newPassword.length < 6) {
-            return "Le mot de passe doit contenir au moins 6 caractères"
+            return TreasuryMessage.PASSWORD_MIN_LENGTH
         }
         dao.upsertUser(user.copy(passwordHash = PasswordHasher.hash(newPassword)))
         return null
@@ -708,10 +691,10 @@ class TreasuryRepository(
 
     suspend fun restoreBackup(entrepriseId: String, json: String): String? {
         val backup = runCatching { TreasuryBackupJson.fromJson(json) }
-            .getOrElse { return "Fichier de sauvegarde invalide: ${it.message}" }
+            .getOrElse { return TreasuryMessage.backupFileInvalid(it.message.orEmpty()) }
 
         if (backup.entrepriseId != entrepriseId) {
-            return "Cette sauvegarde appartient à une autre entreprise"
+            return TreasuryMessage.BACKUP_WRONG_ENTREPRISE
         }
 
         return applyBackup(backup)
@@ -722,7 +705,7 @@ class TreasuryRepository(
             return Result.failure(IllegalStateException("L'application est déjà configurée"))
         }
         val backup = runCatching { TreasuryBackupJson.fromJson(json) }
-            .getOrElse { return Result.failure(IllegalArgumentException("Fichier invalide: ${it.message}")) }
+            .getOrElse { return Result.failure(IllegalArgumentException(TreasuryMessage.backupFileInvalid(it.message.orEmpty()))) }
 
         val owner = backup.users.firstOrNull { it.role == UserRole.ADMIN }
             ?: backup.users.firstOrNull()
@@ -757,7 +740,7 @@ class TreasuryRepository(
         val orphanPayments = backup.invoices.flatMap { it.payments }
             .filter { it.invoiceId !in invoiceIds }
         if (orphanPayments.isNotEmpty()) {
-            return "Sauvegarde invalide : paiements sans facture associée"
+            return TreasuryMessage.BACKUP_ORPHAN_PAYMENTS
         }
 
         database.withTransaction {
@@ -819,13 +802,12 @@ class TreasuryRepository(
                 dao.deleteQuotesForEntreprise(entrepriseId)
                 dao.deleteBankAccountsForEntreprise(entrepriseId)
                 dao.deleteContactsForEntreprise(entrepriseId)
-                dao.deactivateProductsForEntreprise(entrepriseId)
                 dao.deleteUsersForEntreprise(entrepriseId)
                 dao.deleteEntrepriseById(entrepriseId)
             }
             null
         } catch (e: Exception) {
-            e.message ?: "Erreur lors de la suppression"
+            e.message ?: TreasuryMessage.DELETE_ERROR
         }
     }
 
@@ -961,32 +943,6 @@ private fun Quote.toEntity(): QuoteEntity = QuoteEntity(
     lineItemsJson = InvoiceLineItemCodec.encode(lineItems),
     convertedInvoiceId = convertedInvoiceId,
     notes = notes
-)
-
-private fun ProductEntity.toDomain(): Product = Product(
-    id = id,
-    entrepriseId = entrepriseId,
-    name = name,
-    unitPriceExclTax = unitPriceExclTax,
-    kind = kind,
-    unit = unit,
-    category = category,
-    categoryLabel = categoryLabel,
-    isActive = isActive,
-    createdDate = createdDate
-)
-
-private fun Product.toEntity(): ProductEntity = ProductEntity(
-    id = id,
-    entrepriseId = entrepriseId,
-    name = name,
-    unitPriceExclTax = unitPriceExclTax,
-    kind = kind,
-    unit = unit,
-    category = category,
-    categoryLabel = categoryLabel,
-    isActive = isActive,
-    createdDate = createdDate
 )
 
 private fun PaymentEntity.toDomain(): Payment = Payment(

@@ -296,3 +296,9 @@ private fun SupportSQLiteDatabase.addTextColumnIfMissing(
         execSQL("ALTER TABLE `$table` ADD COLUMN `$column` TEXT $definition")
     }
 }
+
+val MIGRATION_20_21 = object : Migration(20, 21) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("DROP TABLE IF EXISTS `products`")
+    }
+}

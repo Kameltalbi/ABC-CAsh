@@ -228,24 +228,6 @@ interface TreasuryDao {
     )
     suspend fun getContactsForBackup(entrepriseId: String): List<ContactEntity>
 
-    @Query(
-        """
-        SELECT * FROM products
-        WHERE entrepriseId = :entrepriseId AND isActive = 1
-        ORDER BY name COLLATE NOCASE ASC
-        """
-    )
-    fun observeProducts(entrepriseId: String): Flow<List<ProductEntity>>
-
-    @Query("SELECT * FROM products WHERE id = :id LIMIT 1")
-    suspend fun findProductById(id: String): ProductEntity?
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertProduct(product: ProductEntity)
-
-    @Query("UPDATE products SET isActive = 0 WHERE id = :id")
-    suspend fun deactivateProduct(id: String)
-
     @Query("DELETE FROM payments WHERE invoiceId IN (SELECT id FROM invoices WHERE entrepriseId = :entrepriseId)")
     suspend fun deletePaymentsForEntreprise(entrepriseId: String)
 
@@ -263,9 +245,6 @@ interface TreasuryDao {
 
     @Query("DELETE FROM contacts WHERE entrepriseId = :entrepriseId")
     suspend fun deleteContactsForEntreprise(entrepriseId: String)
-
-    @Query("UPDATE products SET isActive = 0 WHERE entrepriseId = :entrepriseId")
-    suspend fun deactivateProductsForEntreprise(entrepriseId: String)
 
     @Query("DELETE FROM users WHERE entrepriseId = :entrepriseId")
     suspend fun deleteUsersForEntreprise(entrepriseId: String)
