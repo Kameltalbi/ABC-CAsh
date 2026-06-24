@@ -283,13 +283,20 @@ class TreasuryViewModel(
         }
     }
 
-    fun deleteAccountAndData(onResult: (String?) -> Unit) {
+    fun deleteAccountAndData(deleteDriveBackup: Boolean, onResult: (String?) -> Unit) {
         val entrepriseId = requireEntrepriseId()
         if (entrepriseId == null) {
             onResult("Session expirée")
             return
         }
         viewModelScope.launch {
+            if (deleteDriveBackup && googleBackupManager.isSignedIn()) {
+                googleBackupManager.deleteBackup()
+                    .onFailure { error ->
+                        onResult(error.message ?: "Impossible de supprimer la sauvegarde Google Drive")
+                        return@launch
+                    }
+            }
             val error = repository.deleteAccountData(entrepriseId)
             if (error == null) {
                 googleBackupManager.signOut()

@@ -23,8 +23,8 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 50
-        versionName = "1.20.4"
+        versionCode = 51
+        versionName = "1.20.5"
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
@@ -128,6 +128,8 @@ dependencies {
     implementation("com.google.android.gms:play-services-auth:21.3.0")
     implementation("com.google.api-client:google-api-client-android:2.7.2")
     implementation("com.google.apis:google-api-services-drive:v3-rev20241027-2.0.0")
+
+    implementation("androidx.work:work-runtime-ktx:2.10.0")
 
     // Google Play Billing Library
     implementation("com.android.billingclient:billing:7.1.1")

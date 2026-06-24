@@ -548,6 +548,7 @@ fun TreasuryApp(
                 .collectAsStateWithLifecycle(initialValue = emptyList())
             val customExpense by appSettings.customExpenseCategories(entrepriseId)
                 .collectAsStateWithLifecycle(initialValue = emptyList())
+            val hasOcrScan = uiState.subscription.plan.hasOcrScan
             when (type) {
                 TransactionType.INCOME -> if (role == UserRole.ADMIN) {
                     NewTransactionScreen(
@@ -556,6 +557,7 @@ fun TreasuryApp(
                         selectedMonth = uiState.selectedMonth,
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
+                        hasOcrScan = hasOcrScan,
                         onRequestSuggestedInvoiceNumber = { year, onResult ->
                             viewModel.suggestNextInvoiceNumber(year, onResult)
                         },
@@ -573,7 +575,7 @@ fun TreasuryApp(
                                 }
                             )
                         },
-                        onSaveExpense = { _, _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
+                        onSaveExpense = { _, _, _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
                     )
                 } else {
                     AccessDeniedScreen(
@@ -588,13 +590,15 @@ fun TreasuryApp(
                         selectedMonth = uiState.selectedMonth,
                         customIncomeCategories = customIncome,
                         customExpenseCategories = customExpense,
+                        hasOcrScan = hasOcrScan,
                         onBack = { navController.popBackStack() },
                         onSaveIncome = { _, _, _, _, _, _, _, _, _, onResult -> onResult(null) },
-                        onSaveExpense = { label, amount, date, category, categoryLabel, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, note, onResult ->
+                        onSaveExpense = { label, amount, date, category, categoryLabel, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, note, receiptImagePath, onResult ->
                             viewModel.addExpenseTransaction(
                                 label, amount, date, category, categoryLabel,
                                 isRecurring, recurrence, recurrenceEndDate,
                                 isPaid, paymentMethod, note = note,
+                                receiptImagePath = receiptImagePath,
                                 onResult = { error ->
                                     if (error == null) {
                                         viewModel.setSelectedMonth(YearMonth.from(date))
@@ -771,30 +775,39 @@ private fun MainAppScaffold(
                         .find { it.id == uiState.currentUserId }
                         ?.nom
                         .orEmpty()
-                    ModernDashboardScreen(
-                        userRole = userRole,
-                        permissions = permissions,
-                        userName = userName,
-                        companyName = uiState.entreprise?.nom.orEmpty(),
-                        invoices = uiState.invoices,
-                        expenses = uiState.expenses,
-                        bankAccounts = uiState.bankAccounts,
-                        entrepriseId = uiState.entrepriseId,
-                        userPreferences = userPreferences,
-                        onNavigateToAddIncome = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
-                        },
-                        onNavigateToAddExpense = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
-                        },
-                        onNavigateToSubscription = {
-                            navigateToMainTab(Screen.Subscription.route)
-                        },
-                        onNavigateToBankAccounts = {
-                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
-                        },
-                        onOpenDrawer = { openDrawer() }
-                    )
+                    if (uiState.subscription.plan.hasDashboardAccess) {
+                        ModernDashboardScreen(
+                            userRole = userRole,
+                            permissions = permissions,
+                            userName = userName,
+                            companyName = uiState.entreprise?.nom.orEmpty(),
+                            invoices = uiState.invoices,
+                            expenses = uiState.expenses,
+                            bankAccounts = uiState.bankAccounts,
+                            entrepriseId = uiState.entrepriseId,
+                            userPreferences = userPreferences,
+                            onNavigateToAddIncome = {
+                                navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
+                            },
+                            onNavigateToAddExpense = {
+                                navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
+                            },
+                            onNavigateToSubscription = {
+                                navigateToMainTab(Screen.Subscription.route)
+                            },
+                            onNavigateToBankAccounts = {
+                                navController.navigate(SettingsRoutes.OPTIONS_BANK)
+                            },
+                            onOpenDrawer = { openDrawer() }
+                        )
+                    } else {
+                        SubscriptionFeatureGateScreen(
+                            titleRes = R.string.nav_home,
+                            messageRes = R.string.subscription_dashboard_gate_message,
+                            onUpgrade = { navigateToMainTab(Screen.Subscription.route) },
+                            onOpenDrawer = { openDrawer() }
+                        )
+                    }
                 }
                 Screen.Subscription.route -> {
                     SubscriptionScreen(

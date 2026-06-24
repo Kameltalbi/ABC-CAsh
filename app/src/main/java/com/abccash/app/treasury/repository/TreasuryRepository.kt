@@ -4,6 +4,7 @@ import com.abccash.app.treasury.data.BankAccount
 import com.abccash.app.treasury.data.BankAccountSource
 import com.abccash.app.treasury.data.Contact
 import com.abccash.app.treasury.data.TaxIdValidationStatus
+import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.Entreprise
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
@@ -791,6 +792,24 @@ class TreasuryRepository(
         return !subscription.isTreasuryAccountLimitReached
     }
 
+    suspend fun countOverdueEcheances(entrepriseId: String): Int {
+        val invoiceEntities = dao.getInvoicesForBackup(entrepriseId)
+        val invoiceIds = invoiceEntities.map { it.id }
+        val paymentEntities = if (invoiceIds.isEmpty()) {
+            emptyList()
+        } else {
+            dao.getPaymentsForInvoices(invoiceIds)
+        }
+        val invoices = invoiceEntities.map { invoice ->
+            val payments = paymentEntities
+                .filter { it.invoiceId == invoice.id }
+                .map { it.toDomain() }
+            invoice.toDomain(payments)
+        }
+        val expenses = dao.getExpensesForBackup(entrepriseId).map { it.toDomain() }
+        return EcheanceForecast.countOverdue(invoices, expenses)
+    }
+
     suspend fun deleteAccountData(entrepriseId: String): String? {
         return try {
             database.withTransaction {
@@ -811,6 +830,7 @@ class TreasuryRepository(
     }
 
     private suspend fun countTransactionsThisMonth(entrepriseId: String, month: YearMonth): Int {
+        // Free-plan quota resets on the 1st of each calendar month (YearMonth.now()).
         val invoices = dao.getInvoicesForBackup(entrepriseId)
         val expenses = dao.getExpensesForBackup(entrepriseId)
         

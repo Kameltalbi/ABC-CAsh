@@ -9,6 +9,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -251,38 +252,70 @@ private fun PlanFeatures(
 ) {
     val features = when (plan) {
         SubscriptionPlan.FREE -> listOf(
-            R.string.subscription_free_feature_core,
-            R.string.subscription_free_feature_limit,
-            R.string.subscription_free_feature_accounts,
-            R.string.subscription_free_feature_csv
+            PlanFeature(R.string.subscription_free_feature_limit, true),
+            PlanFeature(R.string.subscription_free_feature_no_dashboard, false),
+            PlanFeature(R.string.subscription_free_feature_accounts, true),
+            PlanFeature(R.string.subscription_free_feature_receipts, true),
+            PlanFeature(R.string.subscription_free_feature_no_ocr, false),
+            PlanFeature(R.string.subscription_free_feature_forecasts, true),
+            PlanFeature(R.string.subscription_free_feature_backup, true),
+            PlanFeature(R.string.subscription_free_feature_biometric, true),
+            PlanFeature(R.string.subscription_free_feature_csv, true)
         )
         SubscriptionPlan.PRO -> listOf(
-            R.string.subscription_pro_feature_unlimited,
-            R.string.subscription_pro_feature_accounts,
-            R.string.subscription_pro_feature_backup,
-            R.string.subscription_pro_feature_csv,
-            R.string.subscription_pro_feature_support
+            PlanFeature(R.string.subscription_pro_feature_unlimited, true),
+            PlanFeature(R.string.subscription_pro_feature_dashboard, true),
+            PlanFeature(R.string.subscription_pro_feature_accounts, true),
+            PlanFeature(R.string.subscription_pro_feature_ocr, true),
+            PlanFeature(R.string.subscription_pro_feature_forecasts, true),
+            PlanFeature(R.string.subscription_pro_feature_backup, true),
+            PlanFeature(R.string.subscription_pro_feature_biometric, true),
+            PlanFeature(R.string.subscription_pro_feature_csv, true)
         )
     }
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        features.forEach { res ->
-            FeatureItem(stringResource(res), textColor)
+        features.forEach { feature ->
+            FeatureItem(
+                text = stringResource(feature.textRes),
+                included = feature.included,
+                textColor = textColor,
+                mutedColor = mutedColor
+            )
         }
     }
 }
 
+private data class PlanFeature(
+    val textRes: Int,
+    val included: Boolean
+)
+
 @Composable
-private fun FeatureItem(text: String, textColor: Color) {
+private fun FeatureItem(
+    text: String,
+    included: Boolean,
+    textColor: Color,
+    mutedColor: Color
+) {
+    val iconColor = when {
+        included -> textColor
+        else -> mutedColor.copy(alpha = 0.7f)
+    }
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         Icon(
-            Icons.Default.Check,
+            if (included) Icons.Default.Check else Icons.Default.Close,
             contentDescription = null,
-            tint = textColor,
+            tint = iconColor,
             modifier = Modifier.size(18.dp)
         )
-        Text(text = text, fontSize = 14.sp, color = textColor, lineHeight = 18.sp)
+        Text(
+            text = text,
+            fontSize = 14.sp,
+            color = if (included) textColor else mutedColor,
+            lineHeight = 18.sp
+        )
     }
 }

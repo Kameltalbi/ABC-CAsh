@@ -35,6 +35,7 @@ data class ReceiptScanUiState(
 @Composable
 fun rememberReceiptScan(
     snackbarHostState: SnackbarHostState,
+    ocrEnabled: Boolean = true,
     onParsed: (ReceiptParseResult) -> Unit
 ): Pair<ReceiptScanUiState, ReceiptScanActions> {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -50,6 +51,13 @@ fun rememberReceiptScan(
     val cameraDenied = stringResource(R.string.camera_permission_denied)
 
     fun processImage(uri: Uri) {
+        if (!ocrEnabled) {
+            uiState = uiState.copy(lastScannedUri = uri, isScanning = false, successMessage = null)
+            scope.launch {
+                snackbarHostState.showSnackbar(context.getString(R.string.receipt_attached))
+            }
+            return
+        }
         scope.launch {
             uiState = uiState.copy(isScanning = true, successMessage = null)
             runCatching { ReceiptOcrProcessor.scanReceipt(context, uri) }
@@ -132,7 +140,8 @@ fun ReceiptSourcePickerSheet(
     visible: Boolean,
     onDismiss: () -> Unit,
     onTakePhoto: () -> Unit,
-    onPickGallery: () -> Unit
+    onPickGallery: () -> Unit,
+    titleRes: Int = R.string.scan_receipt
 ) {
     if (!visible) return
     ModalBottomSheet(onDismissRequest = onDismiss) {
@@ -143,7 +152,7 @@ fun ReceiptSourcePickerSheet(
                 .padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Text(stringResource(R.string.scan_receipt), fontSize = 18.sp, fontWeight = FontWeight.Bold)
+            Text(stringResource(titleRes), fontSize = 18.sp, fontWeight = FontWeight.Bold)
             OutlinedButton(onClick = onTakePhoto, modifier = Modifier.fillMaxWidth()) {
                 Text(stringResource(R.string.take_photo))
             }

@@ -155,6 +155,9 @@ class UserPreferences(private val context: Context) {
     suspend fun readSessionUserId(): String? =
         context.userDataStore.data.first()[UserPreferencesKeys.USER_ID]
 
+    suspend fun readEntrepriseId(): String? =
+        context.userDataStore.data.first()[UserPreferencesKeys.USER_ENTREPRISE_ID]
+
     suspend fun readSubscriptionPlan(): SubscriptionPlan {
         val id = context.userDataStore.data.first()[UserPreferencesKeys.SUBSCRIPTION_PLAN]
         return SubscriptionPlan.fromId(id)

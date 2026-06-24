@@ -16,6 +16,8 @@ enum class SubscriptionPlan(
     val isFree: Boolean get() = this == FREE
     val hasTransactionLimit: Boolean get() = transactionsPerMonth != null
     val unlimited: Boolean get() = transactionsPerMonth == null
+    val hasDashboardAccess: Boolean get() = !isFree
+    val hasOcrScan: Boolean get() = !isFree
 
     companion object {
         fun fromId(id: String?): SubscriptionPlan =

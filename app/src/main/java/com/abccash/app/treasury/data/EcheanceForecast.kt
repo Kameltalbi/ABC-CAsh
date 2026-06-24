@@ -153,4 +153,15 @@ object EcheanceForecast {
         }
         return items
     }
+
+    /** Unpaid income/expense due dates strictly before [today]. */
+    fun countOverdue(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        today: LocalDate = LocalDate.now()
+    ): Int {
+        val lookback = today.minusYears(3)
+        return buildItems(invoices, expenses, from = lookback, to = today)
+            .count { it.dueDate.isBefore(today) }
+    }
 }

@@ -16,6 +16,8 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material.icons.filled.TrendingUp
@@ -30,6 +32,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
+import com.abccash.app.locale.AppLanguage
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.ui.theme.AppColors
 import com.abccash.app.treasury.data.SubscriptionPlan
@@ -68,7 +71,7 @@ fun SettingsScreen(
     onGoogleSignedOut: () -> Unit,
     onUpgradeSubscription: () -> Unit,
     onExportCsv: (Int) -> String?,
-    onDeleteAccount: (onResult: (String?) -> Unit) -> Unit,
+    onDeleteAccount: (deleteDriveBackup: Boolean, onResult: (String?) -> Unit) -> Unit,
     onNavigate: (String) -> Unit,
     onOpenDrawer: () -> Unit = {},
     onAccountDeleted: () -> Unit = {}
@@ -76,6 +79,9 @@ fun SettingsScreen(
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val settings by appSettings.settingsFlow.collectAsState(initial = AppSettingsState())
+    val currentLanguage = remember(settings.appLanguageTag) {
+        AppLanguage.fromTag(settings.appLanguageTag)
+    }
 
     var signedInEmail by remember(googleAccountEmail) {
         mutableStateOf(googleAccountEmail ?: googleBackupManager.getSignedInEmail())
@@ -83,6 +89,7 @@ fun SettingsScreen(
     var isGoogleLoading by remember { mutableStateOf(false) }
     var googleError by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
+    var deleteDriveBackup by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
@@ -133,12 +140,32 @@ fun SettingsScreen(
     if (showDeleteConfirm) {
         AlertDialog(
             onDismissRequest = {
-                if (!isDeleting) showDeleteConfirm = false
+                if (!isDeleting) {
+                    showDeleteConfirm = false
+                    deleteDriveBackup = false
+                }
             },
             title = { Text(stringResource(R.string.settings_delete_account_confirm_title)) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(stringResource(R.string.settings_delete_account_confirm_message))
+                    if (signedInEmail != null) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Checkbox(
+                                checked = deleteDriveBackup,
+                                onCheckedChange = { deleteDriveBackup = it },
+                                enabled = !isDeleting
+                            )
+                            Text(
+                                text = stringResource(R.string.settings_delete_drive_backup),
+                                fontSize = 14.sp,
+                                color = SettingsTextPrimary
+                            )
+                        }
+                    }
                     deleteError?.let { Text(it, color = SettingsDanger, fontSize = 13.sp) }
                 }
             },
@@ -147,10 +174,11 @@ fun SettingsScreen(
                     onClick = {
                         isDeleting = true
                         deleteError = null
-                        onDeleteAccount { error ->
+                        onDeleteAccount(deleteDriveBackup) { error ->
                             isDeleting = false
                             if (error == null) {
                                 showDeleteConfirm = false
+                                deleteDriveBackup = false
                                 onAccountDeleted()
                             } else {
                                 deleteError = error
@@ -168,7 +196,10 @@ fun SettingsScreen(
             },
             dismissButton = {
                 TextButton(
-                    onClick = { showDeleteConfirm = false },
+                    onClick = {
+                        showDeleteConfirm = false
+                        deleteDriveBackup = false
+                    },
                     enabled = !isDeleting
                 ) {
                     Text(stringResource(R.string.cancel))
@@ -278,6 +309,34 @@ fun SettingsScreen(
                             )
                         },
                         onClick = { onNavigate(SettingsRoutes.OPTIONS_BANK) }
+                    )
+                    SettingsInfoListItem(
+                        headline = stringResource(R.string.settings_language),
+                        supporting = stringResource(currentLanguage.labelRes),
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Language,
+                                contentDescription = null,
+                                tint = AppColors.BrandBlue
+                            )
+                        },
+                        onClick = { onNavigate(SettingsRoutes.OPTIONS_LANGUAGE) }
+                    )
+                    SettingsInfoListItem(
+                        headline = stringResource(R.string.settings_notifications),
+                        supporting = if (settings.notificationsEnabled) {
+                            stringResource(R.string.settings_notifications_on)
+                        } else {
+                            stringResource(R.string.settings_notifications_off)
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Notifications,
+                                contentDescription = null,
+                                tint = AppColors.BrandBlue
+                            )
+                        },
+                        onClick = { onNavigate(SettingsRoutes.OPTIONS_NOTIFICATIONS) }
                     )
                 }
             }
@@ -538,6 +597,11 @@ private fun SubscriptionSectionCard(
                     fontSize = 14.sp,
                     color = SettingsTextPrimary,
                     fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = stringResource(R.string.subscription_monthly_reset_hint),
+                    fontSize = 12.sp,
+                    color = SettingsMuted
                 )
                 LinearProgressIndicator(
                     progress = { progress },

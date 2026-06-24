@@ -170,6 +170,9 @@
     <string name="settings_currency_sub">Built-in and custom currencies</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_sub">Reminders and alerts</string>
+    <string name="settings_notifications_on">Enabled</string>
+    <string name="settings_notifications_off">Disabled</string>
+    <string name="settings_notifications_overdue_hint">Each morning around 8:00, ABC Cash reminds you if you have overdue income or expense due dates.</string>
     <string name="settings_security">Security</string>
     <string name="settings_security_sub">Fingerprint and PIN code</string>
     <string name="settings_screen_section_profile">My Business &amp; Profile</string>
@@ -192,6 +195,7 @@
     <string name="settings_delete_account">Delete my account and data</string>
     <string name="settings_delete_account_confirm_title">Delete account?</string>
     <string name="settings_delete_account_confirm_message">All your transactions, forecasts and receipts on this device will be permanently deleted. This action cannot be undone.</string>
+    <string name="settings_delete_drive_backup">Also delete the backup file on my Google Drive</string>
     <string name="settings_manage_categories">Manage categories</string>
     <string name="settings_language">Language</string>
     <string name="settings_language_sub">App display language</string>
@@ -497,25 +501,38 @@
     <string name="subscription_unlimited_items">Unlimited items</string>
     <string name="subscription_current_plan">Current plan</string>
     <string name="subscription_stay_free">Keep Free plan</string>
-    <string name="subscription_free_feature_core">Income, expenses and forecasts</string>
-    <string name="subscription_free_feature_limit">30 items created per month</string>
-    <string name="subscription_free_feature_accounts">Up to 2 treasury accounts</string>
-    <string name="subscription_free_feature_csv">CSV export</string>
-    <string name="subscription_pro_feature_unlimited">Unlimited transactions and forecasts</string>
-    <string name="subscription_pro_feature_accounts">Up to 5 treasury accounts</string>
-    <string name="subscription_pro_feature_backup">Automatic Google Drive backup</string>
+    <string name="subscription_free_feature_limit">30 items per month (transactions + forecasts)</string>
+    <string name="subscription_free_feature_no_dashboard">No dashboard or analysis charts</string>
+    <string name="subscription_free_feature_accounts">Up to 2 accounts (1 bank + 1 cash)</string>
+    <string name="subscription_free_feature_receipts">Manual entry + receipt photo on Google Drive</string>
+    <string name="subscription_free_feature_no_ocr">OCR receipt scan not available</string>
+    <string name="subscription_free_feature_forecasts">Due dates and recurring expense planning</string>
+    <string name="subscription_free_feature_backup">Automatic backup to your Google Drive</string>
+    <string name="subscription_free_feature_biometric">Biometric lock (fingerprint / Face ID)</string>
+    <string name="subscription_free_feature_csv">CSV export for your accountant</string>
+    <string name="subscription_pro_feature_unlimited">100% unlimited (no entry restrictions)</string>
+    <string name="subscription_pro_feature_dashboard">Full access to all 4 charts (flow, forecasts, pie charts)</string>
+    <string name="subscription_pro_feature_accounts">Up to 5 accounts (multiple banks + cash)</string>
+    <string name="subscription_pro_feature_ocr">OCR scan included (auto-fill receipts via camera)</string>
+    <string name="subscription_pro_feature_forecasts">Due dates and recurring expense planning</string>
+    <string name="subscription_pro_feature_backup">Automatic backup to your Google Drive</string>
+    <string name="subscription_pro_feature_biometric">Biometric lock</string>
     <string name="subscription_pro_feature_csv">CSV export for your accountant</string>
-    <string name="subscription_pro_feature_support">Priority support</string>
+    <string name="subscription_dashboard_gate_message">Upgrade to Pro to unlock the dashboard and analyze your cash flow with charts.</string>
     <string name="subscription_play_connecting">Connecting to Google Play…</string>
     <string name="subscription_pro_bank_feature">Open banking connection to your accounts</string>
     <string name="plan_free">Free</string>
     <string name="plan_unlimited">Unlimited version</string>
     <string name="plan_starter">Starter</string>
     <string name="plan_pro">Pro</string>
-    <string name="subscription_limit_reached">Transaction limit reached for this month</string>
+    <string name="subscription_limit_reached">Monthly item limit reached (transactions + forecasts)</string>
     <string name="subscription_upgrade_required">Please upgrade to a paid plan to continue</string>
-    <string name="subscription_monthly_usage">Monthly usage: %1$d / %2$d transactions</string>
+    <string name="subscription_monthly_usage">Monthly usage: %1$d / %2$d items</string>
+    <string name="subscription_monthly_reset_hint">Quota resets on the 1st of each month.</string>
     <string name="subscription_free_usage">Free usage this month.</string>
+    <string name="notification_channel_overdue">Overdue due dates</string>
+    <string name="notification_channel_overdue_desc">Morning reminders for overdue forecasts</string>
+    <string name="notification_overdue_title">Overdue due dates</string>
 
     <!-- PERMISSIONS -->
     <string name="admin_import_only">Only administrators can import data</string>
@@ -873,4 +890,9 @@
     <string name="payment_save_failed">Unable to save payment</string>
     <string name="hide_password">Hide</string>
     <string name="show_password">Show</string>
+    <plurals name="notification_overdue_body">
+        <item quantity="one">You have %d overdue due date today</item>
+        <item quantity="other">You have %d overdue due dates today</item>
+    </plurals>
+
 </resources>

@@ -161,6 +161,9 @@
     <string name="settings_currency_sub">Intégrées et personnalisées</string>
     <string name="settings_notifications">Notifications</string>
     <string name="settings_notifications_sub">Rappels et alertes</string>
+    <string name="settings_notifications_on">Activées</string>
+    <string name="settings_notifications_off">Désactivées</string>
+    <string name="settings_notifications_overdue_hint">Chaque matin vers 8 h, ABC Cash vous alerte si des échéances (encaissements ou dépenses) sont en retard.</string>
     <string name="settings_security">Sécurité</string>
     <string name="settings_security_sub">Empreinte digitale et code PIN</string>
     <string name="settings_screen_section_profile">Mon Entreprise &amp; Profil</string>
@@ -183,6 +186,7 @@
     <string name="settings_delete_account">Supprimer mon compte et mes données</string>
     <string name="settings_delete_account_confirm_title">Supprimer le compte ?</string>
     <string name="settings_delete_account_confirm_message">Toutes vos transactions, prévisions et reçus sur cet appareil seront définitivement supprimés. Cette action est irréversible.</string>
+    <string name="settings_delete_drive_backup">Supprimer également la sauvegarde sur mon Google Drive</string>
     <string name="settings_manage_categories">Gérer les catégories</string>
     <string name="settings_language">Langue</string>
     <string name="settings_language_sub">Langue d\'affichage de l\'application</string>
@@ -488,25 +492,38 @@
     <string name="subscription_unlimited_items">Éléments illimités</string>
     <string name="subscription_current_plan">Plan actuel</string>
     <string name="subscription_stay_free">Rester en Gratuit</string>
-    <string name="subscription_free_feature_core">Revenus, dépenses et prévisions</string>
-    <string name="subscription_free_feature_limit">30 éléments créés par mois</string>
-    <string name="subscription_free_feature_accounts">Jusqu\'à 2 comptes trésorerie</string>
-    <string name="subscription_free_feature_csv">Export CSV</string>
-    <string name="subscription_pro_feature_unlimited">Transactions et prévisions illimitées</string>
-    <string name="subscription_pro_feature_accounts">Jusqu\'à 5 comptes trésorerie</string>
-    <string name="subscription_pro_feature_backup">Sauvegarde automatique Google Drive</string>
-    <string name="subscription_pro_feature_csv">Export CSV pour votre comptable</string>
-    <string name="subscription_pro_feature_support">Support prioritaire</string>
+    <string name="subscription_free_feature_limit">30 éléments / mois (transactions + prévisions)</string>
+    <string name="subscription_free_feature_no_dashboard">Pas de tableau de bord ni graphiques d\'analyse</string>
+    <string name="subscription_free_feature_accounts">Jusqu\'à 2 comptes (1 banque + 1 caisse espèces)</string>
+    <string name="subscription_free_feature_receipts">Saisie manuelle + photo du reçu sur Google Drive</string>
+    <string name="subscription_free_feature_no_ocr">Scan OCR non disponible</string>
+    <string name="subscription_free_feature_forecasts">Planification des échéances et dépenses récurrentes</string>
+    <string name="subscription_free_feature_backup">Sauvegarde automatique sur votre Google Drive</string>
+    <string name="subscription_free_feature_biometric">Verrouillage biométrique (empreinte / Face ID)</string>
+    <string name="subscription_free_feature_csv">Export CSV pour le comptable</string>
+    <string name="subscription_pro_feature_unlimited">100 % illimité (aucune restriction de saisie)</string>
+    <string name="subscription_pro_feature_dashboard">Accès complet aux 4 graphiques (flux, prévisions, camemberts)</string>
+    <string name="subscription_pro_feature_accounts">Jusqu\'à 5 comptes (plusieurs banques + caisse)</string>
+    <string name="subscription_pro_feature_ocr">Scan OCR inclus (lecture et remplissage auto des reçus)</string>
+    <string name="subscription_pro_feature_forecasts">Planification des échéances et dépenses récurrentes</string>
+    <string name="subscription_pro_feature_backup">Sauvegarde automatique sur votre Google Drive</string>
+    <string name="subscription_pro_feature_biometric">Verrouillage biométrique</string>
+    <string name="subscription_pro_feature_csv">Export CSV pour le comptable</string>
+    <string name="subscription_dashboard_gate_message">Passez au Pro pour débloquer le tableau de bord et analyser votre trésorerie avec des graphiques.</string>
     <string name="subscription_play_connecting">Connexion à Google Play en cours…</string>
     <string name="subscription_pro_bank_feature">Connexion open banking à vos comptes</string>
     <string name="plan_free">Gratuit</string>
     <string name="plan_unlimited">Version Illimitée</string>
     <string name="plan_starter">Starter</string>
     <string name="plan_pro">Pro</string>
-    <string name="subscription_limit_reached">Limite de transactions atteinte pour ce mois</string>
+    <string name="subscription_limit_reached">Limite mensuelle atteinte (transactions + prévisions)</string>
     <string name="subscription_upgrade_required">Veuillez passer à un plan payant pour continuer</string>
-    <string name="subscription_monthly_usage">Consommation du mois : %1$d / %2$d transactions</string>
+    <string name="subscription_monthly_usage">Consommation du mois : %1$d / %2$d éléments</string>
+    <string name="subscription_monthly_reset_hint">Le quota se réinitialise le 1er de chaque mois.</string>
     <string name="subscription_free_usage">Utilisation gratuite ce mois-ci.</string>
+    <string name="notification_channel_overdue">Échéances en retard</string>
+    <string name="notification_channel_overdue_desc">Rappels matinaux pour les échéances en retard</string>
+    <string name="notification_overdue_title">Échéances en retard</string>
 
     <!-- PERMISSIONS -->
     <string name="admin_import_only">Seuls les administrateurs peuvent importer des données</string>
@@ -864,4 +881,9 @@
     <string name="payment_save_failed">Impossible d\'enregistrer le paiement</string>
     <string name="hide_password">Masquer</string>
     <string name="show_password">Afficher</string>
+
+    <plurals name="notification_overdue_body">
+        <item quantity="one">Attention, vous avez %d échéance en retard aujourd\'hui</item>
+        <item quantity="other">Attention, vous avez %d échéances en retard aujourd\'hui</item>
+    </plurals>
 </resources>

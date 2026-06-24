@@ -161,4 +161,39 @@ class EcheanceForecastTest {
         assertEquals(AppLocale.monthYear(YearMonth.of(2026, 6)), sections[0].label)
         assertEquals(AppLocale.monthYear(YearMonth.of(2026, 7)), sections[1].label)
     }
+
+    @Test
+    fun `countOverdue includes only unpaid items before today`() {
+        val today = LocalDate.of(2026, 6, 18)
+        val invoices = listOf(
+            Invoice(
+                invoiceNumber = "F1",
+                clientName = "Late client",
+                totalAmount = 100.0,
+                dueDate = LocalDate.of(2026, 6, 10)
+            ),
+            Invoice(
+                invoiceNumber = "F2",
+                clientName = "Future client",
+                totalAmount = 200.0,
+                dueDate = LocalDate.of(2026, 6, 25)
+            )
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Late rent",
+                amount = 50.0,
+                date = LocalDate.of(2026, 6, 5),
+                isPaid = false
+            ),
+            Expense(
+                label = "Paid bill",
+                amount = 30.0,
+                date = LocalDate.of(2026, 6, 1),
+                isPaid = true
+            )
+        )
+
+        assertEquals(2, EcheanceForecast.countOverdue(invoices, expenses, today))
+    }
 }

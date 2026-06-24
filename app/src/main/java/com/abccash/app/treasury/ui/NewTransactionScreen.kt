@@ -39,8 +39,10 @@ import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.defaultDateForMonth
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.data.TransactionType
+import com.abccash.app.treasury.export.ReceiptImageStorage
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.UUID
 
 private val FormBackground = Color.White
 private val FieldBackground = Color.White
@@ -64,6 +66,7 @@ fun NewTransactionScreen(
     forecastMode: Boolean = false,
     customIncomeCategories: List<String> = emptyList(),
     customExpenseCategories: List<String> = emptyList(),
+    hasOcrScan: Boolean = true,
     onRequestSuggestedInvoiceNumber: (year: Int, onResult: (String) -> Unit) -> Unit = { _, _ -> },
     onBack: () -> Unit,
     onSaveIncome: (
@@ -90,11 +93,14 @@ fun NewTransactionScreen(
         isPaid: Boolean,
         paymentMethod: PaymentMethod,
         note: String,
+        receiptImagePath: String?,
         onResult: (String?) -> Unit
     ) -> Unit
 ) {
     val isIncome = type == TransactionType.INCOME
     val today = remember { LocalDate.now() }
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val expenseId = remember { UUID.randomUUID().toString() }
 
     val defaultDate = remember(selectedMonth, forecastMode) {
         if (forecastMode) {
@@ -160,7 +166,10 @@ fun NewTransactionScreen(
         !forecastMode && !date.isAfter(today)
     }
 
-    val (scanState, scanActions) = rememberReceiptScan(snackbarHostState) { result ->
+    val (scanState, scanActions) = rememberReceiptScan(
+        snackbarHostState = snackbarHostState,
+        ocrEnabled = hasOcrScan
+    ) { result ->
         result.amount?.let { amount ->
             amountText = if (amount % 1.0 == 0.0) {
                 amount.toLong().toString()
@@ -433,6 +442,8 @@ fun NewTransactionScreen(
                         Text(
                             if (scanState.lastScannedUri != null) {
                                 stringResource(R.string.receipt_attached)
+                            } else if (hasOcrScan) {
+                                stringResource(R.string.scan_receipt)
                             } else {
                                 stringResource(R.string.attach_receipt)
                             }
@@ -497,6 +508,9 @@ fun NewTransactionScreen(
                                         selectedExpenseCategoryLabel,
                                         customExpenseCategories
                                     )
+                                    val receiptPath = scanState.lastScannedUri?.let { uri ->
+                                        ReceiptImageStorage.persistReceipt(context, uri, expenseId)
+                                    }
                                     onSaveExpense(
                                         label.trim(),
                                         amount,
@@ -508,7 +522,8 @@ fun NewTransactionScreen(
                                         if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
                                         expenseSavesAsPaid,
                                         method,
-                                        ""
+                                        "",
+                                        receiptPath
                                     ) { error ->
                                         isSaving = false
                                         if (error == null) onBack() else saveError = mapSaveError(error)
@@ -552,7 +567,8 @@ fun NewTransactionScreen(
             visible = scanActions.isSourcePickerVisible(),
             onDismiss = scanActions.onDismissSourcePicker,
             onTakePhoto = scanActions.onTakePhoto,
-            onPickGallery = scanActions.onPickGallery
+            onPickGallery = scanActions.onPickGallery,
+            titleRes = if (hasOcrScan) R.string.scan_receipt else R.string.attach_receipt
         )
     }
 }

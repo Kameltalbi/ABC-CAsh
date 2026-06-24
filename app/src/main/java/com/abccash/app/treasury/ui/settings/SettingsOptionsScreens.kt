@@ -1,5 +1,9 @@
 package com.abccash.app.treasury.ui.settings
 
+import android.Manifest
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
@@ -11,14 +15,18 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.treasury.data.AppCurrency
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
+import com.abccash.app.treasury.notifications.OverdueNotificationHelper
+import com.abccash.app.treasury.notifications.OverdueNotificationScheduler
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -202,8 +210,33 @@ fun SettingsNotificationsScreen(
     appSettings: AppSettings,
     onBack: () -> Unit
 ) {
+    val context = LocalContext.current
     val settings by appSettings.settingsFlow.collectAsState(initial = AppSettingsState())
     val scope = rememberCoroutineScope()
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        if (granted) {
+            OverdueNotificationScheduler.schedule(context)
+        }
+    }
+
+    fun applyNotificationsEnabled(enabled: Boolean) {
+        scope.launch {
+            appSettings.setNotificationsEnabled(enabled)
+            if (enabled) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                    !OverdueNotificationHelper.canPostNotifications(context)
+                ) {
+                    permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                }
+                OverdueNotificationScheduler.schedule(context)
+            } else {
+                OverdueNotificationScheduler.cancel(context)
+            }
+        }
+    }
 
     SettingsDetailScaffold(title = stringResource(R.string.settings_notifications), onBack = onBack) { padding ->
         Column(
@@ -227,11 +260,15 @@ fun SettingsNotificationsScreen(
                 }
                 Switch(
                     checked = settings.notificationsEnabled,
-                    onCheckedChange = {
-                        scope.launch { appSettings.setNotificationsEnabled(it) }
-                    }
+                    onCheckedChange = { applyNotificationsEnabled(it) }
                 )
             }
+            Text(
+                text = stringResource(R.string.settings_notifications_overdue_hint),
+                fontSize = 13.sp,
+                color = Color.Gray,
+                lineHeight = 18.sp
+            )
         }
     }
 }

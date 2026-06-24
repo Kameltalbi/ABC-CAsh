@@ -94,6 +94,15 @@ class GoogleBackupManager(private val context: Context) {
         }
     }
 
+    suspend fun deleteBackup(): Result<Unit> = withContext(Dispatchers.IO) {
+        runCatching {
+            val drive = buildDriveService() ?: return@runCatching Unit
+            val existing = findBackupFile(drive) ?: return@runCatching Unit
+            drive.files().delete(existing.id).execute()
+            Unit
+        }
+    }
+
     private fun buildDriveService(): Drive? {
         val account = getSignedInAccount()?.account ?: return null
         val credential = GoogleAccountCredential.usingOAuth2(
