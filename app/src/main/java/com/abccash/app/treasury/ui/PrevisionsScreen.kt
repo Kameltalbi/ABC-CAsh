@@ -33,6 +33,7 @@ import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.EcheanceItem
 import com.abccash.app.treasury.data.EcheanceType
 import com.abccash.app.treasury.data.Expense
+import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.PaymentMethod
@@ -77,14 +78,15 @@ fun PrevisionsScreen(
     onDeleteInvoice: (String) -> Unit,
     onUpdateExpense: (
         String, String, Double, LocalDate, Boolean,
-        ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?
+        ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?, ExpenseCategory, String
     ) -> Unit,
     onDeleteExpense: (String) -> Unit,
     onValidateForecastExpense: (String, LocalDate, PaymentMethod, LocalDate, (String?) -> Unit) -> Unit,
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
     onForecastValidated: (YearMonth) -> Unit,
-    onOpenDrawer: () -> Unit = {}
+    onOpenDrawer: () -> Unit = {},
+    customExpenseCategories: List<String> = emptyList()
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES) ||
         hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
@@ -187,13 +189,15 @@ fun PrevisionsScreen(
         ExpenseFormDialog(
             initialExpense = expense,
             selectedMonth = YearMonth.from(expense.date),
+            customExpenseCategories = customExpenseCategories,
             onDismiss = {
                 expenseToEdit = null
                 editError = null
             },
-            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod ->
+            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod, category, categoryLabel ->
                 onUpdateExpense(
-                    expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod
+                    expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod,
+                    category, categoryLabel
                 )
                 expenseToEdit = null
             },

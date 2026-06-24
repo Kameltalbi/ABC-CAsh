@@ -693,6 +693,9 @@ private fun MainAppScaffold(
     val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpenses = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
     val isAdmin = userRole == UserRole.ADMIN
+    val entrepriseId = uiState.entrepriseId.orEmpty()
+    val customExpense by appSettings.customExpenseCategories(entrepriseId)
+        .collectAsStateWithLifecycle(initialValue = emptyList())
 
     fun closeDrawer() {
         scope.launch { drawerState.close() }
@@ -829,14 +832,18 @@ private fun MainAppScaffold(
                         },
                         onDeleteInvoice = { id, onResult -> viewModel.deleteInvoice(id, onResult) },
                         onDeleteInvoices = viewModel::deleteInvoices,
-                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
-                            viewModel.updateExpense(expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
+                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, category, categoryLabel ->
+                            viewModel.updateExpense(
+                                expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid,
+                                paymentMethod, category, categoryLabel
+                            )
                         },
                         onStopRecurrence = viewModel::stopExpenseRecurrence,
                         onDeleteExpense = viewModel::deleteExpense,
                         onDeleteExpenses = viewModel::deleteExpenses,
                         onValidateExpense = viewModel::validateForecastExpense,
-                        onOpenDrawer = { openDrawer() }
+                        onOpenDrawer = { openDrawer() },
+                        customExpenseCategories = customExpense
                     )
                 }
                 Screen.Treasury.route -> {
@@ -866,8 +873,11 @@ private fun MainAppScaffold(
                         onUpdateInvoice = viewModel::updateInvoice,
                         onRecordPayment = viewModel::recordPayment,
                         onDeleteInvoice = viewModel::deleteInvoice,
-                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
-                            viewModel.updateExpense(expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
+                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, category, categoryLabel ->
+                            viewModel.updateExpense(
+                                expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid,
+                                paymentMethod, category, categoryLabel
+                            )
                         },
                         onValidateForecastExpense = viewModel::validateForecastExpense,
                         onDeleteExpense = viewModel::deleteExpense,
@@ -886,7 +896,8 @@ private fun MainAppScaffold(
                                 launchSingleTop = true
                             }
                         },
-                        onOpenDrawer = { openDrawer() }
+                        onOpenDrawer = { openDrawer() },
+                        customExpenseCategories = customExpense
                     )
                 }
                 Screen.Settings.route -> {

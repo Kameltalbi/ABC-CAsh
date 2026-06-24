@@ -1269,7 +1269,9 @@ class TreasuryViewModel(
         recurrence: ExpenseRecurrence?,
         recurrenceEndDate: LocalDate?,
         isPaid: Boolean,
-        paymentMethod: PaymentMethod?
+        paymentMethod: PaymentMethod?,
+        category: ExpenseCategory,
+        categoryLabel: String
     ) {
         val existing = _uiState.value.expenses.find { it.id == expenseId } ?: return
         viewModelScope.launch {
@@ -1278,6 +1280,8 @@ class TreasuryViewModel(
                     label = label,
                     amount = amount,
                     date = date,
+                    category = category,
+                    categoryLabel = categoryLabel,
                     isRecurring = isRecurring,
                     paymentMethod = paymentMethod,
                     recurrence = if (isRecurring) recurrence else null,

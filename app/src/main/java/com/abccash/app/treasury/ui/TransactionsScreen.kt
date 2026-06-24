@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.data.Expense
+import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.InvoiceStatus
@@ -94,12 +95,16 @@ fun TransactionsScreen(
     onRecordPayment: (String, Double, LocalDate, PaymentMethod, (String?) -> Unit) -> Unit,
     onDeleteInvoice: (String, (String?) -> Unit) -> Unit,
     onDeleteInvoices: (Collection<String>) -> Unit = {},
-    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
+    onUpdateExpense: (
+        String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean,
+        PaymentMethod?, ExpenseCategory, String
+    ) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
     onDeleteExpense: (String) -> Unit,
     onDeleteExpenses: (Collection<String>) -> Unit = {},
     onValidateExpense: (String, LocalDate, PaymentMethod, LocalDate, (String?) -> Unit) -> Unit = { _, _, _, _, onResult -> onResult(null) },
-    onOpenDrawer: () -> Unit = {}
+    onOpenDrawer: () -> Unit = {},
+    customExpenseCategories: List<String> = emptyList()
 ) {
     val canViewIncome = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpense = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
@@ -453,9 +458,13 @@ fun TransactionsScreen(
         ExpenseFormDialog(
             initialExpense = expense,
             selectedMonth = selectedMonth,
+            customExpenseCategories = customExpenseCategories,
             onDismiss = { expenseToEdit = null },
-            onConfirm = { label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod ->
-                onUpdateExpense(expense.id, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod)
+            onConfirm = { label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, category, categoryLabel ->
+                onUpdateExpense(
+                    expense.id, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod,
+                    category, categoryLabel
+                )
                 expenseToEdit = null
             },
             onStopRecurrence = { endDate ->

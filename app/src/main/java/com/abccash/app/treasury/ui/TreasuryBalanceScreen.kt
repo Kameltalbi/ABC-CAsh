@@ -109,7 +109,6 @@ fun TreasuryBalanceScreen(
 
     val context = LocalContext.current
     val displayYear = remember { YearMonth.now().year }
-    val anchorMonth = remember { YearMonth.now() }
     val today = remember { LocalDate.now() }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
     val canManageBank = userRole == UserRole.ADMIN ||
@@ -119,13 +118,22 @@ fun TreasuryBalanceScreen(
     val formatChartAmount = rememberFormatTreasuryChartAmount()
     val shortDateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
 
-    val rollingRows = remember(invoices, expenses, anchorMonth) {
-        TreasuryCalculations.rollingRows(invoices, expenses, anchorMonth)
+    val yearTotals = remember(invoices, expenses, displayYear) {
+        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, displayYear)
+        val yearEndForecast = rows.lastOrNull()?.forecastBalance
+            ?: TreasuryCalculations.yearlyForecastBalance(invoices, expenses, displayYear)
+        TreasuryYearTotals(
+            collected = TreasuryCalculations.yearlyCollections(invoices, displayYear),
+            pendingIncome = TreasuryCalculations.yearlyPendingIncome(invoices, displayYear),
+            expenses = TreasuryCalculations.yearlyPaidExpenses(expenses, displayYear),
+            pendingExpenses = TreasuryCalculations.yearlyPendingExpenses(expenses, displayYear),
+            balance = yearEndForecast,
+            rows = rows
+        )
     }
     val realizedNow = remember(invoices, expenses) {
         TreasuryCalculations.currentRealizedBalance(invoices, expenses)
     }
-    val forecastEnd = rollingRows.lastOrNull()?.forecastCumulative ?: realizedNow
     val upcomingItems = remember(invoices, expenses, today) {
         EcheanceForecast.buildItems(
             invoices = invoices,
@@ -133,18 +141,6 @@ fun TreasuryBalanceScreen(
             from = today,
             to = today.plusDays(90)
         ).sortedBy { it.dueDate }
-    }
-    val upcomingIncome = remember(upcomingItems) {
-        upcomingItems.filter { it.type == EcheanceType.INCOME }.sumOf { it.amount }
-    }
-    val upcomingExpenses = remember(upcomingItems) {
-        upcomingItems.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
-    }
-    val periodStartLabel = remember(rollingRows) {
-        rollingRows.firstOrNull()?.month?.let { AppLocale.monthYear(it) }.orEmpty()
-    }
-    val periodEndLabel = remember(rollingRows) {
-        rollingRows.lastOrNull()?.month?.let { AppLocale.monthYear(it) }.orEmpty()
     }
 
     val exportLauncher = rememberLauncherForActivityResult(
@@ -168,8 +164,7 @@ fun TreasuryBalanceScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         TreasuryHeader(
-            periodStart = periodStartLabel,
-            periodEnd = periodEndLabel,
+            year = displayYear,
             canManageBank = canManageBank,
             onBankClick = onNavigateToBankReconciliation,
             onExportClick = {
@@ -192,34 +187,45 @@ fun TreasuryBalanceScreen(
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             TreasuryKpiCard(
-                title = stringResource(R.string.forecast_income),
-                amount = formatWhole(upcomingIncome),
-                subtitle = stringResource(R.string.treasury_next_90_days),
+                title = stringResource(R.string.collections),
+                amount = formatWhole(yearTotals.collected + yearTotals.pendingIncome),
+                subtitle = if (yearTotals.pendingIncome > 0) {
+                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingIncome))
+                } else {
+                    stringResource(R.string.treasury_year_range)
+                },
                 amountColor = TreasuryScreenTheme.Positive,
                 modifier = Modifier.weight(1f)
             )
             TreasuryKpiCard(
-                title = stringResource(R.string.forecast_expense),
-                amount = formatWhole(upcomingExpenses),
-                subtitle = stringResource(R.string.treasury_next_90_days),
+                title = stringResource(R.string.expenses),
+                amount = formatWhole(yearTotals.expenses + yearTotals.pendingExpenses),
+                subtitle = if (yearTotals.pendingExpenses > 0) {
+                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingExpenses))
+                } else {
+                    stringResource(R.string.treasury_year_range)
+                },
                 amountColor = TreasuryScreenTheme.Accent,
                 modifier = Modifier.weight(1f)
             )
         }
 
         TreasuryKpiCard(
-            title = stringResource(R.string.treasury_forecast_period_end),
-            amount = formatWhole(forecastEnd),
-            subtitle = periodEndLabel,
-            amountColor = if (forecastEnd >= 0) TreasuryScreenTheme.Positive else TreasuryScreenTheme.Negative,
+            title = stringResource(R.string.forecast_balance),
+            amount = formatWhole(yearTotals.balance),
+            subtitle = stringResource(R.string.treasury_december_subtitle),
+            amountColor = if (yearTotals.balance >= 0) {
+                TreasuryScreenTheme.Positive
+            } else {
+                TreasuryScreenTheme.Negative
+            },
             modifier = Modifier.fillMaxWidth()
         )
 
         TreasuryTimelineChart(
-            rows = rollingRows,
+            rows = yearTotals.rows,
             formatChartAmount = formatChartAmount,
-            formatWhole = formatWhole,
-            periodEndLabel = periodEndLabel
+            formatWhole = formatWhole
         )
 
         TreasuryUpcomingSection(
@@ -235,8 +241,7 @@ fun TreasuryBalanceScreen(
 
 @Composable
 private fun TreasuryHeader(
-    periodStart: String,
-    periodEnd: String,
+    year: Int,
     canManageBank: Boolean,
     onBankClick: () -> Unit,
     onExportClick: () -> Unit,
@@ -253,13 +258,13 @@ private fun TreasuryHeader(
         ) {
             Column {
                 Text(
-                    text = stringResource(R.string.treasury_rolling_title),
+                    text = stringResource(R.string.treasury_year_title, year),
                     fontSize = 24.sp,
                     fontWeight = FontWeight.Bold,
                     color = TreasuryScreenTheme.Primary
                 )
                 Text(
-                    text = stringResource(R.string.treasury_rolling_range, periodStart, periodEnd),
+                    text = stringResource(R.string.treasury_year_range),
                     fontSize = 14.sp,
                     color = TreasuryScreenTheme.Muted
                 )
@@ -336,10 +341,9 @@ private fun TreasuryKpiCard(
 
 @Composable
 private fun TreasuryTimelineChart(
-    rows: List<TreasuryCalculations.RollingTreasuryRow>,
+    rows: List<TreasuryCalculations.MonthlyTreasuryRow>,
     formatChartAmount: (Double) -> String,
-    formatWhole: (Double) -> String,
-    periodEndLabel: String
+    formatWhole: (Double) -> String
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -357,33 +361,26 @@ private fun TreasuryTimelineChart(
                 fontWeight = FontWeight.Bold,
                 color = TreasuryScreenTheme.Primary
             )
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                ChartLegendDot(
-                    color = TreasuryScreenTheme.Line,
-                    label = stringResource(R.string.treasury_chart_realized)
-                )
-                ChartLegendDot(
-                    color = AppColors.BrandBlue,
-                    label = stringResource(R.string.treasury_chart_forecast)
-                )
-            }
+            ChartLegendDot(
+                color = AppColors.BrandBlue,
+                label = stringResource(R.string.treasury_chart_forecast)
+            )
 
-            val realized = rows.map { it.realizedCumulative }
-            val forecast = rows.map { it.forecastCumulative }
-            val allValues = realized + forecast
-            val minY = allValues.minOrNull() ?: 0.0
-            val maxY = allValues.maxOrNull() ?: 0.0
+            val balances = rows.map { it.forecastBalance }
+            val minY = balances.minOrNull() ?: 0.0
+            val maxY = balances.maxOrNull() ?: 0.0
             val range = max(maxY - minY, 1.0)
             val yAxisWidth = 34.dp
             val chartHeight = 130.dp
+            val now = YearMonth.now()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom
             ) {
                 Spacer(modifier = Modifier.width(yAxisWidth))
-                forecast.forEachIndexed { index, balance ->
-                    val isFuture = rows.getOrNull(index)?.month?.let { it > YearMonth.now() } == true
+                rows.forEach { row ->
+                    val balance = row.forecastBalance
                     Text(
                         text = formatChartAmount(balance),
                         modifier = Modifier.weight(1f),
@@ -391,7 +388,7 @@ private fun TreasuryTimelineChart(
                         fontWeight = FontWeight.Bold,
                         color = when {
                             balance < 0 -> TreasuryScreenTheme.Negative
-                            isFuture -> AppColors.BrandBlue
+                            row.month >= now -> AppColors.BrandBlue
                             else -> TreasuryScreenTheme.Positive
                         },
                         textAlign = TextAlign.Center,
@@ -423,9 +420,8 @@ private fun TreasuryTimelineChart(
                         )
                     }
                 }
-                TreasuryDualLineChart(
-                    primary = realized,
-                    secondary = forecast,
+                TreasuryForecastLineChart(
+                    balances = balances,
                     modifier = Modifier
                         .weight(1f)
                         .height(chartHeight)
@@ -438,7 +434,7 @@ private fun TreasuryTimelineChart(
             ) {
                 Spacer(modifier = Modifier.width(yAxisWidth))
                 rows.forEach { row ->
-                    val isCurrent = row.month == YearMonth.now()
+                    val isCurrent = row.month == now
                     Text(
                         text = "%02d".format(row.month.monthValue),
                         modifier = Modifier.weight(1f),
@@ -451,12 +447,10 @@ private fun TreasuryTimelineChart(
                 }
             }
 
-            val lastForecast = rows.lastOrNull()?.forecastCumulative
+            val lastForecast = rows.lastOrNull()?.forecastBalance
             if (lastForecast != null) {
                 Text(
-                    text = stringResource(
-                        R.string.treasury_forecast_period_end
-                    ) + " ($periodEndLabel): ${formatWhole(lastForecast)}",
+                    text = stringResource(R.string.treasury_december_end, formatWhole(lastForecast)),
                     fontSize = 12.sp,
                     color = TreasuryScreenTheme.Muted,
                     modifier = Modifier.padding(top = 4.dp)
@@ -465,6 +459,15 @@ private fun TreasuryTimelineChart(
         }
     }
 }
+
+private data class TreasuryYearTotals(
+    val collected: Double,
+    val pendingIncome: Double,
+    val expenses: Double,
+    val pendingExpenses: Double,
+    val balance: Double,
+    val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
+)
 
 @Composable
 private fun ChartLegendDot(color: Color, label: String) {
@@ -582,17 +585,16 @@ private fun TreasuryUpcomingRow(
 }
 
 @Composable
-private fun TreasuryDualLineChart(
-    primary: List<Double>,
-    secondary: List<Double>,
+private fun TreasuryForecastLineChart(
+    balances: List<Double>,
     modifier: Modifier = Modifier
 ) {
-    if (primary.isEmpty()) return
+    if (balances.isEmpty()) return
 
-    val allValues = primary + secondary
-    val minY = allValues.minOrNull() ?: 0.0
-    val maxY = allValues.maxOrNull() ?: 0.0
+    val minY = balances.minOrNull() ?: 0.0
+    val maxY = balances.maxOrNull() ?: 0.0
     val range = max(maxY - minY, 1.0)
+    val lineColor = AppColors.BrandBlue
 
     Canvas(modifier = modifier) {
         val padH = 4.dp.toPx()
@@ -624,28 +626,22 @@ private fun TreasuryDualLineChart(
             )
         }
 
-        fun drawSeries(values: List<Double>, color: Color, strokeWidth: Float) {
-            if (values.isEmpty()) return
-            val path = Path().apply {
-                values.forEachIndexed { index, value ->
-                    val x = xAt(index, values.size)
-                    val y = yAt(value)
-                    if (index == 0) moveTo(x, y) else lineTo(x, y)
-                }
-            }
-            drawPath(
-                path = path,
-                color = color,
-                style = Stroke(width = strokeWidth, cap = StrokeCap.Round)
-            )
-            values.forEachIndexed { index, value ->
-                val point = Offset(xAt(index, values.size), yAt(value))
-                drawCircle(color = TreasuryScreenTheme.Card, radius = 4.dp.toPx(), center = point)
-                drawCircle(color = color, radius = 3.dp.toPx(), center = point)
+        val path = Path().apply {
+            balances.forEachIndexed { index, value ->
+                val x = xAt(index, balances.size)
+                val y = yAt(value)
+                if (index == 0) moveTo(x, y) else lineTo(x, y)
             }
         }
-
-        drawSeries(primary, TreasuryScreenTheme.Line, 2.5.dp.toPx())
-        drawSeries(secondary, AppColors.BrandBlue, 2.dp.toPx())
+        drawPath(
+            path = path,
+            color = lineColor,
+            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+        )
+        balances.forEachIndexed { index, value ->
+            val point = Offset(xAt(index, balances.size), yAt(value))
+            drawCircle(color = TreasuryScreenTheme.Card, radius = 4.dp.toPx(), center = point)
+            drawCircle(color = lineColor, radius = 3.dp.toPx(), center = point)
+        }
     }
 }

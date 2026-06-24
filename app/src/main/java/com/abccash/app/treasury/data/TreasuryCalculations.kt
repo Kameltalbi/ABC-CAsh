@@ -253,4 +253,90 @@ object TreasuryCalculations {
             )
         }
     }
+
+    /**
+     * Calendar-year chart: realized = actuals through [today], forecast = projection from today's
+     * realized balance plus remaining due dates (not a full-year pending stack from January).
+     */
+    fun calendarYearChartRows(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int,
+        today: YearMonth = YearMonth.now()
+    ): List<RollingTreasuryRow> {
+        val realizedToday = currentRealizedBalance(invoices, expenses)
+        var yearRealized = openingBalanceAtYearStart(invoices, expenses, year)
+
+        return (1..12).map { monthNumber ->
+            val month = YearMonth.of(year, monthNumber)
+            val collected = monthlyCollections(invoices, month)
+            val pendingIncome = pendingInvoiceAmount(invoices, month)
+            val paidExpenses = monthlyPaidExpenses(expenses, month)
+            val pendingExpenses = monthlyUnpaidExpenses(expenses, month)
+
+            if (month <= today) {
+                yearRealized += collected - paidExpenses
+            }
+
+            val realizedPoint = when {
+                month < today -> yearRealized
+                else -> realizedToday
+            }
+            val forecastPoint = forecastEndOfMonthBalance(
+                invoices = invoices,
+                expenses = expenses,
+                month = month,
+                today = today,
+                realizedToday = realizedToday,
+                year = year
+            )
+
+            RollingTreasuryRow(
+                month = month,
+                collected = collected,
+                pendingIncome = pendingIncome,
+                paidExpenses = paidExpenses,
+                pendingExpenses = pendingExpenses,
+                realizedCumulative = realizedPoint,
+                forecastCumulative = forecastPoint
+            )
+        }
+    }
+
+    private fun forecastEndOfMonthBalance(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        month: YearMonth,
+        today: YearMonth,
+        realizedToday: Double,
+        year: Int
+    ): Double {
+        if (month < today) {
+            var running = openingBalanceAtYearStart(invoices, expenses, year)
+            for (monthNumber in 1..month.monthValue) {
+                val cursor = YearMonth.of(year, monthNumber)
+                running += monthlyCollections(invoices, cursor) - monthlyPaidExpenses(expenses, cursor)
+            }
+            return running
+        }
+        if (month == today) {
+            return realizedToday +
+                pendingInvoiceAmount(invoices, month) -
+                monthlyUnpaidExpenses(expenses, month)
+        }
+        var balance = forecastEndOfMonthBalance(
+            invoices = invoices,
+            expenses = expenses,
+            month = today,
+            today = today,
+            realizedToday = realizedToday,
+            year = year
+        )
+        var cursor = today.plusMonths(1)
+        while (cursor <= month) {
+            balance += pendingInvoiceAmount(invoices, cursor) - monthlyUnpaidExpenses(expenses, cursor)
+            cursor = cursor.plusMonths(1)
+        }
+        return balance
+    }
 }

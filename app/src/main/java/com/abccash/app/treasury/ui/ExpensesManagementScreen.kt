@@ -28,6 +28,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.treasury.data.Expense
+import com.abccash.app.treasury.data.ExpenseCategory
+import com.abccash.app.treasury.data.CategorySelection
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.UserPermission
@@ -48,10 +50,14 @@ fun ExpensesManagementScreen(
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
     onNavigateToAddExpense: () -> Unit,
-    onUpdateExpense: (String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
+    onUpdateExpense: (
+        String, String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean,
+        PaymentMethod?, ExpenseCategory, String
+    ) -> Unit,
     onStopRecurrence: (String, LocalDate) -> Unit,
     onDeleteExpense: (String) -> Unit,
-    onDeleteExpenses: (Collection<String>) -> Unit = {}
+    onDeleteExpenses: (Collection<String>) -> Unit = {},
+    customExpenseCategories: List<String> = emptyList()
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)) {
         Box(
@@ -203,9 +209,13 @@ fun ExpensesManagementScreen(
         ExpenseFormDialog(
             initialExpense = expense,
             selectedMonth = selectedMonth,
+            customExpenseCategories = customExpenseCategories,
             onDismiss = { expenseToEdit = null },
-            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod ->
-                onUpdateExpense(expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod)
+            onConfirm = { label, amount, date, recurring, recurrence, endDate, paid, paymentMethod, category, categoryLabel ->
+                onUpdateExpense(
+                    expense.id, label, amount, date, recurring, recurrence, endDate, paid, paymentMethod,
+                    category, categoryLabel
+                )
                 expenseToEdit = null
             },
             onStopRecurrence = { endDate ->
@@ -276,13 +286,28 @@ fun ExpensesManagementScreen(
 internal fun ExpenseFormDialog(
     initialExpense: Expense,
     selectedMonth: YearMonth,
+    customExpenseCategories: List<String> = emptyList(),
     onDismiss: () -> Unit,
-    onConfirm: (String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?) -> Unit,
+    onConfirm: (
+        String, Double, LocalDate, Boolean, ExpenseRecurrence?, LocalDate?, Boolean, PaymentMethod?,
+        ExpenseCategory, String
+    ) -> Unit,
     onStopRecurrence: (LocalDate) -> Unit
 ) {
     var expenseLabel by remember(initialExpense) { mutableStateOf(initialExpense.label) }
     var expenseAmount by remember(initialExpense) { mutableStateOf(initialExpense.amount.toString()) }
     var expenseDate by remember(initialExpense) { mutableStateOf(initialExpense.date) }
+    val expenseCategoryOptionsList = expenseCategoryOptions(customExpenseCategories)
+    var selectedExpenseCategoryLabel by remember(initialExpense) { mutableStateOf("") }
+    var showExpenseCategoryMenu by remember { mutableStateOf(false) }
+
+    LaunchedEffect(initialExpense, expenseCategoryOptionsList) {
+        val preferred = initialExpense.categoryLabel.takeIf { it.isNotBlank() }
+        selectedExpenseCategoryLabel = when {
+            preferred != null && preferred in expenseCategoryOptionsList -> preferred
+            else -> expenseCategoryOptionsList.firstOrNull().orEmpty()
+        }
+    }
     var isRecurring by remember(initialExpense) { mutableStateOf(initialExpense.isRecurring) }
     var selectedRecurrence by remember(initialExpense) {
         mutableStateOf(initialExpense.recurrence ?: ExpenseRecurrence.MONTHLY)
@@ -302,6 +327,7 @@ internal fun ExpenseFormDialog(
     }
     val parsedAmount = expenseAmount.replace(",", ".").toDoubleOrNull()
     val dateLabel = stringResource(R.string.date)
+    val expenseCategoryField = stringResource(R.string.expense_category)
     val recurrenceEndLabel = stringResource(R.string.recurrence_end)
     val endDateError = stringResource(R.string.end_date_after_expense)
     val hasEndDateError = isRecurring && hasRecurrenceEnd && recurrenceEndDate.isBefore(expenseDate)
@@ -352,6 +378,39 @@ internal fun ExpenseFormDialog(
                 date = expenseDate,
                 onDateChange = { expenseDate = it }
             )
+            ExposedDropdownMenuBox(
+                expanded = showExpenseCategoryMenu,
+                onExpandedChange = { showExpenseCategoryMenu = it }
+            ) {
+                OutlinedTextField(
+                    value = selectedExpenseCategoryLabel,
+                    onValueChange = {},
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .menuAnchor(),
+                    label = { Text(expenseCategoryField) },
+                    readOnly = true,
+                    shape = fieldShape,
+                    trailingIcon = {
+                        ExposedDropdownMenuDefaults.TrailingIcon(expanded = showExpenseCategoryMenu)
+                    },
+                    colors = fieldColors
+                )
+                ExposedDropdownMenu(
+                    expanded = showExpenseCategoryMenu,
+                    onDismissRequest = { showExpenseCategoryMenu = false }
+                ) {
+                    expenseCategoryOptionsList.forEach { option ->
+                        DropdownMenuItem(
+                            text = { Text(option) },
+                            onClick = {
+                                selectedExpenseCategoryLabel = option
+                                showExpenseCategoryMenu = false
+                            }
+                        )
+                    }
+                }
+            }
             TreasuryPaymentMethodField(
                 selectedMethod = selectedPaymentMethod,
                 onMethodChange = { selectedPaymentMethod = it }
@@ -505,6 +564,11 @@ internal fun ExpenseFormDialog(
                     onClick = {
                         val amount = parsedAmount ?: return@Button
                         if (hasEndDateError) return@Button
+                        if (selectedExpenseCategoryLabel.isBlank()) return@Button
+                        val resolved = CategorySelection.resolveExpense(
+                            selectedExpenseCategoryLabel,
+                            customExpenseCategories
+                        )
                         onConfirm(
                             expenseLabel,
                             amount,
@@ -513,13 +577,16 @@ internal fun ExpenseFormDialog(
                             selectedRecurrence,
                             if (isRecurring && hasRecurrenceEnd) recurrenceEndDate else null,
                             isPaid,
-                            selectedPaymentMethod
+                            selectedPaymentMethod,
+                            resolved.expenseCategory ?: ExpenseCategory.OTHER,
+                            resolved.customLabel.orEmpty()
                         )
                     },
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
                     enabled = expenseLabel.isNotBlank() &&
+                        selectedExpenseCategoryLabel.isNotBlank() &&
                         (parsedAmount?.let { it > 0 } == true) &&
                         !hasEndDateError,
                     shape = fieldShape
