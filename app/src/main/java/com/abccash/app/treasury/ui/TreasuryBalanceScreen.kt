@@ -251,7 +251,6 @@ private fun TreasuryHeader(
             modifier = Modifier.weight(1f),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            DrawerMenuIconButton(onClick = onOpenDrawer)
             Column {
                 Text(
                     text = stringResource(R.string.treasury_rolling_title),

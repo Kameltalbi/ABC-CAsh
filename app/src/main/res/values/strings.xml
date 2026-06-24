@@ -95,6 +95,7 @@
     <string name="dashboard_notifications">Notifications</string>
     <string name="dashboard_monthly_bars_title">Collections vs expenses</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Last 12 months</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Last 6 months (transactions)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Year</string>
     <string name="dashboard_period_month">Month</string>
@@ -463,7 +464,7 @@
     <string name="plus_forecasts">Forecasts</string>
     <string name="plus_forecasts_sub">Upcoming income and expenses</string>
     <string name="plus_subscription">Subscription</string>
-    <string name="plus_subscription_sub">Free, Starter and Pro plans</string>
+    <string name="plus_subscription_sub">Free and Pro plans</string>
     <string name="plus_bank_connection">Bank Connection</string>
     <string name="plus_bank_connection_sub">Link your bank accounts via secure API</string>
     <string name="plus_settings">Settings</string>
@@ -477,6 +478,21 @@
     <string name="subscription_title">Subscription</string>
     <string name="subscription_choose_plan">Choose your plan</string>
     <string name="subscription_unlock_features">Unlock advanced features with our paid plans</string>
+    <string name="subscription_two_plans_desc">Start free with 30 items per month, or go unlimited with Pro.</string>
+    <string name="subscription_recommended">Recommended</string>
+    <string name="subscription_price_free">$0</string>
+    <string name="subscription_price_monthly">$%1$.2f/mo</string>
+    <string name="subscription_items_per_month">%1$d items per month</string>
+    <string name="subscription_unlimited_items">Unlimited items</string>
+    <string name="subscription_current_plan">Current plan</string>
+    <string name="subscription_stay_free">Keep Free plan</string>
+    <string name="subscription_free_feature_core">Income, expenses and forecasts</string>
+    <string name="subscription_free_feature_limit">30 items created per month</string>
+    <string name="subscription_free_feature_csv">CSV export</string>
+    <string name="subscription_pro_feature_unlimited">Unlimited transactions and forecasts</string>
+    <string name="subscription_pro_feature_backup">Automatic Google Drive backup</string>
+    <string name="subscription_pro_feature_csv">CSV export for your accountant</string>
+    <string name="subscription_pro_feature_support">Priority support</string>
     <string name="subscription_play_connecting">Connecting to Google Play…</string>
     <string name="subscription_pro_bank_feature">Open banking connection to your accounts</string>
     <string name="plan_free">Free</string>
@@ -587,13 +603,13 @@
     <string name="onboarding_next">Next</string>
     <string name="onboarding_skip">Skip</string>
     <string name="onboarding_tour_welcome_title">How ABC Cash works</string>
-    <string name="onboarding_tour_welcome_desc">ABC Cash tracks your company cash flow in four simple steps: invoices, forecasts, transactions and treasury balance.</string>
-    <string name="onboarding_tour_invoices_title">Invoices</string>
-    <string name="onboarding_tour_invoices_desc">Create client invoices (or quick collections). Each invoice shows what you expect to receive and when.</string>
+    <string name="onboarding_tour_welcome_desc">ABC Cash tracks your cash flow simply: record income and expenses, plan with forecasts, and monitor your treasury balance.</string>
+    <string name="onboarding_tour_entry_title">Income &amp; expenses</string>
+    <string name="onboarding_tour_entry_desc">Add money in or out in seconds. Choose a category and date — past or today goes to Transactions, future dates go to Forecasts. Attach a receipt photo for expenses.</string>
     <string name="onboarding_tour_forecasts_title">Forecasts</string>
-    <string name="onboarding_tour_forecasts_desc">The Forecasts tab lists upcoming income and expenses not yet paid. This is your cash outlook for the month.</string>
+    <string name="onboarding_tour_forecasts_desc">The Forecasts tab lists upcoming income and expenses not yet settled. This is your cash outlook for the month.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
-    <string name="onboarding_tour_transactions_desc">When a payment is recorded or an expense is paid, it appears in Transactions — your real cash movements, month by month.</string>
+    <string name="onboarding_tour_transactions_desc">Settled income and paid expenses appear in Transactions — your real cash movements, month by month.</string>
     <string name="onboarding_tour_treasury_title">Treasury</string>
     <string name="onboarding_tour_treasury_desc">The Treasury screen shows your running balance and rolling forecast so you always know if cash is healthy.</string>
 
@@ -824,8 +840,8 @@
     <string name="onboarding_privilege_expenses_desc">Track all company expenses, recurring or one-off.</string>
     <string name="onboarding_privilege_treasury_title">Treasury tracking</string>
     <string name="onboarding_privilege_treasury_desc">View monthly balance, collections and financial forecasts.</string>
-    <string name="onboarding_privilege_collection_title">Collections</string>
-    <string name="onboarding_privilege_collection_desc">Manage client invoices and track payments in real time.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 
     <!-- MESSAGES -->
     <string name="no_invoice_match_filters">No income matches the filters</string>

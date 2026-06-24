@@ -19,6 +19,7 @@ import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.repository.TreasuryRepository
+import com.abccash.app.ui.theme.AppColors
 import kotlinx.coroutines.delay
 
 @Composable
@@ -85,7 +86,11 @@ fun SplashDecisionScreen(
                 contentScale = ContentScale.Fit
             )
             Spacer(modifier = Modifier.height(12.dp))
-            Text(text = stringResource(R.string.splash_tagline), fontSize = 16.sp, color = Color.Gray)
+            Text(
+                text = stringResource(R.string.splash_tagline),
+                fontSize = 16.sp,
+                color = AppColors.TextSecondary
+            )
             Spacer(modifier = Modifier.height(48.dp))
             CircularProgressIndicator(
                 modifier = Modifier.size(48.dp),

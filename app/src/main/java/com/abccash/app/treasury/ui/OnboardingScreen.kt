@@ -14,7 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.AddCircle
 import androidx.compose.material.icons.filled.EventNote
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.TrendingUp
@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
+import com.abccash.app.ui.theme.AppColors
 
 private data class OnboardingPage(
     val icon: ImageVector,
@@ -44,31 +45,31 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     val pages = listOf(
         OnboardingPage(
             icon = Icons.Default.TrendingUp,
-            iconBg = Color(0xFF2E3F50),
+            iconBg = AppColors.BrandBlue,
             titleRes = R.string.onboarding_tour_welcome_title,
             descriptionRes = R.string.onboarding_tour_welcome_desc
         ),
         OnboardingPage(
-            icon = Icons.Default.Description,
-            iconBg = Color(0xFF2196F3),
-            titleRes = R.string.onboarding_tour_invoices_title,
-            descriptionRes = R.string.onboarding_tour_invoices_desc
+            icon = Icons.Default.AddCircle,
+            iconBg = AppColors.BrandBlue,
+            titleRes = R.string.onboarding_tour_entry_title,
+            descriptionRes = R.string.onboarding_tour_entry_desc
         ),
         OnboardingPage(
             icon = Icons.Default.EventNote,
-            iconBg = Color(0xFF7C3AED),
+            iconBg = AppColors.Warning,
             titleRes = R.string.onboarding_tour_forecasts_title,
             descriptionRes = R.string.onboarding_tour_forecasts_desc
         ),
         OnboardingPage(
             icon = Icons.Default.SwapVert,
-            iconBg = Color(0xFF4CAF50),
+            iconBg = AppColors.Success,
             titleRes = R.string.onboarding_tour_transactions_title,
             descriptionRes = R.string.onboarding_tour_transactions_desc
         ),
         OnboardingPage(
             icon = Icons.Default.AccountBalance,
-            iconBg = Color(0xFF2E3F50),
+            iconBg = AppColors.BrandBlue,
             titleRes = R.string.onboarding_tour_treasury_title,
             descriptionRes = R.string.onboarding_tour_treasury_desc
         )
@@ -79,7 +80,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(Color.White)
     ) {
         Column(
             modifier = Modifier
@@ -128,7 +129,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         text = stringResource(page.titleRes),
                         fontSize = 26.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color(0xFF1A1A2E),
+                        color = MaterialTheme.colorScheme.primary,
                         textAlign = TextAlign.Center,
                         lineHeight = 32.sp
                     )
@@ -138,7 +139,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     Text(
                         text = stringResource(page.descriptionRes),
                         fontSize = 16.sp,
-                        color = Color(0xFF64748B),
+                        color = AppColors.TextSecondary,
                         textAlign = TextAlign.Center,
                         lineHeight = 24.sp
                     )
@@ -158,8 +159,8 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                             .width(if (index == currentPage) 24.dp else 8.dp)
                             .clip(RoundedCornerShape(4.dp))
                             .background(
-                                if (index == currentPage) Color(0xFF2E3F50)
-                                else Color(0xFFCBD5E1)
+                                if (index == currentPage) MaterialTheme.colorScheme.primary
+                                else AppColors.Border
                             )
                     )
                 }
@@ -176,7 +177,10 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(14.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E3F50))
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White
+                )
             ) {
                 Text(
                     text = if (currentPage < pages.lastIndex) {
@@ -185,8 +189,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                         stringResource(R.string.onboarding_start)
                     },
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
+                    fontWeight = FontWeight.Bold
                 )
             }
 
@@ -195,7 +198,7 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                 TextButton(onClick = onFinish) {
                     Text(
                         text = stringResource(R.string.onboarding_skip),
-                        color = Color(0xFF94A3B8),
+                        color = AppColors.TextTertiary,
                         fontSize = 14.sp
                     )
                 }

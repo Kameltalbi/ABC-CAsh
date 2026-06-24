@@ -21,10 +21,50 @@ import java.time.YearMonth
 @Composable
 fun MonthSelectorRow(
     selectedMonth: YearMonth,
-    onMonthChange: (YearMonth) -> Unit
+    onMonthChange: (YearMonth) -> Unit,
+    compact: Boolean = false,
+    modifier: Modifier = Modifier
 ) {
+    if (compact) {
+        Row(
+            modifier = modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 2.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(
+                onClick = { onMonthChange(selectedMonth.minusMonths(1)) },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.previous_month),
+                    tint = Color(0xFF94A3B8)
+                )
+            }
+            Text(
+                text = AppLocale.monthYear(selectedMonth),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = Color(0xFF94A3B8)
+            )
+            IconButton(
+                onClick = { onMonthChange(selectedMonth.plusMonths(1)) },
+                modifier = Modifier.size(32.dp)
+            ) {
+                Icon(
+                    Icons.Default.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.next_month),
+                    tint = Color(0xFF94A3B8)
+                )
+            }
+        }
+        return
+    }
+
     Card(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)

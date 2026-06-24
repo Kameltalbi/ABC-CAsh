@@ -34,6 +34,7 @@ import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.RevenueCategory
+import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.data.TransactionType
 import java.time.LocalDate
 import java.time.YearMonth
@@ -146,6 +147,12 @@ fun NewTransactionScreen(
     val invalidAmountError = stringResource(R.string.invalid_amount)
     val labelRequiredError = stringResource(R.string.label_required)
     val endDateAfterExpenseError = stringResource(R.string.end_date_after_expense)
+    val subscriptionLimitError = stringResource(R.string.subscription_limit_reached)
+
+    fun mapSaveError(error: String?): String? = when (error) {
+        TreasuryRepository.SUBSCRIPTION_LIMIT_REACHED -> subscriptionLimitError
+        else -> error
+    }
     val amountLabel = stringResource(R.string.amount)
     val dateLabel = stringResource(R.string.date)
     val titleLabel = stringResource(R.string.label)
@@ -419,7 +426,7 @@ fun NewTransactionScreen(
                                         method
                                     ) { error ->
                                         isSaving = false
-                                        if (error == null) onBack() else saveError = error
+                                        if (error == null) onBack() else saveError = mapSaveError(error)
                                     }
                                 } else {
                                     onSaveExpense(
@@ -436,7 +443,7 @@ fun NewTransactionScreen(
                                         ""
                                     ) { error ->
                                         isSaving = false
-                                        if (error == null) onBack() else saveError = error
+                                        if (error == null) onBack() else saveError = mapSaveError(error)
                                     }
                                 }
                             }

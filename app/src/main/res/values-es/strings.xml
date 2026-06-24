@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Notificaciones</string>
     <string name="dashboard_monthly_bars_title">Cobros vs gastos</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Últimos 12 meses</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Últimos 6 meses (transacciones)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Año</string>
     <string name="dashboard_period_month">Mes</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registre y siga todos los gastos de la empresa, recurrentes o puntuales.</string>
     <string name="onboarding_privilege_treasury_title">Seguimiento de tesorería</string>
     <string name="onboarding_privilege_treasury_desc">Vea el saldo mensual, los cobros y las previsiones financieras.</string>
-    <string name="onboarding_privilege_collection_title">Cobros</string>
-    <string name="onboarding_privilege_collection_desc">Gestione facturas de clientes y siga los pagos en tiempo real.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

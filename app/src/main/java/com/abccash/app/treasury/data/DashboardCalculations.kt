@@ -138,6 +138,25 @@ object DashboardCalculations {
         }
     }
 
+    /** Revenus / dépenses payées par mois, fenêtre glissante (transactions uniquement). */
+    fun buildRollingMonthlyBarChart(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        focusMonth: YearMonth = YearMonth.now(),
+        monthCount: Int = 6
+    ): List<MonthlyBarPoint> {
+        val months = (monthCount - 1 downTo 0).map { offset ->
+            focusMonth.minusMonths(offset.toLong())
+        }
+        return months.map { month ->
+            MonthlyBarPoint(
+                month = month,
+                income = TreasuryCalculations.monthlyCollections(invoices, month),
+                expenses = TreasuryCalculations.monthlyPaidExpenses(expenses, month)
+            )
+        }
+    }
+
     fun buildDashboardData(
         invoices: List<Invoice>,
         expenses: List<Expense>,

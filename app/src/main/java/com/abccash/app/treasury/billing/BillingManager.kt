@@ -4,13 +4,21 @@ import android.app.Activity
 import android.content.Context
 import com.android.billingclient.api.*
 import com.abccash.app.treasury.data.SubscriptionPlan
+import com.abccash.app.treasury.datastore.UserPreferences
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 class BillingManager(
     private val context: Context
 ) : PurchasesUpdatedListener, BillingClientStateListener {
+
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val userPreferences = UserPreferences(context)
 
     private var billingClient: BillingClient = BillingClient.newBuilder(context)
         .setListener(this)
@@ -27,6 +35,12 @@ class BillingManager(
     val isPurchasing: StateFlow<Boolean> = _isPurchasing.asStateFlow()
 
     fun startConnection() {
+        scope.launch {
+            val savedPlan = userPreferences.readSubscriptionPlan()
+            if (savedPlan != SubscriptionPlan.FREE) {
+                _subscriptionPlan.value = savedPlan
+            }
+        }
         billingClient.startConnection(this)
     }
 
@@ -70,14 +84,24 @@ class BillingManager(
     }
 
     private fun handlePurchases(purchases: List<Purchase>) {
+        var activePlan = SubscriptionPlan.FREE
         for (purchase in purchases) {
             if (purchase.purchaseState == Purchase.PurchaseState.PURCHASED) {
                 if (!purchase.isAcknowledged) {
                     acknowledgePurchase(purchase)
                 }
-                updateSubscriptionPlan(purchase)
+                val productId = purchase.products.firstOrNull()
+                if (productId == "pro_subscription") {
+                    activePlan = SubscriptionPlan.PRO
+                }
             }
         }
+        persistPlan(activePlan)
+    }
+
+    private fun persistPlan(plan: SubscriptionPlan) {
+        _subscriptionPlan.value = plan
+        scope.launch { userPreferences.saveSubscriptionPlan(plan) }
     }
 
     private fun acknowledgePurchase(purchase: Purchase) {
@@ -92,21 +116,10 @@ class BillingManager(
         }
     }
 
-    private fun updateSubscriptionPlan(purchase: Purchase) {
-        val productId = purchase.products.firstOrNull()
-        val plan = when (productId) {
-            "starter_subscription" -> SubscriptionPlan.STARTER
-            "pro_subscription" -> SubscriptionPlan.PRO
-            else -> SubscriptionPlan.FREE
-        }
-        _subscriptionPlan.value = plan
-    }
-
     suspend fun launchBillingFlow(activity: Activity, plan: SubscriptionPlan): Boolean {
         if (!_isConnected.value) return false
 
         val productId = when (plan) {
-            SubscriptionPlan.STARTER -> "starter_subscription"
             SubscriptionPlan.PRO -> "pro_subscription"
             else -> return false
         }

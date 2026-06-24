@@ -22,9 +22,9 @@
 
 | Nom | Hex | Usage |
 |-----|-----|-------|
-| **Background** | `#F8FAFC` | Fond principal de l'application |
+| **Background** | `#FFFFFF` | Fond principal de l'application |
 | **Surface** | `#FFFFFF` | Fond des cartes et composants |
-| **SurfaceVariant** | `#F1F5F9` | Fond alternatif pour différenciation |
+| **SurfaceVariant** | `#FFFFFF` | Fond alternatif (blanc pur) |
 
 ---
 

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import com.abccash.app.treasury.data.DocumentPdfTemplate
 import com.abccash.app.treasury.data.InvoiceSettings
 import com.abccash.app.treasury.data.OtherTaxMode
+import com.abccash.app.treasury.data.SubscriptionPlan
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import kotlinx.coroutines.flow.Flow
@@ -29,6 +30,7 @@ object UserPreferencesKeys {
     val ONBOARDING_ADMIN_VU = booleanPreferencesKey("onboarding_admin_vu")
     val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
     val GOOGLE_LAST_BACKUP_AT = stringPreferencesKey("google_last_backup_at")
+    val SUBSCRIPTION_PLAN = stringPreferencesKey("subscription_plan")
 }
 
 class UserPreferences(private val context: Context) {
@@ -152,6 +154,23 @@ class UserPreferences(private val context: Context) {
 
     suspend fun readSessionUserId(): String? =
         context.userDataStore.data.first()[UserPreferencesKeys.USER_ID]
+
+    suspend fun readSubscriptionPlan(): SubscriptionPlan {
+        val id = context.userDataStore.data.first()[UserPreferencesKeys.SUBSCRIPTION_PLAN]
+        return SubscriptionPlan.fromId(id)
+    }
+
+    suspend fun saveSubscriptionPlan(plan: SubscriptionPlan) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.SUBSCRIPTION_PLAN] = plan.id
+        }
+    }
+
+    suspend fun clearSubscriptionPlan() {
+        context.userDataStore.edit { preferences ->
+            preferences.remove(UserPreferencesKeys.SUBSCRIPTION_PLAN)
+        }
+    }
 
     fun observeBankBalance(entrepriseId: String, year: Int): Flow<Double?> =
         context.userDataStore.data.map { preferences ->

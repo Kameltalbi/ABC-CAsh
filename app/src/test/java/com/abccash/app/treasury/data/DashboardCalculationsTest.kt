@@ -201,6 +201,20 @@ class DashboardCalculationsTest {
         assertEquals(YearMonth.of(2026, 12), bars.last().month)
     }
 
+    @Test
+    fun `rolling monthly bar chart returns last six months in chronological order`() {
+        val bars = DashboardCalculations.buildRollingMonthlyBarChart(
+            invoices = emptyList(),
+            expenses = emptyList(),
+            focusMonth = YearMonth.of(2026, 6),
+            monthCount = 6
+        )
+
+        assertEquals(6, bars.size)
+        assertEquals(YearMonth.of(2026, 1), bars.first().month)
+        assertEquals(YearMonth.of(2026, 6), bars.last().month)
+    }
+
     private fun sampleInvoice(
         paid: Double,
         total: Double,

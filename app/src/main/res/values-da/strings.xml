@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Notifikationer</string>
     <string name="dashboard_monthly_bars_title">Indbetalinger vs udgifter</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Seneste 12 måneder</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Seneste 6 måneder (transaktioner)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">År</string>
     <string name="dashboard_period_month">Måned</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registrer og følg alle virksomhedsudgifter, faste eller engangs.</string>
     <string name="onboarding_privilege_treasury_title">Likviditetsopfølgning</string>
     <string name="onboarding_privilege_treasury_desc">Se månedlig saldo, indbetalinger og finansielle prognoser.</string>
-    <string name="onboarding_privilege_collection_title">Inddrivelse</string>
-    <string name="onboarding_privilege_collection_desc">Administrer kundefakturaer og følg betalinger i realtid.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

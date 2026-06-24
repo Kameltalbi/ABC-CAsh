@@ -256,6 +256,14 @@ class TreasuryViewModel(
                 currentUserId = userId
             )
         }
+        refreshSubscription()
+    }
+
+    fun syncSubscriptionPlan(plan: SubscriptionPlan) {
+        viewModelScope.launch {
+            userPreferences.saveSubscriptionPlan(plan)
+            refreshSubscription()
+        }
     }
 
     fun clearSession() {
@@ -283,6 +291,7 @@ class TreasuryViewModel(
             if (error == null) {
                 googleBackupManager.signOut()
                 userPreferences.clearGoogleAccount()
+                userPreferences.clearSubscriptionPlan()
                 clearSession()
             }
             onResult(error)
@@ -908,7 +917,10 @@ class TreasuryViewModel(
                 }
             }
             onResult(error)
-            if (error == null) scheduleGoogleBackup()
+            if (error == null) {
+                scheduleGoogleBackup()
+                refreshSubscription()
+            }
         }
     }
 
@@ -936,7 +948,7 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            repository.addExpense(
+            val error = repository.addExpense(
                 Expense(
                     id = expenseId ?: java.util.UUID.randomUUID().toString(),
                     label = label,
@@ -956,8 +968,11 @@ class TreasuryViewModel(
                     isExpenseNote = isExpenseNote
                 )
             )
-            onResult(null)
-            scheduleGoogleBackup()
+            onResult(error)
+            if (error == null) {
+                scheduleGoogleBackup()
+                refreshSubscription()
+            }
         }
     }
 

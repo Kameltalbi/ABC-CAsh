@@ -117,7 +117,6 @@ fun PrevisionsScreen(
     val formatAmount = rememberFormatMoney()
     val dateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
     val today = remember { LocalDate.now() }
-    val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
 
     val allItems = remember(invoices, expenses, selectedMonth, canViewIncome, canViewExpenses) {
         val filteredInvoices = if (canViewIncome) invoices else emptyList()
@@ -296,25 +295,17 @@ fun PrevisionsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp, bottom = 8.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DrawerMenuIconButton(onClick = onOpenDrawer)
-                    Column {
-                        Text(
-                            text = stringResource(R.string.forecasts),
-                            fontSize = 26.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = PrevisionsTheme.TextPrimary
-                        )
-                        Text(monthLabel, fontSize = 12.sp, color = PrevisionsTheme.Muted)
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.forecasts),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = PrevisionsTheme.TextPrimary
+                )
                 IconButton(onClick = onNavigateToSettings) {
                     Icon(
                         Icons.Default.Settings,
@@ -324,7 +315,17 @@ fun PrevisionsScreen(
                 }
             }
 
-            MonthSelectorRow(selectedMonth = selectedMonth, onMonthChange = onMonthChange)
+            PrevisionListFilterRow(
+                filters = listFilters,
+                selected = listFilter,
+                onSelect = { listFilter = it }
+            )
+
+            MonthSelectorRow(
+                selectedMonth = selectedMonth,
+                onMonthChange = onMonthChange,
+                compact = true
+            )
 
             PrevisionSummaryRow(
                 incomeLabel = stringResource(R.string.expected_income),
@@ -333,10 +334,9 @@ fun PrevisionsScreen(
                 expenseAmount = formatAmount(forecastExpenses)
             )
 
-            PrevisionListFilterRow(
-                filters = listFilters,
-                selected = listFilter,
-                onSelect = { listFilter = it }
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 4.dp),
+                color = PrevisionsTheme.Divider
             )
 
             if (filteredItems.isEmpty()) {

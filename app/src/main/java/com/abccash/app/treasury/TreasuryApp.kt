@@ -1,5 +1,6 @@
 package com.abccash.app.treasury
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -34,6 +35,7 @@ import com.abccash.app.treasury.data.effectivePermissions
 import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.backup.GoogleBackupManager
+import com.abccash.app.treasury.billing.BillingManager
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.ui.*
@@ -60,11 +62,8 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object BankReconciliation : Screen("bank_reconciliation", R.string.bank_account, Icons.Default.AccountBalance)
     object BankAccounts : Screen("bank_accounts", R.string.bank_accounts_title, Icons.Default.AccountBalance)
     object BankAccountDetail : Screen("bank_account/{accountId}", R.string.bank_account_detail, Icons.Default.AccountBalance)
-    object BankConnection : Screen("bank_connection", R.string.bank_connection_title, Icons.Default.Link)
     object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
     object Subscription : Screen("subscription", R.string.plan_free, Icons.Default.Payments)
-    object ExpenseNotes : Screen("expense_notes", R.string.expense_notes_title, Icons.Default.Receipt)
-    object ExpenseNoteNew : Screen("expense_note_new", R.string.expense_note_add, Icons.Default.Add)
 }
 
 @Composable
@@ -324,22 +323,6 @@ fun TreasuryApp(
                 onLogout = { logout() }
             )
         }
-
-        composable(Screen.BankConnection.route) {
-            MainAppScaffold(
-                navController = navController,
-                viewModel = viewModel,
-                userRole = currentUserRole ?: uiState.currentUserRole,
-                permissions = currentPermissions.ifEmpty { uiState.permissions },
-                appSettings = appSettings,
-                userPreferences = userPreferences,
-                googleBackupManager = googleBackupManager,
-                googleAccountEmail = googleAccountEmail,
-                startDestination = Screen.BankConnection.route,
-                onLogout = { logout() }
-            )
-        }
-
 
         composable(SettingsRoutes.PROFILE_USER) {
             val sessionExpiredMessage = stringResource(R.string.session_expired)
@@ -623,42 +606,6 @@ fun TreasuryApp(
                 onLogout = { logout() }
             )
         }
-
-        composable(Screen.ExpenseNotes.route) {
-            val notes = remember(uiState.expenses) { viewModel.expenseNotes() }
-            ExpenseNotesListScreen(
-                notes = notes,
-                onBack = { navController.popBackStack() },
-                onCreateNote = { navController.navigate(Screen.ExpenseNoteNew.route) },
-                onDeleteNote = { id -> viewModel.deleteExpenseNote(id) {} }
-            )
-        }
-
-        composable(Screen.ExpenseNoteNew.route) {
-            val entrepriseId = uiState.entrepriseId.orEmpty()
-            val customExpense by appSettings.customExpenseCategories(entrepriseId)
-                .collectAsStateWithLifecycle(initialValue = emptyList())
-            ExpenseNoteFormScreen(
-                customExpenseCategories = customExpense,
-                entrepriseId = entrepriseId,
-                onBack = { navController.popBackStack() },
-                onSave = { expenseId, label, amount, date, category, categoryLabel, note, receiptPath, onResult ->
-                    viewModel.addExpenseTransaction(
-                        label = label,
-                        amount = amount,
-                        date = date,
-                        category = category,
-                        categoryLabel = categoryLabel,
-                        note = note,
-                        receiptImagePath = receiptPath,
-                        isExpenseNote = true,
-                        expenseId = expenseId,
-                        isPaid = true,
-                        onResult = onResult
-                    )
-                }
-            )
-        }
     }
     }
 }
@@ -680,6 +627,16 @@ private fun MainAppScaffold(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val billingManager = remember { BillingManager.getInstance(context) }
+    val billingPlan by billingManager.subscriptionPlan.collectAsStateWithLifecycle()
+
+    LaunchedEffect(Unit) {
+        billingManager.startConnection()
+    }
+    LaunchedEffect(billingPlan) {
+        viewModel.syncSubscriptionPlan(billingPlan)
+    }
 
     val canViewTreasury = hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
     val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
@@ -710,26 +667,10 @@ private fun MainAppScaffold(
     val drawerItems = buildList {
         add(
             DrawerMenuEntry(
-                titleRes = R.string.plus_expense_notes,
-                subtitleRes = R.string.plus_expense_notes_sub,
-                icon = Icons.Default.Receipt,
-                onClick = { navController.navigate(Screen.ExpenseNotes.route) }
-            )
-        )
-        add(
-            DrawerMenuEntry(
                 titleRes = R.string.plus_subscription,
                 subtitleRes = R.string.plus_subscription_sub,
                 icon = Icons.Default.Payments,
                 onClick = { navigateToMainTab(Screen.Subscription.route) }
-            )
-        )
-        add(
-            DrawerMenuEntry(
-                titleRes = R.string.plus_bank_connection,
-                subtitleRes = R.string.plus_bank_connection_sub,
-                icon = Icons.Default.AccountBalance,
-                onClick = { navigateToMainTab(Screen.BankConnection.route) }
             )
         )
         add(
@@ -763,13 +704,18 @@ private fun MainAppScaffold(
                 TreasuryBottomNavigation(
                     navController = navController,
                     userRole = userRole,
-                    permissions = permissions
+                    permissions = permissions,
+                    isMenuOpen = drawerState.isOpen,
+                    onOpenMenu = {
+                        if (drawerState.isOpen) closeDrawer() else openDrawer()
+                    }
                 )
             }
         ) { paddingValues ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
+                    .background(Color.White)
                     .padding(paddingValues)
             ) {
                 when (startDestination) {
@@ -805,19 +751,9 @@ private fun MainAppScaffold(
                 }
                 Screen.Subscription.route -> {
                     SubscriptionScreen(
-                        currentPlan = com.abccash.app.treasury.data.SubscriptionPlan.FREE,
+                        currentPlan = uiState.subscription.plan,
                         onBack = { navigateToMainTab(Screen.Dashboard.route) },
-                        onSelectPlan = {
-                            // TODO: Implement subscription upgrade logic via BillingManager
-                        }
-                    )
-                }
-                Screen.BankConnection.route -> {
-                    BankConnectionScreen(
-                        onBack = { navigateToMainTab(Screen.Dashboard.route) },
-                        onOpenManualReconciliation = {
-                            navController.navigate(Screen.BankReconciliation.route)
-                        }
+                        onSelectPlan = { plan -> viewModel.syncSubscriptionPlan(plan) }
                     )
                 }
                 Screen.Transactions.route -> {
@@ -939,7 +875,9 @@ private fun MainAppScaffold(
 fun TreasuryBottomNavigation(
     navController: NavHostController,
     userRole: UserRole,
-    permissions: Set<UserPermission>
+    permissions: Set<UserPermission>,
+    isMenuOpen: Boolean,
+    onOpenMenu: () -> Unit
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -962,18 +900,19 @@ fun TreasuryBottomNavigation(
         }
     }
 
+    val itemCount = mainTabs.size + 1
+
     NavigationBar(
         containerColor = Color.White,
         contentColor = MaterialTheme.colorScheme.primary
     ) {
-        val itemCount = mainTabs.size
         mainTabs.forEach { screen ->
             NavigationBarItem(
                 icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
                 label = {
                     NavBarLabel(screen.adaptiveNavLabel(itemCount))
                 },
-                selected = currentRoute?.startsWith(screen.route.split("/")[0]) == true,
+                selected = !isMenuOpen && currentRoute?.startsWith(screen.route.split("/")[0]) == true,
                 onClick = {
                     if (currentRoute != screen.route) {
                         navController.navigate(screen.route) {
@@ -994,5 +933,25 @@ fun TreasuryBottomNavigation(
                 )
             )
         }
+        NavigationBarItem(
+            icon = {
+                Icon(
+                    Icons.Default.Menu,
+                    contentDescription = stringResource(R.string.nav_menu)
+                )
+            },
+            label = {
+                NavBarLabel(stringResource(R.string.nav_menu))
+            },
+            selected = isMenuOpen,
+            onClick = onOpenMenu,
+            colors = NavigationBarItemDefaults.colors(
+                selectedIconColor = MaterialTheme.colorScheme.primary,
+                selectedTextColor = MaterialTheme.colorScheme.primary,
+                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
+                unselectedIconColor = Color.Gray,
+                unselectedTextColor = Color.Gray
+            )
+        )
     }
 }

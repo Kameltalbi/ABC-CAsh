@@ -37,7 +37,9 @@
 }
 -keep class kotlin.Metadata { *; }
 
-# Compose ViewModels
+# Google Play Billing
+-keep class com.android.vending.billing.** { *; }
+-keep class com.android.billingclient.** { *; }
 -keep class * extends androidx.lifecycle.ViewModel {
     <init>(...);
 }

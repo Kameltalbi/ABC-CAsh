@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Notifiche</string>
     <string name="dashboard_monthly_bars_title">Incassi vs uscite</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Ultimi 12 mesi</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Ultimi 6 mesi (transazioni)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Anno</string>
     <string name="dashboard_period_month">Mese</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registra e monitora tutte le spese aziendali, ricorrenti o occasionali.</string>
     <string name="onboarding_privilege_treasury_title">Monitoraggio tesoreria</string>
     <string name="onboarding_privilege_treasury_desc">Visualizza saldo mensile, incassi e previsioni finanziarie.</string>
-    <string name="onboarding_privilege_collection_title">Incassi</string>
-    <string name="onboarding_privilege_collection_desc">Gestisci fatture clienti e monitora i pagamenti in tempo reale.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

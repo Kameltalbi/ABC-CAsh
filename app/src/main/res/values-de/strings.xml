@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Benachrichtigungen</string>
     <string name="dashboard_monthly_bars_title">Einnahmen vs. Ausgaben</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Letzte 12 Monate</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Letzte 6 Monate (Transaktionen)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Jahr</string>
     <string name="dashboard_period_month">Monat</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Erfassen und verfolgen Sie alle Unternehmensausgaben, wiederkehrend oder einmalig.</string>
     <string name="onboarding_privilege_treasury_title">Liquiditätsverfolgung</string>
     <string name="onboarding_privilege_treasury_desc">Monatssaldo, Einnahmen und Finanzprognosen einsehen.</string>
-    <string name="onboarding_privilege_collection_title">Forderungseinzug</string>
-    <string name="onboarding_privilege_collection_desc">Kundenrechnungen verwalten und Zahlungen in Echtzeit verfolgen.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

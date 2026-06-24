@@ -35,6 +35,7 @@ import androidx.room.withTransaction
 import com.abccash.app.treasury.local.TreasuryDao
 import com.abccash.app.treasury.local.UserEntity
 import com.abccash.app.treasury.security.PasswordHasher
+import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.export.TreasuryBackupData
 import com.abccash.app.treasury.export.TreasuryBackupJson
 import kotlinx.coroutines.flow.Flow
@@ -52,8 +53,13 @@ data class InvoiceImportStats(
 
 class TreasuryRepository(
     private val dao: TreasuryDao,
-    private val database: RoomDatabase
+    private val database: RoomDatabase,
+    private val userPreferences: UserPreferences
 ) {
+
+    companion object {
+        const val SUBSCRIPTION_LIMIT_REACHED = "SUBSCRIPTION_LIMIT_REACHED"
+    }
 
     suspend fun hasAnyUser(): Boolean = dao.countUsers() > 0
 
@@ -265,6 +271,7 @@ class TreasuryRepository(
 
     suspend fun addInvoice(invoice: Invoice): String? {
         if (invoice.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (!canAddTransaction(invoice.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
         if (invoice.clientName.isBlank()) return "Le nom du client est obligatoire"
         if (invoice.totalAmount <= 0) return "Le montant total doit être supérieur à 0"
         if (invoice.paidAmount < 0) return "Le montant payé ne peut pas être négatif"
@@ -570,6 +577,7 @@ class TreasuryRepository(
     suspend fun addExpense(expense: Expense): String? {
         if (expense.label.isBlank()) return "Le libellé de la dépense est obligatoire"
         if (expense.entrepriseId.isBlank()) return "L'ID entreprise est obligatoire"
+        if (!canAddTransaction(expense.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
         if (expense.amount <= 0) return "Le montant de la dépense doit être supérieur à 0"
         val expenseToSave = if (expense.affectsBankTreasury() && expense.bankAccountId == null) {
             expense.copy(bankAccountId = resolveBankAccountIdForBankPayment(expense.entrepriseId))
@@ -730,12 +738,11 @@ class TreasuryRepository(
 
     // Subscription management
     suspend fun getUserSubscription(entrepriseId: String): UserSubscription {
-        // For now, return free plan for all users
-        // This will be enhanced with actual subscription data from backend
         val currentMonth = YearMonth.now()
         val transactionsThisMonth = countTransactionsThisMonth(entrepriseId, currentMonth)
+        val plan = userPreferences.readSubscriptionPlan()
         return UserSubscription(
-            plan = SubscriptionPlan.FREE,
+            plan = plan,
             transactionsThisMonth = transactionsThisMonth
         )
     }
@@ -772,22 +779,14 @@ class TreasuryRepository(
         val monthEnd = month.atEndOfMonth()
         
         // Count real transactions (invoices + expenses)
-        val invoiceCount = invoices.count { 
+        val invoiceCount = invoices.count {
             it.createdDate >= monthStart && it.createdDate <= monthEnd
         }
-        val expenseCount = expenses.count { 
+        val expenseCount = expenses.count {
             it.createdDate >= monthStart && it.createdDate <= monthEnd
         }
-        
-        // Count forecasts (échéances) for the month
-        val forecastCount = com.abccash.app.treasury.data.EcheanceForecast.buildItems(
-            invoices = invoices.map { it.toDomain(emptyList()) },
-            expenses = expenses.map { it.toDomain() },
-            from = monthStart,
-            to = monthEnd
-        ).size
-        
-        return invoiceCount + expenseCount + forecastCount
+
+        return invoiceCount + expenseCount
     }
 }
 

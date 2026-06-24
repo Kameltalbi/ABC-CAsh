@@ -3,6 +3,9 @@ package com.abccash.app.treasury.ui.settings
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -11,6 +14,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -24,21 +29,21 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.treasury.backup.GoogleBackupManager
+import com.abccash.app.ui.theme.AppColors
 import com.abccash.app.treasury.data.SubscriptionPlan
 import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
-import com.abccash.app.treasury.ui.DrawerMenuIconButton
 import com.google.android.gms.auth.api.signin.GoogleSignIn
 import com.google.android.gms.common.api.ApiException
 import kotlinx.coroutines.launch
 
-// Palette stricte : pas de violet — anthracite + gris clair uniquement.
-private val SettingsBackground = Color(0xFFF8F9FA)
-private val SettingsAnthracite = Color(0xFF1E293B)
-private val SettingsMuted = Color(0xFF64748B)
-private val SettingsDanger = Color(0xFFDC2626)
-private val SettingsProgressTrack = Color(0xFFE2E8F0)
+// Palette alignée ABC Cash — bleu principal, pas de violet.
+private val SettingsBackground = Color.White
+private val SettingsTextPrimary = AppColors.TextPrimary
+private val SettingsMuted = AppColors.TextSecondary
+private val SettingsDanger = AppColors.ExpenseRed
+private val SettingsProgressTrack = AppColors.Border
 
 /**
  * Architecture UX — Note de frais :
@@ -80,6 +85,11 @@ fun SettingsScreen(
     var isDeleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
+    val expandedSections = remember { mutableStateMapOf<String, Boolean>() }
+
+    fun toggleSection(key: String) {
+        expandedSections[key] = !(expandedSections[key] ?: false)
+    }
 
     val googleSignInLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -164,15 +174,14 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(horizontal = 8.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            DrawerMenuIconButton(onClick = onOpenDrawer)
             Text(
                 text = stringResource(R.string.settings),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
-                color = SettingsAnthracite
+                color = SettingsTextPrimary
             )
         }
 
@@ -182,18 +191,22 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             item {
-                SettingsSectionCard(title = stringResource(R.string.settings_screen_section_profile)) {
+                CollapsibleSettingsSection(
+                    title = stringResource(R.string.settings_screen_section_profile),
+                    expanded = expandedSections["profile"] ?: false,
+                    onToggle = { toggleSection("profile") }
+                ) {
                     SettingsInfoListItem(
                         headline = stringResource(R.string.settings_user_first_name),
                         supporting = userFirstName.ifBlank { "—" },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = SettingsAnthracite) },
+                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = AppColors.BrandBlue) },
                         onClick = { onNavigate(SettingsRoutes.PROFILE_USER) }
                     )
                     HorizontalDivider(color = SettingsProgressTrack)
                     SettingsInfoListItem(
                         headline = stringResource(R.string.settings_company_name),
                         supporting = companyName.ifBlank { "—" },
-                        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = SettingsAnthracite) },
+                        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = AppColors.BrandBlue) },
                         onClick = { onNavigate(SettingsRoutes.PROFILE_COMPANY) }
                     )
                     HorizontalDivider(color = SettingsProgressTrack)
@@ -210,7 +223,7 @@ fun SettingsScreen(
                     SettingsInfoListItem(
                         headline = stringResource(R.string.settings_manage_categories),
                         supporting = stringResource(R.string.settings_income_categories_sub),
-                        leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = SettingsAnthracite) },
+                        leadingIcon = { Icon(Icons.Default.Category, contentDescription = null, tint = AppColors.BrandBlue) },
                         onClick = { onNavigate(SettingsRoutes.CATEGORIES_INCOME) }
                     )
                 }
@@ -219,12 +232,18 @@ fun SettingsScreen(
             item {
                 SubscriptionSectionCard(
                     subscription = subscription,
-                    onUpgrade = onUpgradeSubscription
+                    onUpgrade = onUpgradeSubscription,
+                    expanded = expandedSections["subscription"] ?: false,
+                    onToggle = { toggleSection("subscription") }
                 )
             }
 
             item {
-                SettingsSectionCard(title = stringResource(R.string.settings_section_backup)) {
+                CollapsibleSettingsSection(
+                    title = stringResource(R.string.settings_section_backup),
+                    expanded = expandedSections["backup"] ?: false,
+                    onToggle = { toggleSection("backup") }
+                ) {
                     Text(
                         text = stringResource(R.string.settings_backup_cloud_desc),
                         fontSize = 13.sp,
@@ -257,16 +276,15 @@ fun SettingsScreen(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(12.dp),
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = Color.White,
-                                    contentColor = SettingsAnthracite
-                                ),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = Color.White
+                                )
                             ) {
                                 if (isGoogleLoading) {
                                     CircularProgressIndicator(
                                         modifier = Modifier.size(18.dp),
                                         strokeWidth = 2.dp,
-                                        color = SettingsAnthracite
+                                        color = Color.White
                                     )
                                 } else {
                                     Text(
@@ -285,7 +303,14 @@ fun SettingsScreen(
                                     }
                                 },
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp)
+                                shape = RoundedCornerShape(12.dp),
+                                colors = ButtonDefaults.outlinedButtonColors(
+                                    contentColor = MaterialTheme.colorScheme.primary
+                                ),
+                                border = androidx.compose.foundation.BorderStroke(
+                                    1.dp,
+                                    MaterialTheme.colorScheme.primary
+                                )
                             ) {
                                 Text(stringResource(R.string.google_sign_out))
                             }
@@ -295,12 +320,16 @@ fun SettingsScreen(
             }
 
             item {
-                SettingsSectionCard(title = stringResource(R.string.settings_section_security_export)) {
+                CollapsibleSettingsSection(
+                    title = stringResource(R.string.settings_section_security_export),
+                    expanded = expandedSections["security"] ?: false,
+                    onToggle = { toggleSection("security") }
+                ) {
                     ListItem(
                         headlineContent = {
                             Text(
                                 stringResource(R.string.settings_biometric_lock),
-                                color = SettingsAnthracite,
+                                color = SettingsTextPrimary,
                                 fontWeight = FontWeight.Medium
                             )
                         },
@@ -312,7 +341,7 @@ fun SettingsScreen(
                                 },
                                 colors = SwitchDefaults.colors(
                                     checkedThumbColor = Color.White,
-                                    checkedTrackColor = SettingsAnthracite,
+                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
                                     uncheckedThumbColor = Color.White,
                                     uncheckedTrackColor = SettingsProgressTrack
                                 )
@@ -327,15 +356,18 @@ fun SettingsScreen(
                             color = SettingsMuted,
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
-                        OutlinedButton(
+                        Button(
                             onClick = {
-                                val csv = onExportCsv(java.time.YearMonth.now().year) ?: return@OutlinedButton
+                                val csv = onExportCsv(java.time.YearMonth.now().year) ?: return@Button
                                 pendingCsv = csv
                                 csvExportLauncher.launch("abc-cash-export.csv")
                             },
                             modifier = Modifier.fillMaxWidth(),
                             shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.outlinedButtonColors(contentColor = SettingsAnthracite)
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = Color.White
+                            )
                         ) {
                             Text(
                                 stringResource(R.string.settings_export_csv_excel),
@@ -365,8 +397,10 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun SettingsSectionCard(
+private fun CollapsibleSettingsSection(
     title: String,
+    expanded: Boolean,
+    onToggle: () -> Unit,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
@@ -376,15 +410,37 @@ private fun SettingsSectionCard(
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
-            Text(
-                text = title,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = SettingsAnthracite
-            )
-            HorizontalDivider(color = SettingsProgressTrack)
-            content()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = SettingsTextPrimary
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp
+                    else Icons.Default.KeyboardArrowDown,
+                    contentDescription = null,
+                    tint = AppColors.BrandBlue
+                )
+            }
+            AnimatedVisibility(
+                visible = expanded,
+                enter = expandVertically(),
+                exit = shrinkVertically()
+            ) {
+                Column {
+                    HorizontalDivider(color = SettingsProgressTrack)
+                    content()
+                }
+            }
         }
     }
 }
@@ -392,7 +448,9 @@ private fun SettingsSectionCard(
 @Composable
 private fun SubscriptionSectionCard(
     subscription: UserSubscription,
-    onUpgrade: () -> Unit
+    onUpgrade: () -> Unit,
+    expanded: Boolean,
+    onToggle: () -> Unit
 ) {
     val plan = subscription.plan
     val limit = plan.transactionsPerMonth ?: 30
@@ -400,7 +458,11 @@ private fun SubscriptionSectionCard(
     val progress = if (limit > 0) used.toFloat() / limit else 0f
     val isUnlimited = plan.unlimited
 
-    SettingsSectionCard(title = stringResource(R.string.settings_section_subscription)) {
+    CollapsibleSettingsSection(
+        title = stringResource(R.string.settings_section_subscription),
+        expanded = expanded,
+        onToggle = onToggle
+    ) {
         Column(
             modifier = Modifier.padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp)
@@ -408,20 +470,20 @@ private fun SubscriptionSectionCard(
             if (!isUnlimited) {
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = Color(0xFFF1F5F9)
+                    color = AppColors.BrandBlueLight
                 ) {
                     Text(
                         text = stringResource(R.string.settings_free_plan_badge),
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
                         fontSize = 12.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = SettingsAnthracite
+                        color = AppColors.BrandBlueDark
                     )
                 }
                 Text(
                     text = stringResource(R.string.settings_monthly_usage, used, limit),
                     fontSize = 14.sp,
-                    color = SettingsAnthracite,
+                    color = SettingsTextPrimary,
                     fontWeight = FontWeight.Medium
                 )
                 LinearProgressIndicator(
@@ -429,7 +491,7 @@ private fun SubscriptionSectionCard(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(8.dp),
-                    color = SettingsAnthracite,
+                    color = MaterialTheme.colorScheme.primary,
                     trackColor = SettingsProgressTrack,
                     strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
                 )
@@ -447,7 +509,7 @@ private fun SubscriptionSectionCard(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = SettingsAnthracite,
+                    containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = Color.White
                 ),
                 enabled = !isUnlimited
@@ -475,7 +537,7 @@ private fun SettingsInfoListItem(
         supportingContent = {
             Text(
                 supporting,
-                color = SettingsAnthracite,
+                color = SettingsTextPrimary,
                 fontWeight = FontWeight.Medium,
                 fontSize = 15.sp
             )

@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Notificações</string>
     <string name="dashboard_monthly_bars_title">Recebimentos vs despesas</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Últimos 12 meses</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Últimos 6 meses (transações)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Ano</string>
     <string name="dashboard_period_month">Mês</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registe e acompanhe todas as despesas da empresa, recorrentes ou pontuais.</string>
     <string name="onboarding_privilege_treasury_title">Acompanhamento de tesouraria</string>
     <string name="onboarding_privilege_treasury_desc">Veja o saldo mensal, recebimentos e previsões financeiras.</string>
-    <string name="onboarding_privilege_collection_title">Cobranças</string>
-    <string name="onboarding_privilege_collection_desc">Gerencie faturas de clientes e acompanhe pagamentos em tempo real.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

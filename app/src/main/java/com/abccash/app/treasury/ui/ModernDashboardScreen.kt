@@ -91,6 +91,14 @@ fun ModernDashboardScreen(
     val dailyExpenses = remember(visibleExpenses, today) {
         DashboardCalculations.buildDailyExpensesLast7Days(visibleExpenses, today)
     }
+    val monthlyBars = remember(visibleInvoices, visibleExpenses, focusMonth) {
+        DashboardCalculations.buildRollingMonthlyBarChart(
+            invoices = visibleInvoices,
+            expenses = visibleExpenses,
+            focusMonth = focusMonth,
+            monthCount = 6
+        )
+    }
     val expenseCategories = remember(visibleExpenses, focusMonth) {
         DashboardCalculations.buildInnovativeDashboard(
             invoices = visibleInvoices,
@@ -192,13 +200,18 @@ fun ModernDashboardScreen(
                         onAddAccount = onNavigateToBankAccounts
                     )
                 }
-                if (canManageExpense || isAdmin) {
+                if (canViewIncome || canManageExpense || isAdmin) {
                     item {
-                        WeeklyExpensesCard(
-                            bars = dailyExpenses,
-                            formatAmount = formatAmount
+                        TransactionsChartsCard(
+                            dailyBars = dailyExpenses,
+                            monthlyBars = monthlyBars,
+                            formatAmount = formatAmount,
+                            showIncome = canViewIncome || isAdmin,
+                            showExpenses = canManageExpense || isAdmin
                         )
                     }
+                }
+                if (canManageExpense || isAdmin) {
                     if (expenseCategories.isNotEmpty()) {
                         item {
                             TopCategoriesCard(
@@ -237,10 +250,8 @@ private fun FastBudgetHeader(
         ) {
             Row(
                 modifier = Modifier.weight(1f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                DrawerMenuIconButton(onClick = onOpenDrawer, tint = Color.White)
                 Text(
                     text = title,
                     fontSize = 20.sp,
@@ -340,14 +351,14 @@ private fun SummaryComparisonCard(
         ) {
             MonthSummaryColumn(
                 modifier = Modifier.weight(1f),
-                summary = current,
+                summary = previous,
                 formatAmount = formatAmount,
                 showIncome = showIncome,
                 showExpenses = showExpenses
             )
             MonthSummaryColumn(
                 modifier = Modifier.weight(1f),
-                summary = previous,
+                summary = current,
                 formatAmount = formatAmount,
                 showIncome = showIncome,
                 showExpenses = showExpenses
@@ -589,69 +600,225 @@ private fun AccountRow(
 }
 
 @Composable
-private fun WeeklyExpensesCard(
-    bars: List<DailyExpenseBar>,
-    formatAmount: (Double) -> String
+private fun TransactionsChartsCard(
+    dailyBars: List<DailyExpenseBar>,
+    monthlyBars: List<MonthlyBarPoint>,
+    formatAmount: (Double) -> String,
+    showIncome: Boolean,
+    showExpenses: Boolean
 ) {
     DashboardSectionCard(title = stringResource(R.string.dashboard_expenses_7d)) {
-        val maxAmount = bars.maxOfOrNull { it.amount }?.coerceAtLeast(1.0) ?: 1.0
-        val hasData = bars.any { it.amount > 0 }
+        WeeklyExpensesChart(
+            bars = dailyBars,
+            formatAmount = formatAmount,
+            showExpenses = showExpenses
+        )
 
-        if (!hasData) {
+        HorizontalDivider(color = DashboardTheme.Track)
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(
-                text = stringResource(R.string.not_enough_data),
-                fontSize = 13.sp,
-                color = DashboardTheme.TextSecondary,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 24.dp),
-                textAlign = TextAlign.Center
+                text = stringResource(R.string.dashboard_monthly_bars_title),
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = DashboardTheme.TextPrimary
             )
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(170.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                bars.forEach { bar ->
-                    val heightFraction = (bar.amount / maxAmount).toFloat().coerceIn(0.04f, 1f)
-                    Column(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Bottom
-                    ) {
-                        if (bar.amount > 0) {
-                            Text(
-                                text = formatAmount(bar.amount),
-                                fontSize = 9.sp,
-                                color = DashboardTheme.TextSecondary,
-                                maxLines = 1,
-                                textAlign = TextAlign.Center
-                            )
-                            Spacer(Modifier.height(4.dp))
-                        } else {
-                            Spacer(Modifier.height(18.dp))
-                        }
-                        Box(
-                            modifier = Modifier
-                                .width(28.dp)
-                                .fillMaxHeight(heightFraction)
-                                .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
-                                .background(DashboardTheme.Expense)
+            Text(
+                text = stringResource(R.string.dashboard_monthly_bars_subtitle_6m),
+                fontSize = 12.sp,
+                color = DashboardTheme.TextSecondary
+            )
+            MonthlyIncomeExpenseBarChart(
+                bars = monthlyBars,
+                showIncome = showIncome,
+                showExpenses = showExpenses
+            )
+            if (showIncome || showExpenses) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                ) {
+                    if (showIncome) {
+                        ChartLegendDot(
+                            color = DashboardTheme.Income,
+                            label = stringResource(R.string.income_title)
                         )
-                        Spacer(Modifier.height(6.dp))
-                        Text(
-                            text = bar.label,
-                            fontSize = 11.sp,
-                            color = DashboardTheme.TextSecondary,
-                            textAlign = TextAlign.Center
+                    }
+                    if (showExpenses) {
+                        ChartLegendDot(
+                            color = DashboardTheme.Expense,
+                            label = stringResource(R.string.expense_title)
                         )
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ChartLegendDot(color: Color, label: String) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(CircleShape)
+                .background(color)
+        )
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = DashboardTheme.TextSecondary
+        )
+    }
+}
+
+@Composable
+private fun WeeklyExpensesChart(
+    bars: List<DailyExpenseBar>,
+    formatAmount: (Double) -> String,
+    showExpenses: Boolean
+) {
+    if (!showExpenses) return
+
+    val maxAmount = bars.maxOfOrNull { it.amount }?.coerceAtLeast(1.0) ?: 1.0
+    val hasData = bars.any { it.amount > 0 }
+
+    if (!hasData) {
+        Text(
+            text = stringResource(R.string.not_enough_data),
+            fontSize = 13.sp,
+            color = DashboardTheme.TextSecondary,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 12.dp),
+            textAlign = TextAlign.Center
+        )
+    } else {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(140.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Bottom
+        ) {
+            bars.forEach { bar ->
+                val heightFraction = (bar.amount / maxAmount).toFloat().coerceIn(0.04f, 1f)
+                Column(
+                    modifier = Modifier
+                        .weight(1f)
+                        .fillMaxHeight(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Bottom
+                ) {
+                    if (bar.amount > 0) {
+                        Text(
+                            text = formatAmount(bar.amount),
+                            fontSize = 9.sp,
+                            color = DashboardTheme.TextSecondary,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(4.dp))
+                    } else {
+                        Spacer(Modifier.height(18.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .width(22.dp)
+                            .fillMaxHeight(heightFraction)
+                            .clip(RoundedCornerShape(topStart = 6.dp, topEnd = 6.dp))
+                            .background(DashboardTheme.Expense)
+                    )
+                    Spacer(Modifier.height(6.dp))
+                    Text(
+                        text = bar.label,
+                        fontSize = 10.sp,
+                        color = DashboardTheme.TextSecondary,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthlyIncomeExpenseBarChart(
+    bars: List<MonthlyBarPoint>,
+    showIncome: Boolean,
+    showExpenses: Boolean,
+    modifier: Modifier = Modifier
+) {
+    val monthFormatter = remember {
+        DateTimeFormatter.ofPattern("MMM", AppLocale.current())
+    }
+    val maxAmount = bars.maxOfOrNull { max(it.income, it.expenses) }?.coerceAtLeast(1.0) ?: 1.0
+    val barCount = (if (showIncome) 1 else 0) + (if (showExpenses) 1 else 0)
+
+    if (barCount == 0) return
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(160.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.Bottom
+    ) {
+        bars.forEach { bar ->
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Bottom
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp, Alignment.CenterHorizontally),
+                    verticalAlignment = Alignment.Bottom
+                ) {
+                    if (showIncome) {
+                        val incomeFraction = (bar.income / maxAmount).toFloat().coerceIn(0.04f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .width(12.dp)
+                                .fillMaxHeight(incomeFraction)
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(
+                                    if (bar.income > 0) DashboardTheme.Income
+                                    else DashboardTheme.Track.copy(alpha = 0.5f)
+                                )
+                        )
+                    }
+                    if (showExpenses) {
+                        val expenseFraction = (bar.expenses / maxAmount).toFloat().coerceIn(0.04f, 1f)
+                        Box(
+                            modifier = Modifier
+                                .width(12.dp)
+                                .fillMaxHeight(expenseFraction)
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(
+                                    if (bar.expenses > 0) DashboardTheme.Expense
+                                    else DashboardTheme.Track.copy(alpha = 0.5f)
+                                )
+                        )
+                    }
+                }
+                Spacer(Modifier.height(6.dp))
+                Text(
+                    text = bar.month.atDay(1).format(monthFormatter)
+                        .replaceFirstChar { it.uppercase() },
+                    fontSize = 10.sp,
+                    color = DashboardTheme.TextSecondary,
+                    textAlign = TextAlign.Center,
+                    maxLines = 1
+                )
             }
         }
     }

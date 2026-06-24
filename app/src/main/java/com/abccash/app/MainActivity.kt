@@ -4,8 +4,10 @@ import android.os.Bundle
 import androidx.fragment.app.FragmentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.lightColorScheme
+import androidx.compose.material3.Surface
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.abccash.app.treasury.TreasuryApp
@@ -15,7 +17,6 @@ import com.abccash.app.treasury.local.TreasuryDatabase
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import com.abccash.app.treasury.viewmodel.TreasuryViewModelFactory
-import com.abccash.app.ui.theme.AppColors
 import com.abccash.app.ui.theme.AppPalette
 import com.abccash.app.ui.theme.appColorScheme
 
@@ -26,7 +27,7 @@ class MainActivity : FragmentActivity() {
 
         val userPreferences = UserPreferences(this)
         val database = TreasuryDatabase.getInstance(this)
-        val repository = TreasuryRepository(database.treasuryDao(), database)
+        val repository = TreasuryRepository(database.treasuryDao(), database, userPreferences)
         val googleBackupManager = GoogleBackupManager(this)
         val factory = TreasuryViewModelFactory(repository, googleBackupManager, userPreferences)
 
@@ -34,13 +35,18 @@ class MainActivity : FragmentActivity() {
             MaterialTheme(
                 colorScheme = appColorScheme(darkMode = false, palette = AppPalette.ABC_CASH)
             ) {
-                val vm: TreasuryViewModel = viewModel(factory = factory)
-                TreasuryApp(
-                    repository = repository,
-                    viewModel = vm,
-                    userPreferences = userPreferences,
-                    googleBackupManager = googleBackupManager
-                )
+                Surface(
+                    modifier = Modifier.fillMaxSize(),
+                    color = Color.White
+                ) {
+                    val vm: TreasuryViewModel = viewModel(factory = factory)
+                    TreasuryApp(
+                        repository = repository,
+                        viewModel = vm,
+                        userPreferences = userPreferences,
+                        googleBackupManager = googleBackupManager
+                    )
+                }
             }
         }
     }

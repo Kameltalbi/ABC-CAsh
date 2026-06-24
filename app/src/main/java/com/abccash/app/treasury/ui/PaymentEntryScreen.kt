@@ -52,6 +52,7 @@ fun PaymentEntryScreen(
     val context = androidx.compose.ui.platform.LocalContext.current
     
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.record_payment)) },
@@ -80,7 +81,7 @@ fun PaymentEntryScreen(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFFF5F5F5)
+                        containerColor = Color.White
                     )
                 ) {
                     Column(

@@ -95,6 +95,7 @@
     <string name="dashboard_notifications">Notifications</string>
     <string name="dashboard_monthly_bars_title">Encaissements vs dépenses</string>
     <string name="dashboard_monthly_bars_subtitle_12m">12 derniers mois</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">6 derniers mois (transactions)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Année</string>
     <string name="dashboard_period_month">Mois</string>
@@ -454,7 +455,7 @@
     <string name="plus_forecasts">Prévisions</string>
     <string name="plus_forecasts_sub">Recettes et dépenses à venir</string>
     <string name="plus_subscription">Abonnement</string>
-    <string name="plus_subscription_sub">Plans Gratuit, Starter et Pro</string>
+    <string name="plus_subscription_sub">Plans Gratuit et Pro</string>
     <string name="plus_bank_connection">Connexion bancaire</string>
     <string name="plus_bank_connection_sub">Lier vos comptes bancaires via API sécurisée</string>
     <string name="plus_settings">Paramètres</string>
@@ -467,7 +468,22 @@
     <!-- SUBSCRIPTION -->
     <string name="subscription_title">Abonnement</string>
     <string name="subscription_choose_plan">Choisissez votre plan</string>
-    <string name="subscription_unlock_features">Débloquez des fonctionnalités avancées avec nos plans payants</string>
+    <string name="subscription_unlock_features">Débloquez des fonctionnalités avancées avec le plan Pro</string>
+    <string name="subscription_two_plans_desc">Commencez gratuitement avec 30 éléments par mois, ou passez en illimité avec Pro.</string>
+    <string name="subscription_recommended">Recommandé</string>
+    <string name="subscription_price_free">0 DT</string>
+    <string name="subscription_price_monthly">%1$.2f $/mois</string>
+    <string name="subscription_items_per_month">%1$d éléments par mois</string>
+    <string name="subscription_unlimited_items">Éléments illimités</string>
+    <string name="subscription_current_plan">Plan actuel</string>
+    <string name="subscription_stay_free">Rester en Gratuit</string>
+    <string name="subscription_free_feature_core">Revenus, dépenses et prévisions</string>
+    <string name="subscription_free_feature_limit">30 éléments créés par mois</string>
+    <string name="subscription_free_feature_csv">Export CSV</string>
+    <string name="subscription_pro_feature_unlimited">Transactions et prévisions illimitées</string>
+    <string name="subscription_pro_feature_backup">Sauvegarde automatique Google Drive</string>
+    <string name="subscription_pro_feature_csv">Export CSV pour votre comptable</string>
+    <string name="subscription_pro_feature_support">Support prioritaire</string>
     <string name="subscription_play_connecting">Connexion à Google Play en cours…</string>
     <string name="subscription_pro_bank_feature">Connexion open banking à vos comptes</string>
     <string name="plan_free">Gratuit</string>
@@ -578,13 +594,13 @@
     <string name="onboarding_next">Suivant</string>
     <string name="onboarding_skip">Passer</string>
     <string name="onboarding_tour_welcome_title">Comment fonctionne ABC Cash</string>
-    <string name="onboarding_tour_welcome_desc">ABC Cash suit la trésorerie de votre entreprise en quatre étapes : factures, prévisions, transactions et solde.</string>
-    <string name="onboarding_tour_invoices_title">Factures</string>
-    <string name="onboarding_tour_invoices_desc">Créez des factures clients (ou des encaissements rapides). Chaque facture indique ce que vous devez recevoir et quand.</string>
+    <string name="onboarding_tour_welcome_desc">ABC Cash suit votre trésorerie simplement : enregistrez revenus et dépenses, anticipez avec les prévisions et suivez votre solde.</string>
+    <string name="onboarding_tour_entry_title">Revenus &amp; dépenses</string>
+    <string name="onboarding_tour_entry_desc">Saisissez un encaissement ou une dépense en quelques secondes. Choisissez la catégorie et la date — passé ou aujourd\'hui dans le Flux, dates futures dans les Prévisions. Joignez une photo de reçu pour les dépenses.</string>
     <string name="onboarding_tour_forecasts_title">Prévisions</string>
-    <string name="onboarding_tour_forecasts_desc">L\'onglet Prévisions liste les encaissements et dépenses pas encore payés. C\'est votre vision du mois à venir.</string>
+    <string name="onboarding_tour_forecasts_desc">L\'onglet Prévisions liste les encaissements et dépenses pas encore réglés. C\'est votre vision du mois à venir.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
-    <string name="onboarding_tour_transactions_desc">Dès qu\'un paiement est enregistré ou une dépense payée, elle apparaît dans Transactions — les mouvements réels de trésorerie.</string>
+    <string name="onboarding_tour_transactions_desc">Les encaissements réalisés et dépenses payées apparaissent dans Transactions — vos mouvements réels de trésorerie.</string>
     <string name="onboarding_tour_treasury_title">Trésorerie</string>
     <string name="onboarding_tour_treasury_desc">L\'écran Trésorerie affiche le solde et la prévision glissante pour savoir si votre cash est sain.</string>
 
@@ -815,8 +831,8 @@
     <string name="onboarding_privilege_expenses_desc">Enregistrez et suivez toutes les dépenses de l\'entreprise, récurrentes ou ponctuelles.</string>
     <string name="onboarding_privilege_treasury_title">Suivi de trésorerie</string>
     <string name="onboarding_privilege_treasury_desc">Visualisez le solde mensuel, les encaissements et les prévisions financières.</string>
-    <string name="onboarding_privilege_collection_title">Recouvrement</string>
-    <string name="onboarding_privilege_collection_desc">Gérez les factures clients et suivez les paiements en temps réel.</string>
+    <string name="onboarding_privilege_collection_title">Encaissements</string>
+    <string name="onboarding_privilege_collection_desc">Enregistrez vos revenus et suivez ce qui est encaissé ou encore attendu.</string>
 
     <!-- MESSAGES -->
     <string name="no_invoice_match_filters">Aucun encaissement ne correspond aux filtres</string>

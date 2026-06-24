@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Bildirimler</string>
     <string name="dashboard_monthly_bars_title">Tahsilatlar vs giderler</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Son 12 ay</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Son 6 ay (işlemler)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">Yıl</string>
     <string name="dashboard_period_month">Ay</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Tüm şirket giderlerini, tekrarlayan veya tek seferlik olarak kaydedin ve takip edin.</string>
     <string name="onboarding_privilege_treasury_title">Nakit akışı takibi</string>
     <string name="onboarding_privilege_treasury_desc">Aylık bakiye, tahsilatlar ve finansal öngörüleri görüntüleyin.</string>
-    <string name="onboarding_privilege_collection_title">Tahsilat</string>
-    <string name="onboarding_privilege_collection_desc">Müşteri faturalarını yönetin ve ödemeleri gerçek zamanlı takip edin.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

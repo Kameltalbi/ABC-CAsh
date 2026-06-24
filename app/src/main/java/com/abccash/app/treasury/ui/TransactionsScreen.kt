@@ -143,7 +143,6 @@ fun TransactionsScreen(
         selectedExpenseIds = emptySet()
     }
 
-    val monthLabel = remember(selectedMonth) { AppLocale.monthYear(selectedMonth) }
     val datePattern = remember { DateTimeFormatter.ofPattern("dd/MM/yy") }
 
     val allRows = remember(invoices, expenses, selectedMonth, canViewIncome, canManageExpense) {
@@ -212,33 +211,33 @@ fun TransactionsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 8.dp, end = 12.dp, top = 12.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
+                    .padding(horizontal = 20.dp)
+                    .padding(top = 12.dp, bottom = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(
-                    modifier = Modifier.weight(1f),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    DrawerMenuIconButton(onClick = onOpenDrawer)
-                    Column {
-                    Text(
-                        text = stringResource(R.string.transactions),
-                        fontSize = 26.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TransactionsTheme.TextPrimary
-                    )
-                    Text(monthLabel, fontSize = 12.sp, color = TransactionsTheme.Muted)
-                    }
-                }
+                Text(
+                    text = stringResource(R.string.transactions),
+                    fontSize = 26.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TransactionsTheme.TextPrimary
+                )
             }
-
-            MonthSelectorRow(selectedMonth = selectedMonth, onMonthChange = onMonthChange)
 
             TransactionListFilterRow(
                 filters = listFilters,
                 selected = listFilter,
                 onSelect = { listFilter = it }
+            )
+
+            MonthSelectorRow(
+                selectedMonth = selectedMonth,
+                onMonthChange = onMonthChange,
+                compact = true
+            )
+
+            HorizontalDivider(
+                modifier = Modifier.padding(top = 4.dp),
+                color = TransactionsTheme.Divider
             )
 
             if (showIncomeBulk) {
@@ -548,47 +547,37 @@ private fun TransactionListFilterRow(
 ) {
     LazyRow(
         modifier = Modifier.fillMaxWidth(),
-        contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
-        horizontalArrangement = Arrangement.spacedBy(18.dp)
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         items(filters) { filter ->
-            UnderlineFilterChip(
-                label = stringResource(filter.labelRes),
-                selected = filter == selected,
-                onClick = { onSelect(filter) }
+            val isSelected = filter == selected
+            FilterChip(
+                selected = isSelected,
+                onClick = { onSelect(filter) },
+                label = {
+                    Text(
+                        text = stringResource(filter.labelRes),
+                        fontSize = 14.sp,
+                        fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Medium
+                    )
+                },
+                shape = RoundedCornerShape(20.dp),
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected,
+                    borderColor = TransactionsTheme.Divider,
+                    selectedBorderColor = TransactionsTheme.Accent,
+                    borderWidth = 1.dp
+                ),
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = Color.White,
+                    labelColor = TransactionsTheme.TextPrimary,
+                    selectedContainerColor = TransactionsTheme.Accent.copy(alpha = 0.14f),
+                    selectedLabelColor = TransactionsTheme.Accent
+                )
             )
         }
-    }
-}
-
-@Composable
-private fun UnderlineFilterChip(
-    label: String,
-    selected: Boolean,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier.clickable(onClick = onClick),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Text(
-            text = label,
-            fontSize = 13.sp,
-            fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
-            color = if (selected) TransactionsTheme.Accent else TransactionsTheme.ChipInactive,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Box(
-            modifier = Modifier
-                .width(if (selected) 24.dp else 0.dp)
-                .height(2.dp)
-                .background(
-                    if (selected) TransactionsTheme.Accent else Color.Transparent,
-                    RoundedCornerShape(1.dp)
-                )
-        )
     }
 }
 

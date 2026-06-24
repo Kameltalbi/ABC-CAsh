@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Aviseringar</string>
     <string name="dashboard_monthly_bars_title">Inbetalningar vs utgifter</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Senaste 12 månaderna</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Senaste 6 månaderna (transaktioner)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">År</string>
     <string name="dashboard_period_month">Månad</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registrera och följ alla företagsutgifter, återkommande eller engångs.</string>
     <string name="onboarding_privilege_treasury_title">Likviditetsuppföljning</string>
     <string name="onboarding_privilege_treasury_desc">Se månadssaldo, inbetalningar och finansiella prognoser.</string>
-    <string name="onboarding_privilege_collection_title">Inkrävning</string>
-    <string name="onboarding_privilege_collection_desc">Hantera kundfakturor och följ betalningar i realtid.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

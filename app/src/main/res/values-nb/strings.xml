@@ -71,6 +71,7 @@
     <string name="dashboard_notifications">Varsler</string>
     <string name="dashboard_monthly_bars_title">Innbetalinger vs utgifter</string>
     <string name="dashboard_monthly_bars_subtitle_12m">Siste 12 måneder</string>
+    <string name="dashboard_monthly_bars_subtitle_6m">Siste 6 måneder (transaksjoner)</string>
     <string name="dashboard_monthly_bars_subtitle_year">%1$s</string>
     <string name="dashboard_period_year">År</string>
     <string name="dashboard_period_month">Måned</string>
@@ -436,6 +437,6 @@
     <string name="onboarding_privilege_expenses_desc">Registrer og følg alle bedriftsutgifter, faste eller engangs.</string>
     <string name="onboarding_privilege_treasury_title">Likviditetsoppfølging</string>
     <string name="onboarding_privilege_treasury_desc">Se månedlig saldo, innbetalinger og finansielle prognoser.</string>
-    <string name="onboarding_privilege_collection_title">Innkreving</string>
-    <string name="onboarding_privilege_collection_desc">Administrer kundefakturaer og følg betalinger i sanntid.</string>
+    <string name="onboarding_privilege_collection_title">Income tracking</string>
+    <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
 </resources>

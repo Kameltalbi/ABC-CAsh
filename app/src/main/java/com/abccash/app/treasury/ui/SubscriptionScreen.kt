@@ -7,7 +7,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -23,6 +23,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abccash.app.R
 import com.abccash.app.treasury.billing.BillingManager
 import com.abccash.app.treasury.data.SubscriptionPlan
+import com.abccash.app.ui.theme.AppColors
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -32,30 +34,32 @@ fun SubscriptionScreen(
     onSelectPlan: (SubscriptionPlan) -> Unit
 ) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     val billingManager = remember { BillingManager.getInstance(context) }
     val subscriptionPlan by billingManager.subscriptionPlan.collectAsStateWithLifecycle()
     val isConnected by billingManager.isConnected.collectAsStateWithLifecycle()
     val isPurchasing by billingManager.isPurchasing.collectAsStateWithLifecycle()
+    val activePlan = if (subscriptionPlan != SubscriptionPlan.FREE) subscriptionPlan else currentPlan
 
     LaunchedEffect(Unit) {
         billingManager.startConnection()
     }
 
     DisposableEffect(Unit) {
-        onDispose {
-            billingManager.endConnection()
-        }
+        onDispose { billingManager.endConnection() }
     }
 
     Scaffold(
+        containerColor = Color.White,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.subscription_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = null)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
                     }
-                }
+                },
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.White)
             )
         }
     ) { padding ->
@@ -70,54 +74,54 @@ fun SubscriptionScreen(
             Text(
                 text = stringResource(R.string.subscription_choose_plan),
                 fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
+                fontWeight = FontWeight.Bold,
+                color = AppColors.TextPrimary
             )
-            
             Text(
-                text = stringResource(R.string.subscription_unlock_features),
+                text = stringResource(R.string.subscription_two_plans_desc),
                 fontSize = 14.sp,
-                color = Color.Gray
+                color = AppColors.TextSecondary,
+                lineHeight = 20.sp
             )
 
             if (!isConnected) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF3CD))
+                    colors = CardDefaults.cardColors(containerColor = AppColors.WarningBackground),
+                    shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = stringResource(R.string.subscription_play_connecting),
                         modifier = Modifier.padding(16.dp),
-                        color = Color(0xFF856404)
+                        color = Color(0xFF856404),
+                        fontSize = 13.sp
                     )
                 }
             }
-            
+
             SubscriptionPlanCard(
                 plan = SubscriptionPlan.FREE,
-                currentPlan = subscriptionPlan,
+                currentPlan = activePlan,
                 onSelectPlan = onSelectPlan,
-                isPopular = false,
-                isEnabled = true
+                isEnabled = true,
+                isPurchasing = false
             )
-            
-            SubscriptionPlanCard(
-                plan = SubscriptionPlan.STARTER,
-                currentPlan = subscriptionPlan,
-                onSelectPlan = { plan ->
-                    // Handle purchase in a coroutine
-                },
-                isPopular = false,
-                isEnabled = isConnected && !isPurchasing
-            )
-            
+
             SubscriptionPlanCard(
                 plan = SubscriptionPlan.PRO,
-                currentPlan = subscriptionPlan,
+                currentPlan = activePlan,
                 onSelectPlan = { plan ->
-                    // Handle purchase in a coroutine
+                    val activity = context as? Activity
+                    if (activity != null) {
+                        scope.launch {
+                            val started = billingManager.launchBillingFlow(activity, plan)
+                            if (started) onSelectPlan(plan)
+                        }
+                    }
                 },
-                isPopular = true,
-                isEnabled = isConnected && !isPurchasing
+                isEnabled = isConnected && !isPurchasing,
+                isPurchasing = isPurchasing,
+                highlighted = true
             )
         }
     }
@@ -128,22 +132,30 @@ private fun SubscriptionPlanCard(
     plan: SubscriptionPlan,
     currentPlan: SubscriptionPlan,
     onSelectPlan: (SubscriptionPlan) -> Unit,
-    isPopular: Boolean,
-    isEnabled: Boolean = true
+    isEnabled: Boolean,
+    isPurchasing: Boolean,
+    highlighted: Boolean = false
 ) {
     val isSelected = currentPlan == plan
-    val backgroundColor = if (isSelected) {
-        Color(0xFF22C55E)
-    } else {
-        Color.White
+    val accent = AppColors.BrandBlue
+    val cardBackground = when {
+        isSelected -> accent
+        highlighted -> Color.White
+        else -> Color.White
     }
-    val textColor = if (isSelected) Color.White else Color.Black
-    
+    val textColor = if (isSelected) Color.White else AppColors.TextPrimary
+    val mutedColor = if (isSelected) Color.White.copy(alpha = 0.85f) else AppColors.TextSecondary
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = backgroundColor),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 8.dp else 2.dp)
+        colors = CardDefaults.cardColors(containerColor = cardBackground),
+        elevation = CardDefaults.cardElevation(defaultElevation = if (highlighted) 4.dp else 1.dp),
+        border = if (highlighted && !isSelected) {
+            androidx.compose.foundation.BorderStroke(2.dp, accent.copy(alpha = 0.35f))
+        } else {
+            null
+        }
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -155,93 +167,104 @@ private fun SubscriptionPlanCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = when (plan) {
-                        SubscriptionPlan.FREE -> stringResource(R.string.plan_free)
-                        SubscriptionPlan.STARTER -> stringResource(R.string.plan_starter)
-                        SubscriptionPlan.PRO -> stringResource(R.string.plan_pro)
-                    },
+                    text = stringResource(plan.nameRes),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = textColor
                 )
-                if (isPopular) {
+                if (highlighted && !isSelected) {
                     Text(
-                        text = "Populaire",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFFFBBF24),
+                        text = stringResource(R.string.subscription_recommended),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = accent,
                         modifier = Modifier
-                            .background(Color(0xFFFEF3C7), RoundedCornerShape(12.dp))
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .background(accent.copy(alpha = 0.12f), RoundedCornerShape(12.dp))
+                            .padding(horizontal = 10.dp, vertical = 5.dp)
                     )
                 }
             }
-            
+
             Text(
-                text = "$${plan.priceUsd}/mois",
-                fontSize = 32.sp,
+                text = if (plan.isFree) {
+                    stringResource(R.string.subscription_price_free)
+                } else {
+                    stringResource(R.string.subscription_price_monthly, plan.priceUsd)
+                },
+                fontSize = 30.sp,
                 fontWeight = FontWeight.Bold,
                 color = textColor
             )
-            
-            if (plan.hasTransactionLimit) {
-                Text(
-                    text = "${plan.transactionsPerMonth} transactions/mois",
-                    fontSize = 14.sp,
-                    color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color.Gray
-                )
-            } else {
-                Text(
-                    text = "Transactions illimitées",
-                    fontSize = 14.sp,
-                    color = if (isSelected) Color.White.copy(alpha = 0.8f) else Color.Gray
-                )
-            }
-            
-            PlanFeatures(plan, textColor)
-            
+
+            Text(
+                text = if (plan.hasTransactionLimit) {
+                    stringResource(R.string.subscription_items_per_month, plan.transactionsPerMonth!!)
+                } else {
+                    stringResource(R.string.subscription_unlimited_items)
+                },
+                fontSize = 14.sp,
+                color = mutedColor
+            )
+
+            PlanFeatures(plan = plan, textColor = textColor, mutedColor = mutedColor)
+
             Button(
                 onClick = { onSelectPlan(plan) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
-                    containerColor = if (isSelected) Color.White else Color(0xFF22C55E),
-                    contentColor = if (isSelected) Color(0xFF22C55E) else Color.White
+                    containerColor = if (isSelected) Color.White else accent,
+                    contentColor = if (isSelected) accent else Color.White,
+                    disabledContainerColor = accent.copy(alpha = 0.4f),
+                    disabledContentColor = Color.White.copy(alpha = 0.8f)
                 ),
                 shape = RoundedCornerShape(12.dp),
-                enabled = !isSelected && isEnabled
+                enabled = !isSelected && isEnabled && !isPurchasing
             ) {
-                Text(
-                    text = if (isSelected) "Plan actuel" else "Choisir ce plan",
-                    fontWeight = FontWeight.Bold
-                )
+                if (isPurchasing && !plan.isFree) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(20.dp),
+                        strokeWidth = 2.dp,
+                        color = Color.White
+                    )
+                } else {
+                    Text(
+                        text = if (isSelected) {
+                            stringResource(R.string.subscription_current_plan)
+                        } else if (plan.isFree) {
+                            stringResource(R.string.subscription_stay_free)
+                        } else {
+                            stringResource(R.string.settings_upgrade_unlimited)
+                        },
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
     }
 }
 
 @Composable
-private fun PlanFeatures(plan: SubscriptionPlan, textColor: Color) {
-    Column(
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        when (plan) {
-            SubscriptionPlan.FREE -> {
-                FeatureItem("Accès à toutes les fonctionnalités", textColor)
-                FeatureItem("Export CSV", textColor)
-                FeatureItem("${plan.transactionsPerMonth} transactions/mois", textColor)
-            }
-            SubscriptionPlan.STARTER -> {
-                FeatureItem("Tout le plan Free", textColor)
-                FeatureItem("Transactions illimitées", textColor)
-                FeatureItem("Export CSV", textColor)
-                FeatureItem("Support email", textColor)
-            }
-            SubscriptionPlan.PRO -> {
-                FeatureItem("Tout le plan Starter", textColor)
-                FeatureItem(stringResource(R.string.subscription_pro_bank_feature), textColor)
-                FeatureItem(stringResource(R.string.google_backup_title), textColor)
-                FeatureItem("Support prioritaire", textColor)
-            }
+private fun PlanFeatures(
+    plan: SubscriptionPlan,
+    textColor: Color,
+    mutedColor: Color
+) {
+    val features = when (plan) {
+        SubscriptionPlan.FREE -> listOf(
+            R.string.subscription_free_feature_core,
+            R.string.subscription_free_feature_limit,
+            R.string.subscription_free_feature_csv
+        )
+        SubscriptionPlan.PRO -> listOf(
+            R.string.subscription_pro_feature_unlimited,
+            R.string.subscription_pro_feature_backup,
+            R.string.subscription_pro_feature_csv,
+            R.string.subscription_pro_feature_support
+        )
+    }
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        features.forEach { res ->
+            FeatureItem(stringResource(res), textColor)
         }
     }
 }
@@ -256,12 +279,8 @@ private fun FeatureItem(text: String, textColor: Color) {
             Icons.Default.Check,
             contentDescription = null,
             tint = textColor,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(18.dp)
         )
-        Text(
-            text = text,
-            fontSize = 14.sp,
-            color = textColor
-        )
+        Text(text = text, fontSize = 14.sp, color = textColor, lineHeight = 18.sp)
     }
 }

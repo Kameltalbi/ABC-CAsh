@@ -2,7 +2,7 @@
 
 ## 📦 Description
 
-Application Android native en Kotlin avec Jetpack Compose pour la gestion de trésorerie et recouvrement (factures, paiements, dépenses, prévisions).
+Application Android native en Kotlin (Jetpack Compose) pour la gestion de trésorerie « Juste Assez » : revenus, dépenses, prévisions, catégories, sauvegarde Google Drive. Plans Free (30 transactions/mois) et Pro illimité.
 
 ## 🏗️ Architecture
 

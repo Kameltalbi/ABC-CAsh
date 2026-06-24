@@ -144,7 +144,7 @@ fun SettingsHubScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFFF5F7FA))
+            .background(Color.White)
     ) {
         Row(
             modifier = Modifier

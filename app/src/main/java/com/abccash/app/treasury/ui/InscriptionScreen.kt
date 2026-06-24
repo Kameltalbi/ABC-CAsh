@@ -61,7 +61,7 @@ fun InscriptionScreen(
     }
 
     Scaffold(
-        containerColor = AppColors.Background
+        containerColor = Color.White
     ) { padding ->
         Column(
             modifier = Modifier
@@ -84,7 +84,7 @@ fun InscriptionScreen(
                 text = stringResource(R.string.signup_admin_title),
                 fontSize = 26.sp,
                 fontWeight = FontWeight.Bold,
-                color = AppColors.TextPrimary,
+                color = MaterialTheme.colorScheme.primary,
                 textAlign = TextAlign.Center
             )
 
@@ -187,6 +187,16 @@ fun InscriptionScreen(
                         } else {
                             PasswordVisualTransformation()
                         },
+                        trailingIcon = {
+                            TextButton(onClick = { showPassword = !showPassword }) {
+                                Text(
+                                    text = stringResource(
+                                        if (showPassword) R.string.hide_password else R.string.show_password
+                                    ),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        },
                         fieldColors = fieldColors
                     )
 
@@ -202,7 +212,21 @@ fun InscriptionScreen(
                         errorText = uiState.confirmPasswordError?.let { stringResource(authErrorRes(it)) },
                         keyboardType = KeyboardType.Password,
                         imeAction = ImeAction.Done,
-                        visualTransformation = PasswordVisualTransformation(),
+                        visualTransformation = if (showPassword) {
+                            VisualTransformation.None
+                        } else {
+                            PasswordVisualTransformation()
+                        },
+                        trailingIcon = {
+                            TextButton(onClick = { showPassword = !showPassword }) {
+                                Text(
+                                    text = stringResource(
+                                        if (showPassword) R.string.hide_password else R.string.show_password
+                                    ),
+                                    fontSize = 12.sp
+                                )
+                            }
+                        },
                         fieldColors = fieldColors
                     )
 
@@ -238,7 +262,11 @@ fun InscriptionScreen(
                             .fillMaxWidth()
                             .height(52.dp),
                         enabled = !uiState.isLoading,
-                        shape = RoundedCornerShape(12.dp)
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = Color.White
+                        )
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(

@@ -6,10 +6,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
-import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AdminPanelSettings
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.MoneyOff
+import androidx.compose.material.icons.filled.Payments
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -94,7 +94,7 @@ fun OnboardingAdminScreen(
             )
             
             PrivilegeItem(
-                icon = Icons.Default.AccountBalance,
+                icon = Icons.Default.Payments,
                 title = stringResource(R.string.onboarding_privilege_collection_title),
                 description = stringResource(R.string.onboarding_privilege_collection_desc)
             )
