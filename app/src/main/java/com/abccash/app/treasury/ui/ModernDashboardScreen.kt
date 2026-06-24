@@ -264,22 +264,20 @@ private fun FastBudgetHeader(
             ) {
                 Text(
                     text = stringResource(R.string.dashboard_header_label),
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color.White.copy(alpha = 0.82f),
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White.copy(alpha = 0.9f),
                     maxLines = 1
                 )
-                if (companyName.isNotBlank()) {
-                    Text(
-                        text = companyName,
-                        fontSize = 17.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f, fill = false)
-                    )
-                }
+                Text(
+                    text = companyName.trim().ifBlank { stringResource(R.string.company_fallback) },
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false)
+                )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 BadgedBox(

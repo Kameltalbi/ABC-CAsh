@@ -775,39 +775,30 @@ private fun MainAppScaffold(
                         .find { it.id == uiState.currentUserId }
                         ?.nom
                         .orEmpty()
-                    if (uiState.subscription.plan.hasDashboardAccess) {
-                        ModernDashboardScreen(
-                            userRole = userRole,
-                            permissions = permissions,
-                            userName = userName,
-                            companyName = uiState.entreprise?.nom.orEmpty(),
-                            invoices = uiState.invoices,
-                            expenses = uiState.expenses,
-                            bankAccounts = uiState.bankAccounts,
-                            entrepriseId = uiState.entrepriseId,
-                            userPreferences = userPreferences,
-                            onNavigateToAddIncome = {
-                                navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
-                            },
-                            onNavigateToAddExpense = {
-                                navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
-                            },
-                            onNavigateToSubscription = {
-                                navigateToMainTab(Screen.Subscription.route)
-                            },
-                            onNavigateToBankAccounts = {
-                                navController.navigate(SettingsRoutes.OPTIONS_BANK)
-                            },
-                            onOpenDrawer = { openDrawer() }
-                        )
-                    } else {
-                        SubscriptionFeatureGateScreen(
-                            titleRes = R.string.nav_home,
-                            messageRes = R.string.subscription_dashboard_gate_message,
-                            onUpgrade = { navigateToMainTab(Screen.Subscription.route) },
-                            onOpenDrawer = { openDrawer() }
-                        )
-                    }
+                    ModernDashboardScreen(
+                        userRole = userRole,
+                        permissions = permissions,
+                        userName = userName,
+                        companyName = uiState.entreprise?.nom.orEmpty(),
+                        invoices = uiState.invoices,
+                        expenses = uiState.expenses,
+                        bankAccounts = uiState.bankAccounts,
+                        entrepriseId = uiState.entrepriseId,
+                        userPreferences = userPreferences,
+                        onNavigateToAddIncome = {
+                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
+                        },
+                        onNavigateToAddExpense = {
+                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
+                        },
+                        onNavigateToSubscription = {
+                            navigateToMainTab(Screen.Subscription.route)
+                        },
+                        onNavigateToBankAccounts = {
+                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
+                        },
+                        onOpenDrawer = { openDrawer() }
+                    )
                 }
                 Screen.Subscription.route -> {
                     SubscriptionScreen(

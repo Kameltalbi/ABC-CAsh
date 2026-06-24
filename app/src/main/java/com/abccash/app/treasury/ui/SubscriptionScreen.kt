@@ -253,7 +253,7 @@ private fun PlanFeatures(
     val features = when (plan) {
         SubscriptionPlan.FREE -> listOf(
             PlanFeature(R.string.subscription_free_feature_limit, true),
-            PlanFeature(R.string.subscription_free_feature_no_dashboard, false),
+            PlanFeature(R.string.subscription_free_feature_dashboard, true),
             PlanFeature(R.string.subscription_free_feature_accounts, true),
             PlanFeature(R.string.subscription_free_feature_receipts, true),
             PlanFeature(R.string.subscription_free_feature_no_ocr, false),

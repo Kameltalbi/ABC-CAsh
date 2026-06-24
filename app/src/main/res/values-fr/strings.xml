@@ -100,7 +100,7 @@
     <string name="dashboard_period_year">Année</string>
     <string name="dashboard_period_month">Mois</string>
     <string name="dashboard_overview_title">Vue d\'ensemble</string>
-    <string name="dashboard_header_label">Tableau de bord</string>
+    <string name="dashboard_header_label">Dashboard</string>
     <string name="dashboard_summary">Sommaire</string>
     <string name="dashboard_summary_income">Revenus</string>
     <string name="dashboard_summary_expense">Dépenses</string>
@@ -494,6 +494,7 @@
     <string name="subscription_current_plan">Plan actuel</string>
     <string name="subscription_stay_free">Rester en Gratuit</string>
     <string name="subscription_free_feature_limit">30 éléments / mois (transactions + prévisions)</string>
+    <string name="subscription_free_feature_dashboard">Tableau de bord avec graphiques d\'analyse</string>
     <string name="subscription_free_feature_no_dashboard">Pas de tableau de bord ni graphiques d\'analyse</string>
     <string name="subscription_free_feature_accounts">Jusqu\'à 2 comptes (1 banque + 1 caisse espèces)</string>
     <string name="subscription_free_feature_receipts">Saisie manuelle + photo du reçu sur Google Drive</string>

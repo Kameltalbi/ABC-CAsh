@@ -503,6 +503,7 @@
     <string name="subscription_current_plan">Current plan</string>
     <string name="subscription_stay_free">Keep Free plan</string>
     <string name="subscription_free_feature_limit">30 items per month (transactions + forecasts)</string>
+    <string name="subscription_free_feature_dashboard">Dashboard with analysis charts</string>
     <string name="subscription_free_feature_no_dashboard">No dashboard or analysis charts</string>
     <string name="subscription_free_feature_accounts">Up to 2 accounts (1 bank + 1 cash)</string>
     <string name="subscription_free_feature_receipts">Manual entry + receipt photo on Google Drive</string>
