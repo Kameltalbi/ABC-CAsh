@@ -518,11 +518,24 @@ fun BankAccountFormSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
+            val openingLocked = initialAccount != null
             OutlinedTextField(
                 value = openingText,
-                onValueChange = { openingText = it },
+                onValueChange = { if (!openingLocked) openingText = it },
                 label = { Text(stringResource(R.string.bank_account_opening_balance)) },
-                supportingText = { Text(stringResource(R.string.bank_account_opening_balance_hint)) },
+                supportingText = {
+                    Text(
+                        stringResource(
+                            if (openingLocked) {
+                                R.string.bank_account_opening_balance_locked
+                            } else {
+                                R.string.bank_account_opening_balance_hint
+                            }
+                        )
+                    )
+                },
+                readOnly = openingLocked,
+                enabled = !openingLocked,
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),

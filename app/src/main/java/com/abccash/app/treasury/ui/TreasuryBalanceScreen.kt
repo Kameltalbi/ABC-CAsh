@@ -59,6 +59,12 @@ private object TreasuryScreenTheme {
     val Card = Color.White
     val Grid = Color(0xFFE2E8F0)
     val Line = Color(0xFF1E293B)
+
+    // Per-rubric accents (derived from green / red families)
+    val RealizedAccent = Color(0xFF0D9488)  // teal green
+    val ForecastAccent = Color(0xFF10B981)  // emerald green
+    val IncomeAccent = Color(0xFF16A34A)    // leaf green
+    val ExpenseAccent = Color(0xFFEF4444)   // red
 }
 
 @Composable
@@ -122,9 +128,13 @@ fun TreasuryBalanceScreen(
 
     val yearTotals = remember(invoices, expenses, bankAccounts, displayYear) {
         val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
-        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, displayYear, openingBalance)
-        val yearEndForecast = rows.lastOrNull()?.forecastBalance
-            ?: TreasuryCalculations.yearlyForecastBalance(invoices, expenses, displayYear, openingBalance)
+        val rows = TreasuryCalculations.calendarYearChartRows(
+            invoices = invoices,
+            expenses = expenses,
+            year = displayYear,
+            openingBalance = openingBalance
+        )
+        val yearEndForecast = rows.lastOrNull()?.forecastCumulative ?: openingBalance
         TreasuryYearTotals(
             collected = TreasuryCalculations.yearlyCollections(invoices, displayYear),
             pendingIncome = TreasuryCalculations.yearlyPendingIncome(invoices, displayYear),
@@ -179,16 +189,56 @@ fun TreasuryBalanceScreen(
             onOpenDrawer = onOpenDrawer
         )
 
-        TreasuryKpiCard(
-            title = stringResource(R.string.treasury_realized_balance),
-            amount = formatWhole(realizedNow),
-            amountColor = if (realizedNow >= 0) TreasuryScreenTheme.Positive else TreasuryScreenTheme.Negative,
-            modifier = Modifier.fillMaxWidth()
-        )
+        val totalAccountsBalance = realizedNow + yearTotals.openingFromAccounts
+        val realizedColor = if (realizedNow >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
+        val totalAccountsColor = if (totalAccountsBalance >= 0) {
+            TreasuryScreenTheme.RealizedAccent
+        } else {
+            TreasuryScreenTheme.Negative
+        }
+        val forecastColor = if (yearTotals.balance >= 0) TreasuryScreenTheme.ForecastAccent else TreasuryScreenTheme.Negative
 
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_total_accounts_balance),
+                amount = formatWhole(totalAccountsBalance),
+                subtitle = if (yearTotals.openingFromAccounts != 0.0) {
+                    stringResource(
+                        R.string.treasury_total_accounts_balance_breakdown,
+                        formatWhole(yearTotals.openingFromAccounts),
+                        formatWhole(realizedNow)
+                    )
+                } else {
+                    stringResource(R.string.treasury_total_accounts_balance_hint)
+                },
+                amountColor = totalAccountsColor,
+                accent = totalAccountsColor,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+            TreasuryKpiCard(
+                title = stringResource(R.string.forecast_balance),
+                amount = formatWhole(yearTotals.balance),
+                subtitle = stringResource(R.string.treasury_december_subtitle),
+                amountColor = forecastColor,
+                accent = forecastColor,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TreasuryKpiCard(
                 title = stringResource(R.string.collections),
@@ -196,10 +246,13 @@ fun TreasuryBalanceScreen(
                 subtitle = if (yearTotals.pendingIncome > 0) {
                     stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingIncome))
                 } else {
-                    stringResource(R.string.treasury_year_range)
+                    null
                 },
-                amountColor = TreasuryScreenTheme.Positive,
-                modifier = Modifier.weight(1f)
+                amountColor = TreasuryScreenTheme.IncomeAccent,
+                accent = TreasuryScreenTheme.IncomeAccent,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
             TreasuryKpiCard(
                 title = stringResource(R.string.expenses),
@@ -207,35 +260,23 @@ fun TreasuryBalanceScreen(
                 subtitle = if (yearTotals.pendingExpenses > 0) {
                     stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingExpenses))
                 } else {
-                    stringResource(R.string.treasury_year_range)
+                    null
                 },
-                amountColor = TreasuryScreenTheme.Accent,
-                modifier = Modifier.weight(1f)
+                amountColor = TreasuryScreenTheme.ExpenseAccent,
+                accent = TreasuryScreenTheme.ExpenseAccent,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
             )
         }
 
-        TreasuryKpiCard(
-            title = stringResource(R.string.forecast_balance),
-            amount = formatWhole(yearTotals.balance),
-            subtitle = stringResource(R.string.treasury_december_subtitle),
-            amountColor = if (yearTotals.balance >= 0) {
-                TreasuryScreenTheme.Positive
-            } else {
-                TreasuryScreenTheme.Negative
-            },
-            modifier = Modifier.fillMaxWidth()
-        )
-
         if (yearTotals.openingFromAccounts != 0.0) {
             TreasuryKpiCard(
-                title = stringResource(R.string.treasury_opening_balance_accounts),
-                amount = formatWhole(yearTotals.openingFromAccounts),
-                subtitle = stringResource(R.string.treasury_opening_balance_accounts_hint),
-                amountColor = if (yearTotals.openingFromAccounts >= 0) {
-                    TreasuryScreenTheme.Positive
-                } else {
-                    TreasuryScreenTheme.Negative
-                },
+                title = stringResource(R.string.treasury_realized_balance),
+                amount = formatWhole(realizedNow),
+                subtitle = stringResource(R.string.treasury_realized_balance_hint),
+                amountColor = realizedColor,
+                accent = realizedColor,
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -316,30 +357,32 @@ private fun TreasuryKpiCard(
     amount: String,
     subtitle: String? = null,
     amountColor: Color,
+    accent: Color = amountColor,
     modifier: Modifier = Modifier
 ) {
     Card(
         modifier = modifier,
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = TreasuryScreenTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = accent.copy(alpha = 0.10f)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 11.dp, vertical = 9.dp),
             verticalArrangement = Arrangement.spacedBy(2.dp)
         ) {
             Text(
                 text = title,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
+                fontSize = 11.sp,
+                fontWeight = FontWeight.SemiBold,
                 color = TreasuryScreenTheme.Muted,
-                maxLines = 1
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = amount,
-                fontSize = 17.sp,
+                fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = amountColor,
                 maxLines = 1,
@@ -348,7 +391,7 @@ private fun TreasuryKpiCard(
             subtitle?.let {
                 Text(
                     text = it,
-                    fontSize = 10.sp,
+                    fontSize = 9.sp,
                     color = TreasuryScreenTheme.Muted,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -358,9 +401,12 @@ private fun TreasuryKpiCard(
     }
 }
 
+private fun TreasuryCalculations.RollingTreasuryRow.displayBalance(now: YearMonth): Double =
+    if (month < now) realizedCumulative else forecastCumulative
+
 @Composable
 private fun TreasuryTimelineChart(
-    rows: List<TreasuryCalculations.MonthlyTreasuryRow>,
+    rows: List<TreasuryCalculations.RollingTreasuryRow>,
     formatChartAmount: (Double) -> String,
     formatWhole: (Double) -> String,
     yearEndForecast: Double
@@ -381,23 +427,29 @@ private fun TreasuryTimelineChart(
                 fontWeight = FontWeight.Bold,
                 color = TreasuryScreenTheme.Primary
             )
-            ChartLegendDot(
-                color = AppColors.BrandBlue,
-                label = stringResource(R.string.treasury_chart_forecast)
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                ChartLegendDot(
+                    color = TreasuryScreenTheme.Positive,
+                    label = stringResource(R.string.treasury_chart_realized)
+                )
+                ChartLegendDot(
+                    color = AppColors.BrandBlue,
+                    label = stringResource(R.string.treasury_chart_forecast)
+                )
+            }
             Text(
                 text = stringResource(R.string.treasury_cumulative_formula),
                 fontSize = 11.sp,
                 color = TreasuryScreenTheme.Muted
             )
 
-            val balances = rows.map { it.forecastBalance }
+            val now = YearMonth.now()
+            val balances = rows.map { it.displayBalance(now) }
             val minY = balances.minOrNull() ?: 0.0
             val maxY = balances.maxOrNull() ?: 0.0
             val range = max(maxY - minY, 1.0)
             val yAxisWidth = 34.dp
             val chartHeight = 130.dp
-            val now = YearMonth.now()
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -405,7 +457,7 @@ private fun TreasuryTimelineChart(
             ) {
                 Spacer(modifier = Modifier.width(yAxisWidth))
                 rows.forEach { row ->
-                    val balance = row.forecastBalance
+                    val balance = row.displayBalance(now)
                     Text(
                         text = formatChartAmount(balance),
                         modifier = Modifier.weight(1f),
@@ -489,7 +541,7 @@ private data class TreasuryYearTotals(
     val pendingExpenses: Double,
     val balance: Double,
     val openingFromAccounts: Double,
-    val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
+    val rows: List<TreasuryCalculations.RollingTreasuryRow>
 )
 
 @Composable

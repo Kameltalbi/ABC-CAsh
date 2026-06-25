@@ -15,6 +15,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Business
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Notifications
@@ -33,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.locale.AppLanguage
+import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.ui.theme.AppColors
 import com.abccash.app.treasury.data.SubscriptionPlan
@@ -40,6 +43,7 @@ import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
 import com.abccash.app.treasury.ui.googleSignInErrorMessage
+import com.abccash.app.treasury.ui.resolveTreasuryMessage
 import kotlinx.coroutines.launch
 
 // Palette alignée ABC Cash — bleu principal, pas de violet.
@@ -72,6 +76,8 @@ fun SettingsScreen(
     onUpgradeSubscription: () -> Unit,
     onExportCsv: (Int) -> String?,
     onDeleteAccount: (deleteDriveBackup: Boolean, onResult: (String?) -> Unit) -> Unit,
+    onDeleteAllTransactions: (onResult: (String?) -> Unit) -> Unit = { it(null) },
+    onDeleteTransactionsForMonth: (month: java.time.YearMonth, onResult: (String?) -> Unit) -> Unit = { _, cb -> cb(null) },
     onNavigate: (String) -> Unit,
     onOpenDrawer: () -> Unit = {},
     onAccountDeleted: () -> Unit = {}
@@ -92,6 +98,11 @@ fun SettingsScreen(
     var deleteDriveBackup by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
     var deleteError by remember { mutableStateOf<String?>(null) }
+    var showDeleteAllTxConfirm by remember { mutableStateOf(false) }
+    var isDeletingAllTx by remember { mutableStateOf(false) }
+    var deleteAllTxError by remember { mutableStateOf<String?>(null) }
+    var deleteTxWholeScope by remember { mutableStateOf(true) }
+    var deleteTxMonth by remember { mutableStateOf(java.time.YearMonth.now()) }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
     val expandedSections = remember {
         mutableStateMapOf(
@@ -201,6 +212,132 @@ fun SettingsScreen(
                         deleteDriveBackup = false
                     },
                     enabled = !isDeleting
+                ) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
+    if (showDeleteAllTxConfirm) {
+        AlertDialog(
+            onDismissRequest = {
+                if (!isDeletingAllTx) {
+                    showDeleteAllTxConfirm = false
+                    deleteAllTxError = null
+                }
+            },
+            title = { Text(stringResource(R.string.settings_delete_transactions_title)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isDeletingAllTx) { deleteTxWholeScope = true },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = deleteTxWholeScope,
+                            onClick = { deleteTxWholeScope = true },
+                            enabled = !isDeletingAllTx
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_delete_scope_all),
+                            fontSize = 14.sp,
+                            color = SettingsTextPrimary
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable(enabled = !isDeletingAllTx) { deleteTxWholeScope = false },
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = !deleteTxWholeScope,
+                            onClick = { deleteTxWholeScope = false },
+                            enabled = !isDeletingAllTx
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_delete_scope_month),
+                            fontSize = 14.sp,
+                            color = SettingsTextPrimary
+                        )
+                    }
+                    if (!deleteTxWholeScope) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.Center,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = { deleteTxMonth = deleteTxMonth.minusMonths(1) },
+                                enabled = !isDeletingAllTx
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowLeft,
+                                    contentDescription = stringResource(R.string.previous_month)
+                                )
+                            }
+                            Text(
+                                text = AppLocale.monthYear(deleteTxMonth),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = SettingsTextPrimary
+                            )
+                            IconButton(
+                                onClick = { deleteTxMonth = deleteTxMonth.plusMonths(1) },
+                                enabled = !isDeletingAllTx
+                            ) {
+                                Icon(
+                                    Icons.Default.KeyboardArrowRight,
+                                    contentDescription = stringResource(R.string.next_month)
+                                )
+                            }
+                        }
+                    }
+                    Text(
+                        text = stringResource(R.string.settings_delete_transactions_warning),
+                        fontSize = 12.sp,
+                        color = AppColors.TextSecondary
+                    )
+                    deleteAllTxError?.let { Text(it, color = SettingsDanger, fontSize = 13.sp) }
+                }
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        isDeletingAllTx = true
+                        deleteAllTxError = null
+                        val callback: (String?) -> Unit = { error ->
+                            isDeletingAllTx = false
+                            if (error == null) {
+                                showDeleteAllTxConfirm = false
+                            } else {
+                                deleteAllTxError = context.resolveTreasuryMessage(error) ?: error
+                            }
+                        }
+                        if (deleteTxWholeScope) {
+                            onDeleteAllTransactions(callback)
+                        } else {
+                            onDeleteTransactionsForMonth(deleteTxMonth, callback)
+                        }
+                    },
+                    enabled = !isDeletingAllTx
+                ) {
+                    if (isDeletingAllTx) {
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), strokeWidth = 2.dp)
+                    } else {
+                        Text(stringResource(R.string.delete), color = SettingsDanger)
+                    }
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showDeleteAllTxConfirm = false },
+                    enabled = !isDeletingAllTx
                 ) {
                     Text(stringResource(R.string.cancel))
                 }
@@ -492,10 +629,25 @@ fun SettingsScreen(
 
             item {
                 TextButton(
+                    onClick = { showDeleteAllTxConfirm = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp)
+                ) {
+                    Text(
+                        stringResource(R.string.settings_delete_all_transactions),
+                        color = SettingsDanger,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
+
+            item {
+                TextButton(
                     onClick = { showDeleteConfirm = true },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 8.dp)
+                        .padding(bottom = 8.dp)
                 ) {
                     Text(
                         stringResource(R.string.settings_delete_account),

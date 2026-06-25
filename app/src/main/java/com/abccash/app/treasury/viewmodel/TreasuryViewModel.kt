@@ -7,6 +7,7 @@ import com.abccash.app.treasury.data.*
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.export.TreasuryCsvExporter
+import com.abccash.app.treasury.importer.BankStatementEntry
 import com.abccash.app.treasury.repository.TreasuryRepository
 import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -20,6 +21,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
+import java.util.Locale
 import java.time.format.DateTimeFormatter
 
 data class TreasuryUiState(
@@ -1066,6 +1068,134 @@ class TreasuryViewModel(
 
     fun clearImportFeedback() {
         _uiState.update { it.copy(importFeedback = null) }
+    }
+
+    fun deleteAllTransactions(onResult: (String?) -> Unit) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
+            return
+        }
+        viewModelScope.launch {
+            val error = repository.deleteAllTransactions(entrepriseId)
+            onResult(error)
+            if (error == null) {
+                scheduleGoogleBackup()
+                refreshSubscription()
+            }
+        }
+    }
+
+    /** Deletes the transactions shown for a given month (income + expenses), keeping the account. */
+    fun deleteTransactionsForMonth(month: YearMonth, onResult: (String?) -> Unit) {
+        if (requireEntrepriseId() == null) {
+            onResult(TreasuryMessage.SESSION_EXPIRED_RECONNECT)
+            return
+        }
+        viewModelScope.launch {
+            val state = _uiState.value
+            val invoiceIds = state.invoices.filter { it.transactionDateIn(month) }.map { it.id }
+            val expenseIds = state.expenses
+                .filter { it.isPaid && YearMonth.from(it.date) == month }
+                .map { it.id }
+            invoiceIds.forEach { repository.deleteInvoice(it) }
+            expenseIds.forEach { repository.deleteExpense(it) }
+            onResult(null)
+            scheduleGoogleBackup()
+            refreshSubscription()
+        }
+    }
+
+    /**
+     * Imports settled bank statement operations: credits become collected income (invoices),
+     * debits become paid expenses. Categories are left as default so the user can adjust later.
+     * Duplicate operations (same date, amount and label) are skipped.
+     */
+    fun importBankStatement(
+        entries: List<BankStatementEntry>,
+        onResult: (imported: Int, skipped: Int) -> Unit
+    ) {
+        val entrepriseId = requireEntrepriseId()
+        if (entrepriseId == null) {
+            onResult(0, 0)
+            return
+        }
+        viewModelScope.launch {
+            val settings = userPreferences.observeInvoiceSettings(entrepriseId).first()
+            val current = _uiState.value
+            val incomeSignatures = current.invoices
+                .map { transactionSignature(it.dueDate, it.totalAmount, it.clientName) }
+                .toMutableSet()
+            val expenseSignatures = current.expenses
+                .map { transactionSignature(it.date, it.amount, it.label) }
+                .toMutableSet()
+
+            var imported = 0
+            var skipped = 0
+
+            for (entry in entries) {
+                val signature = transactionSignature(entry.date, entry.amount, entry.label)
+                if (entry.isCredit) {
+                    if (!incomeSignatures.add(signature)) {
+                        skipped++
+                        continue
+                    }
+                    val number = repository.nextInvoiceNumber(entrepriseId, entry.date.year, settings)
+                    val invoice = Invoice(
+                        invoiceNumber = number,
+                        clientName = entry.label,
+                        totalAmount = entry.amount,
+                        dueDate = entry.date,
+                        entrepriseId = entrepriseId,
+                        category = RevenueCategory.OTHER
+                    )
+                    val error = repository.addInvoice(invoice, enforceLimit = false)
+                    if (error == null) {
+                        repository.addPayment(
+                            Payment(
+                                invoiceId = invoice.id,
+                                amount = entry.amount,
+                                date = entry.date,
+                                method = PaymentMethod.TRANSFER
+                            )
+                        )
+                        imported++
+                    } else {
+                        skipped++
+                    }
+                } else {
+                    if (!expenseSignatures.add(signature)) {
+                        skipped++
+                        continue
+                    }
+                    val error = repository.addExpense(
+                        Expense(
+                            label = entry.label,
+                            amount = entry.amount,
+                            date = entry.date,
+                            isPaid = true,
+                            paymentMethod = PaymentMethod.TRANSFER,
+                            entrepriseId = entrepriseId,
+                            category = ExpenseCategory.OTHER
+                        ),
+                        enforceLimit = false
+                    )
+                    if (error == null) imported++ else skipped++
+                }
+            }
+
+            onResult(imported, skipped)
+            if (imported > 0) {
+                scheduleGoogleBackup()
+                refreshSubscription()
+            }
+        }
+    }
+
+    private fun transactionSignature(date: LocalDate, amount: Double, label: String): String {
+        val normalizedAmount = Math.round(amount * 1000.0)
+        val normalizedLabel = label.trim().lowercase(Locale.ROOT)
+        return "$date|$normalizedAmount|$normalizedLabel"
     }
 
     fun updateInvoice(

@@ -61,6 +61,7 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
     object AddTransaction : Screen("add_transaction/{type}", R.string.transactions, Icons.Default.Add)
     object BankReconciliation : Screen("bank_reconciliation", R.string.bank_account, Icons.Default.AccountBalance)
+    object BankStatementImport : Screen("bank_statement_import", R.string.import_statement_title, Icons.Default.FileUpload)
     object BankAccounts : Screen("bank_accounts", R.string.bank_accounts_title, Icons.Default.AccountBalance)
     object BankAccountDetail : Screen("bank_account/{accountId}", R.string.bank_account_detail, Icons.Default.AccountBalance)
     object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
@@ -655,6 +656,26 @@ fun TreasuryApp(
                 onLogout = { logout() }
             )
         }
+
+        composable(Screen.BankStatementImport.route) {
+            val role = currentUserRole ?: uiState.currentUserRole
+            val permissions = currentPermissions.ifEmpty { uiState.permissions }
+            val canImport = role == UserRole.ADMIN ||
+                hasPermission(role, permissions, UserPermission.MANAGE_EXPENSES)
+            if (canImport) {
+                BankStatementImportScreen(
+                    onBack = { navController.popBackStack() },
+                    onConfirm = { entries, onResult ->
+                        viewModel.importBankStatement(entries, onResult)
+                    }
+                )
+            } else {
+                AccessDeniedScreen(
+                    message = stringResource(R.string.access_denied),
+                    onBack = { navController.popBackStack() }
+                )
+            }
+        }
     }
     }
 }
@@ -840,6 +861,9 @@ private fun MainAppScaffold(
                         onDeleteExpense = viewModel::deleteExpense,
                         onDeleteExpenses = viewModel::deleteExpenses,
                         onValidateExpense = viewModel::validateForecastExpense,
+                        onNavigateToImportStatement = {
+                            navController.navigate(Screen.BankStatementImport.route)
+                        },
                         onOpenDrawer = { openDrawer() },
                         customExpenseCategories = customExpense
                     )
@@ -920,6 +944,8 @@ private fun MainAppScaffold(
                         onUpgradeSubscription = { navigateToMainTab(Screen.Subscription.route) },
                         onExportCsv = viewModel::buildCsvExport,
                         onDeleteAccount = viewModel::deleteAccountAndData,
+                        onDeleteAllTransactions = viewModel::deleteAllTransactions,
+                        onDeleteTransactionsForMonth = viewModel::deleteTransactionsForMonth,
                         onNavigate = { route -> navController.navigate(route) },
                         onOpenDrawer = { openDrawer() },
                         onAccountDeleted = onLogout

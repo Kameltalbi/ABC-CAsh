@@ -193,6 +193,12 @@
     <string name="settings_biometric_lock">Biometric / fingerprint lock on app launch</string>
     <string name="settings_export_csv_excel">Export as CSV (Excel)</string>
     <string name="settings_export_csv_hint">Income and expenses with categories (meals, travel, etc.) for your accountant.</string>
+    <string name="settings_delete_all_transactions">Delete transactions</string>
+    <string name="settings_delete_transactions_title">Delete transactions</string>
+    <string name="settings_delete_scope_all">All transactions</string>
+    <string name="settings_delete_scope_month">A specific month</string>
+    <string name="settings_delete_transactions_warning">Your account, contacts and bank accounts are kept. This action cannot be undone.</string>
+    <string name="settings_delete_all_transactions_done">Transactions have been deleted.</string>
     <string name="settings_delete_account">Delete my account and data</string>
     <string name="settings_delete_account_confirm_title">Delete account?</string>
     <string name="settings_delete_account_confirm_message">All your transactions, forecasts and receipts on this device will be permanently deleted. This action cannot be undone.</string>
@@ -258,6 +264,7 @@
     <string name="bank_account_iban_last4">Last 4 digits of IBAN</string>
     <string name="bank_account_opening_balance">Opening balance</string>
     <string name="bank_account_opening_balance_hint">Cash in the account when you start (used for the Treasury page)</string>
+    <string name="bank_account_opening_balance_locked">Set once at setup and locked. Record later changes as transactions.</string>
     <string name="bank_account_alert_threshold_label">Low balance alert (optional)</string>
     <string name="bank_account_alert_threshold">Alert below %1$s</string>
     <string name="bank_account_set_default">Default account for bank movements</string>
@@ -637,6 +644,10 @@
     <string name="treasury_rolling_title">Treasury outlook</string>
     <string name="treasury_rolling_range">%1$s → %2$s</string>
     <string name="treasury_realized_balance">Current balance (realized)</string>
+    <string name="treasury_realized_balance_hint">Income − expenses, without opening balance</string>
+    <string name="treasury_total_accounts_balance">Total balance (accounts)</string>
+    <string name="treasury_total_accounts_balance_hint">Matches bank and cash accounts</string>
+    <string name="treasury_total_accounts_balance_breakdown">Opening %1$s + activity %2$s</string>
     <string name="treasury_forecast_period_end">Forecast at period end</string>
     <string name="treasury_upcoming_forecasts">Upcoming due dates</string>
     <string name="treasury_next_90_days">Next 90 days</string>
@@ -883,6 +894,16 @@
     <!-- MISC UI -->
     <string name="new_transaction">New transaction</string>
     <string name="import_action">Import</string>
+    <string name="import_statement_action">Import statement</string>
+    <string name="import_statement_title">Import bank statement</string>
+    <string name="import_statement_intro">Choose a CSV or Excel (.xlsx) statement. Columns are detected automatically: date, description, amount (or debit/credit). Credits become income, debits become expenses. Categories stay empty so you can adjust them later.</string>
+    <string name="import_statement_none">No valid operation found. Check the amount and date columns.</string>
+    <string name="import_statement_credits">Credits (%1$d)</string>
+    <string name="import_statement_debits">Debits (%1$d)</string>
+    <string name="import_statement_confirm">Import %1$d operations</string>
+    <string name="import_statement_result">%1$d operations imported, %2$d skipped (duplicates).</string>
+    <string name="cannot_read_file">Unable to read the file.</string>
+    <string name="import_failed_reason">Import failed: %1$s</string>
     <string name="search">Search</string>
     <string name="clear">Clear</string>
     <string name="actions">Actions</string>

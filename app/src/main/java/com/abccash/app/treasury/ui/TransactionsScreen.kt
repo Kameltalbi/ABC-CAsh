@@ -14,6 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -103,6 +104,7 @@ fun TransactionsScreen(
     onDeleteExpense: (String) -> Unit,
     onDeleteExpenses: (Collection<String>) -> Unit = {},
     onValidateExpense: (String, LocalDate, PaymentMethod, LocalDate, (String?) -> Unit) -> Unit = { _, _, _, _, onResult -> onResult(null) },
+    onNavigateToImportStatement: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     customExpenseCategories: List<String> = emptyList()
 ) {
@@ -132,20 +134,9 @@ fun TransactionsScreen(
     var paymentError by remember { mutableStateOf<String?>(null) }
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
-    var selectedIncomeIds by remember { mutableStateOf(setOf<String>()) }
-    var selectedExpenseIds by remember { mutableStateOf(setOf<String>()) }
-    var showBulkDeleteConfirm by remember { mutableStateOf(false) }
-    var bulkDeleteIncome by remember { mutableStateOf(false) }
 
     LaunchedEffect(selectedMonth) {
         listFilter = TransactionListFilter.ALL
-        selectedIncomeIds = emptySet()
-        selectedExpenseIds = emptySet()
-    }
-
-    LaunchedEffect(listFilter) {
-        selectedIncomeIds = emptySet()
-        selectedExpenseIds = emptySet()
     }
 
     val datePattern = remember { DateTimeFormatter.ofPattern("dd/MM/yy") }
@@ -190,12 +181,6 @@ fun TransactionsScreen(
         result.sortedByDescending { it.date }
     }
 
-    val incomeRows = remember(filteredRows) { filteredRows.filter { it.isIncome } }
-    val expenseRows = remember(filteredRows) { filteredRows.filter { !it.isIncome } }
-    val showIncomeBulk = listFilter == TransactionListFilter.INCOME && isAdmin && incomeRows.isNotEmpty()
-    val showExpenseBulk = listFilter == TransactionListFilter.EXPENSE &&
-        (isAdmin || canManageExpense) && expenseRows.isNotEmpty()
-
     Scaffold(
         containerColor = TransactionsTheme.Background,
         floatingActionButton = {
@@ -226,6 +211,16 @@ fun TransactionsScreen(
                     fontWeight = FontWeight.Bold,
                     color = TransactionsTheme.TextPrimary
                 )
+                Spacer(Modifier.weight(1f))
+                if (canAdd) {
+                    IconButton(onClick = onNavigateToImportStatement) {
+                        Icon(
+                            imageVector = Icons.Default.FileUpload,
+                            contentDescription = stringResource(R.string.import_statement_action),
+                            tint = TransactionsTheme.Accent
+                        )
+                    }
+                }
             }
 
             TransactionListFilterRow(
@@ -244,42 +239,6 @@ fun TransactionsScreen(
                 modifier = Modifier.padding(top = 4.dp),
                 color = TransactionsTheme.Divider
             )
-
-            if (showIncomeBulk) {
-                AdminBulkSelectionBar(
-                    totalCount = incomeRows.size,
-                    selectedCount = selectedIncomeIds.size,
-                    onToggleSelectAll = {
-                        selectedIncomeIds = if (selectedIncomeIds.size == incomeRows.size) {
-                            emptySet()
-                        } else {
-                            incomeRows.mapNotNull { it.invoice?.id }.toSet()
-                        }
-                    },
-                    onDeleteSelected = {
-                        bulkDeleteIncome = true
-                        showBulkDeleteConfirm = true
-                    }
-                )
-            }
-
-            if (showExpenseBulk) {
-                AdminBulkSelectionBar(
-                    totalCount = expenseRows.size,
-                    selectedCount = selectedExpenseIds.size,
-                    onToggleSelectAll = {
-                        selectedExpenseIds = if (selectedExpenseIds.size == expenseRows.size) {
-                            emptySet()
-                        } else {
-                            expenseRows.mapNotNull { it.expense?.id }.toSet()
-                        }
-                    },
-                    onDeleteSelected = {
-                        bulkDeleteIncome = false
-                        showBulkDeleteConfirm = true
-                    }
-                )
-            }
 
             Box(
                 modifier = Modifier
@@ -317,15 +276,6 @@ fun TransactionsScreen(
                                 datePattern = datePattern,
                                 isAdmin = isAdmin,
                                 canAddPayment = canAddPayment,
-                                showSelection = showIncomeBulk,
-                                isSelected = row.invoice.id in selectedIncomeIds,
-                                onSelectionChange = { selected ->
-                                    selectedIncomeIds = if (selected) {
-                                        selectedIncomeIds + row.invoice.id
-                                    } else {
-                                        selectedIncomeIds - row.invoice.id
-                                    }
-                                },
                                 onMarkPaid = { invoiceToMarkPaid = row.invoice },
                                 onPartialPayment = {
                                     paymentError = null
@@ -340,15 +290,6 @@ fun TransactionsScreen(
                                 datePattern = datePattern,
                                 isAdmin = isAdmin,
                                 canManage = canManageExpense,
-                                showSelection = showExpenseBulk,
-                                isSelected = row.expense.id in selectedExpenseIds,
-                                onSelectionChange = { selected ->
-                                    selectedExpenseIds = if (selected) {
-                                        selectedExpenseIds + row.expense.id
-                                    } else {
-                                        selectedExpenseIds - row.expense.id
-                                    }
-                                },
                                 onEdit = { expenseToEdit = row.expense },
                                 onValidate = { expenseToValidate = row.expense },
                                 onDelete = { expenseToDelete = row.expense }
@@ -508,36 +449,6 @@ fun TransactionsScreen(
             },
             dismissButton = {
                 TextButton(onClick = { expenseToDelete = null }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
-    }
-
-    if (showBulkDeleteConfirm) {
-        val count = if (bulkDeleteIncome) selectedIncomeIds.size else selectedExpenseIds.size
-        AlertDialog(
-            onDismissRequest = { showBulkDeleteConfirm = false },
-            title = { Text(stringResource(R.string.delete_selection_question)) },
-            text = { Text(stringResource(R.string.delete_count, count)) },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                        if (bulkDeleteIncome) {
-                            onDeleteInvoices(selectedIncomeIds)
-                            selectedIncomeIds = emptySet()
-                        } else {
-                            onDeleteExpenses(selectedExpenseIds)
-                            selectedExpenseIds = emptySet()
-                        }
-                        showBulkDeleteConfirm = false
-                    }
-                ) {
-                    Text(stringResource(R.string.delete), color = Color(0xFFF44336))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showBulkDeleteConfirm = false }) {
-                    Text(stringResource(R.string.cancel))
-                }
             }
         )
     }

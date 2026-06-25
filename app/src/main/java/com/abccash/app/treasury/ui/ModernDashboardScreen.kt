@@ -475,19 +475,22 @@ private fun MonthSummaryColumn(
                 if (showIncome) {
                     SummaryAmountRow(
                         label = stringResource(R.string.dashboard_summary_income),
-                        amount = formatAmount(summary.income)
+                        amount = formatAmount(summary.income),
+                        amountColor = DashboardTheme.Income
                     )
                 }
                 if (showExpenses) {
                     SummaryAmountRow(
                         label = stringResource(R.string.dashboard_summary_expense),
-                        amount = formatSignedExpense(summary.expenses, formatAmount)
+                        amount = formatSignedExpense(summary.expenses, formatAmount),
+                        amountColor = DashboardTheme.Expense
                     )
                 }
                 SummaryAmountRow(
                     label = stringResource(R.string.total),
                     amount = formatAmount(summary.total),
-                    bold = true
+                    bold = true,
+                    amountColor = if (summary.total < 0) DashboardTheme.Expense else DashboardTheme.Income
                 )
             }
         }
@@ -503,7 +506,8 @@ private fun formatSignedExpense(amount: Double, formatAmount: (Double) -> String
 private fun SummaryAmountRow(
     label: String,
     amount: String,
-    bold: Boolean = false
+    bold: Boolean = false,
+    amountColor: Color = DashboardTheme.TextPrimary
 ) {
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -520,7 +524,7 @@ private fun SummaryAmountRow(
             text = amount,
             fontSize = if (bold) 13.sp else 12.sp,
             fontWeight = if (bold) FontWeight.Bold else FontWeight.SemiBold,
-            color = DashboardTheme.TextPrimary,
+            color = amountColor,
             maxLines = 2,
             lineHeight = 15.sp
         )

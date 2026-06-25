@@ -193,6 +193,12 @@
     <string name="settings_biometric_lock">Verrouillage biométrique / empreinte à l\'ouverture</string>
     <string name="settings_export_csv_excel">Exporter au format CSV (Excel)</string>
     <string name="settings_export_csv_hint">Revenus et dépenses avec catégories (repas, déplacements…) pour votre comptable.</string>
+    <string name="settings_delete_all_transactions">Supprimer des transactions</string>
+    <string name="settings_delete_transactions_title">Supprimer des transactions</string>
+    <string name="settings_delete_scope_all">Toutes les transactions</string>
+    <string name="settings_delete_scope_month">Un mois précis</string>
+    <string name="settings_delete_transactions_warning">Votre compte, contacts et comptes bancaires sont conservés. Cette action est irréversible.</string>
+    <string name="settings_delete_all_transactions_done">Les transactions ont été supprimées.</string>
     <string name="settings_delete_account">Supprimer mon compte et mes données</string>
     <string name="settings_delete_account_confirm_title">Supprimer le compte ?</string>
     <string name="settings_delete_account_confirm_message">Toutes vos transactions, prévisions et reçus sur cet appareil seront définitivement supprimés. Cette action est irréversible.</string>
@@ -259,6 +265,7 @@
     <string name="bank_account_iban_last4">4 derniers chiffres de l\'IBAN</string>
     <string name="bank_account_opening_balance">Solde d\'ouverture</string>
     <string name="bank_account_opening_balance_hint">Montant sur le compte au démarrage (utilisé pour la page Trésorerie)</string>
+    <string name="bank_account_opening_balance_locked">Saisi une seule fois au démarrage, puis verrouillé. Enregistrez les changements ultérieurs comme des transactions.</string>
     <string name="bank_account_alert_threshold_label">Alerte solde bas (optionnel)</string>
     <string name="bank_account_alert_threshold">Alerte en dessous de %1$s</string>
     <string name="bank_account_set_default">Compte par défaut pour les mouvements bancaires</string>
@@ -637,6 +644,10 @@
     <string name="treasury_rolling_title">Vue trésorerie</string>
     <string name="treasury_rolling_range">%1$s → %2$s</string>
     <string name="treasury_realized_balance">Solde actuel (réalisé)</string>
+    <string name="treasury_realized_balance_hint">Encaissements − dépenses, hors solde d\'ouverture</string>
+    <string name="treasury_total_accounts_balance">Solde total (comptes)</string>
+    <string name="treasury_total_accounts_balance_hint">Correspond aux comptes banque et caisse</string>
+    <string name="treasury_total_accounts_balance_breakdown">Ouverture %1$s + activité %2$s</string>
     <string name="treasury_forecast_period_end">Prévision fin de période</string>
     <string name="treasury_upcoming_forecasts">Échéances à venir</string>
     <string name="treasury_next_90_days">90 prochains jours</string>
@@ -883,6 +894,16 @@
     <!-- MISC UI -->
     <string name="new_transaction">Nouvelle transaction</string>
     <string name="import_action">Importer</string>
+    <string name="import_statement_action">Importer relevé</string>
+    <string name="import_statement_title">Importer un relevé bancaire</string>
+    <string name="import_statement_intro">Choisissez un relevé CSV ou Excel (.xlsx). Les colonnes sont détectées automatiquement : date, description, montant (ou débit/crédit). Les crédits deviennent des recettes, les débits des dépenses. Les catégories restent vides pour que vous puissiez les ajuster ensuite.</string>
+    <string name="import_statement_none">Aucune opération valide trouvée. Vérifiez les colonnes montant et date.</string>
+    <string name="import_statement_credits">Crédits (%1$d)</string>
+    <string name="import_statement_debits">Débits (%1$d)</string>
+    <string name="import_statement_confirm">Importer %1$d opérations</string>
+    <string name="import_statement_result">%1$d opérations importées, %2$d ignorées (doublons).</string>
+    <string name="cannot_read_file">Impossible de lire le fichier.</string>
+    <string name="import_failed_reason">Import impossible : %1$s</string>
     <string name="search">Rechercher</string>
     <string name="clear">Effacer</string>
     <string name="actions">Actions</string>

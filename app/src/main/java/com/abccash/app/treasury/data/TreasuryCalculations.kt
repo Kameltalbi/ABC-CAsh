@@ -279,10 +279,11 @@ object TreasuryCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         year: Int,
-        today: YearMonth = YearMonth.now()
+        today: YearMonth = YearMonth.now(),
+        openingBalance: Double = 0.0
     ): List<RollingTreasuryRow> {
-        val realizedToday = currentRealizedBalance(invoices, expenses)
-        var yearRealized = openingBalanceAtYearStart(invoices, expenses, year)
+        val realizedToday = currentRealizedBalance(invoices, expenses) + openingBalance
+        var yearRealized = openingBalanceAtYearStart(invoices, expenses, year) + openingBalance
 
         return (1..12).map { monthNumber ->
             val month = YearMonth.of(year, monthNumber)
@@ -305,7 +306,8 @@ object TreasuryCalculations {
                 month = month,
                 today = today,
                 realizedToday = realizedToday,
-                year = year
+                year = year,
+                openingBalance = openingBalance
             )
 
             RollingTreasuryRow(
@@ -326,10 +328,11 @@ object TreasuryCalculations {
         month: YearMonth,
         today: YearMonth,
         realizedToday: Double,
-        year: Int
+        year: Int,
+        openingBalance: Double = 0.0
     ): Double {
         if (month < today) {
-            var running = openingBalanceAtYearStart(invoices, expenses, year)
+            var running = openingBalanceAtYearStart(invoices, expenses, year) + openingBalance
             for (monthNumber in 1..month.monthValue) {
                 val cursor = YearMonth.of(year, monthNumber)
                 running += monthlyCollections(invoices, cursor) - monthlyPaidExpenses(expenses, cursor)
@@ -347,7 +350,8 @@ object TreasuryCalculations {
             month = today,
             today = today,
             realizedToday = realizedToday,
-            year = year
+            year = year,
+            openingBalance = openingBalance
         )
         var cursor = today.plusMonths(1)
         while (cursor <= month) {

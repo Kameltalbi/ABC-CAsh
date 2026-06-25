@@ -28,7 +28,7 @@ fun AdminBulkSelectionBar(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 4.dp),
+            .padding(horizontal = 8.dp, vertical = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.SpaceBetween
     ) {
@@ -38,31 +38,38 @@ fun AdminBulkSelectionBar(
         ) {
             Checkbox(
                 checked = allSelected,
-                onCheckedChange = { onToggleSelectAll() }
+                onCheckedChange = { onToggleSelectAll() },
+                modifier = Modifier.size(20.dp)
             )
+            Spacer(modifier = Modifier.width(10.dp))
             Text(
                 text = if (allSelected) {
                     stringResource(R.string.deselect_all)
                 } else {
                     stringResource(R.string.select_all)
                 },
-                fontSize = 14.sp
+                fontSize = 13.sp
             )
         }
 
         if (selectedCount > 0) {
-            TextButton(onClick = onDeleteSelected) {
+            Row(
+                modifier = Modifier
+                    .clickable(onClick = onDeleteSelected)
+                    .padding(horizontal = 6.dp, vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(
                     Icons.Default.Delete,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp),
+                    contentDescription = stringResource(R.string.delete_count, selectedCount),
+                    modifier = Modifier.size(16.dp),
                     tint = Color(0xFFF44336)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = stringResource(R.string.delete_count, selectedCount),
                     color = Color(0xFFF44336),
-                    fontSize = 14.sp
+                    fontSize = 13.sp
                 )
             }
         }

@@ -283,9 +283,9 @@ class TreasuryRepository(
         return null
     }
 
-    suspend fun addInvoice(invoice: Invoice): String? {
+    suspend fun addInvoice(invoice: Invoice, enforceLimit: Boolean = true): String? {
         if (invoice.entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
-        if (!canAddTransaction(invoice.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
+        if (enforceLimit && !canAddTransaction(invoice.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
         if (invoice.clientName.isBlank()) return TreasuryMessage.CLIENT_NAME_REQUIRED
         if (invoice.totalAmount <= 0) return TreasuryMessage.TOTAL_AMOUNT_POSITIVE
         if (invoice.paidAmount < 0) return TreasuryMessage.PAID_AMOUNT_NEGATIVE
@@ -589,10 +589,10 @@ class TreasuryRepository(
         return null
     }
 
-    suspend fun addExpense(expense: Expense): String? {
+    suspend fun addExpense(expense: Expense, enforceLimit: Boolean = true): String? {
         if (expense.label.isBlank()) return TreasuryMessage.EXPENSE_LABEL_REQUIRED
         if (expense.entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
-        if (!canAddTransaction(expense.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
+        if (enforceLimit && !canAddTransaction(expense.entrepriseId)) return SUBSCRIPTION_LIMIT_REACHED
         if (expense.amount <= 0) return TreasuryMessage.EXPENSE_AMOUNT_POSITIVE
         val accountId = resolveAccountIdForExpense(expense)
         val expenseToSave = if (accountId != null && expense.bankAccountId == null) {
@@ -791,6 +791,21 @@ class TreasuryRepository(
         }
         val expenses = dao.getExpensesForBackup(entrepriseId).map { it.toDomain() }
         return EcheanceForecast.countOverdue(invoices, expenses)
+    }
+
+    /** Deletes all transactions (invoices, expenses and their payments) but keeps the account. */
+    suspend fun deleteAllTransactions(entrepriseId: String): String? {
+        if (entrepriseId.isBlank()) return TreasuryMessage.ENTREPRISE_ID_REQUIRED
+        return try {
+            database.withTransaction {
+                dao.deletePaymentsForEntreprise(entrepriseId)
+                dao.deleteInvoicesForEntreprise(entrepriseId)
+                dao.deleteExpensesForEntreprise(entrepriseId)
+            }
+            null
+        } catch (e: Exception) {
+            e.message ?: TreasuryMessage.DELETE_ERROR
+        }
     }
 
     suspend fun deleteAccountData(entrepriseId: String): String? {
