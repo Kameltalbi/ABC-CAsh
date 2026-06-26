@@ -264,7 +264,7 @@
     <string name="bank_account_bank_name">Nom de la banque</string>
     <string name="bank_account_iban_last4">4 derniers chiffres de l\'IBAN</string>
     <string name="bank_account_opening_balance">Solde d\'ouverture</string>
-    <string name="bank_account_opening_balance_hint">Montant sur le compte au démarrage (utilisé pour la page Trésorerie)</string>
+    <string name="bank_account_opening_balance_hint">Solde avant ta première transaction enregistrée. Mets 0 si tes relevés importés incluent déjà le solde reporté.</string>
     <string name="bank_account_opening_balance_locked">Saisi une seule fois au démarrage, puis verrouillé. Enregistrez les changements ultérieurs comme des transactions.</string>
     <string name="bank_account_alert_threshold_label">Alerte solde bas (optionnel)</string>
     <string name="bank_account_alert_threshold">Alerte en dessous de %1$s</string>
@@ -652,6 +652,8 @@
     <string name="treasury_upcoming_forecasts">Échéances à venir</string>
     <string name="treasury_next_90_days">90 prochains jours</string>
     <string name="treasury_chart_realized">Réalisé</string>
+    <string name="treasury_chart_balance">Solde de fin de mois</string>
+    <string name="treasury_chart_net_flow">Flux net (encaiss. − décaiss.)</string>
     <string name="treasury_chart_forecast">Prévision (dont à venir)</string>
     <string name="treasury_opening_balance_accounts">Solde d\'ouverture (comptes)</string>
     <string name="treasury_opening_balance_accounts_hint">Somme des soldes saisis à la création des comptes banque/caisse</string>

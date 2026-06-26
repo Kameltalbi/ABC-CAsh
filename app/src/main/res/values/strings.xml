@@ -263,7 +263,7 @@
     <string name="bank_account_bank_name">Bank name</string>
     <string name="bank_account_iban_last4">Last 4 digits of IBAN</string>
     <string name="bank_account_opening_balance">Opening balance</string>
-    <string name="bank_account_opening_balance_hint">Cash in the account when you start (used for the Treasury page)</string>
+    <string name="bank_account_opening_balance_hint">Balance before your first recorded transaction. Set to 0 if your imported statements already include the carried-over balance.</string>
     <string name="bank_account_opening_balance_locked">Set once at setup and locked. Record later changes as transactions.</string>
     <string name="bank_account_alert_threshold_label">Low balance alert (optional)</string>
     <string name="bank_account_alert_threshold">Alert below %1$s</string>
@@ -653,6 +653,8 @@
     <string name="treasury_next_90_days">Next 90 days</string>
     <string name="treasury_chart_realized">Realized</string>
     <string name="treasury_chart_forecast">Forecast (incl. pending)</string>
+    <string name="treasury_chart_balance">Month-end balance</string>
+    <string name="treasury_chart_net_flow">Net flow (income − expenses)</string>
     <string name="treasury_opening_balance_accounts">Opening balance (accounts)</string>
     <string name="treasury_opening_balance_accounts_hint">Sum of opening balances set when creating bank/cash accounts</string>
     <string name="treasury_no_upcoming">No upcoming due dates</string>

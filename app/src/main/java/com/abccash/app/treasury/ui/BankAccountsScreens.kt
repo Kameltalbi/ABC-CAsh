@@ -31,9 +31,12 @@ fun BankAccountsListScreen(
     accountsUsed: Int,
     accountsLimit: Int,
     canAddAccount: Boolean,
+    canManageAccounts: Boolean = true,
     onBack: () -> Unit,
     onAddAccount: () -> Unit,
     onOpenAccount: (String) -> Unit,
+    onEditAccount: (BankAccount) -> Unit = {},
+    onDeleteAccount: (BankAccount) -> Unit = {},
     onOpenManualReconciliation: () -> Unit
 ) {
     Scaffold(
@@ -109,7 +112,10 @@ fun BankAccountsListScreen(
                 items(summaries, key = { it.account.id }) { summary ->
                     BankAccountListCard(
                         summary = summary,
-                        onClick = { onOpenAccount(summary.account.id) }
+                        canManage = canManageAccounts,
+                        onClick = { onOpenAccount(summary.account.id) },
+                        onEdit = { onEditAccount(summary.account) },
+                        onDelete = { onDeleteAccount(summary.account) }
                     )
                 }
             }
@@ -173,9 +179,36 @@ private fun Dsp2ComingSoonCard() {
 @Composable
 private fun BankAccountListCard(
     summary: BankAccountSummary,
-    onClick: () -> Unit
+    canManage: Boolean,
+    onClick: () -> Unit,
+    onEdit: () -> Unit,
+    onDelete: () -> Unit
 ) {
     val formatAmount = rememberFormatMoney()
+    var showMenu by remember { mutableStateOf(false) }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text(stringResource(R.string.bank_account_delete_title)) },
+            text = { Text(stringResource(R.string.bank_account_delete_message, summary.account.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteDialog = false
+                    onDelete()
+                }) {
+                    Text(stringResource(R.string.delete), color = Color(0xFFDC2626))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) {
+                    Text(stringResource(R.string.cancel))
+                }
+            }
+        )
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -211,7 +244,7 @@ private fun BankAccountListCard(
                     }
                     if (summary.account.kind == TreasuryAccountKind.BANK && summary.account.ibanLast4.isNotBlank()) {
                         Text(
-                            "•••• ${summary.account.ibanLast4}",
+                            "â€¢â€¢â€¢â€¢ ${summary.account.ibanLast4}",
                             fontSize = 12.sp,
                             color = Color(0xFF94A3B8)
                         )
@@ -223,6 +256,48 @@ private fun BankAccountListCard(
                         enabled = false,
                         label = { Text(stringResource(R.string.bank_account_default), fontSize = 11.sp) }
                     )
+                }
+                if (canManage) {
+                    Box {
+                        IconButton(onClick = { showMenu = true }) {
+                            Icon(
+                                Icons.Default.MoreVert,
+                                contentDescription = stringResource(R.string.actions)
+                            )
+                        }
+                        DropdownMenu(
+                            expanded = showMenu,
+                            onDismissRequest = { showMenu = false }
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.edit)) },
+                                leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null) },
+                                onClick = {
+                                    showMenu = false
+                                    onEdit()
+                                }
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(R.string.delete),
+                                        color = Color(0xFFDC2626)
+                                    )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        Icons.Default.Delete,
+                                        contentDescription = null,
+                                        tint = Color(0xFFDC2626)
+                                    )
+                                },
+                                onClick = {
+                                    showMenu = false
+                                    showDeleteDialog = true
+                                }
+                            )
+                        }
+                    }
                 }
             }
             Text(
@@ -404,7 +479,7 @@ private fun BankAccountMovementRow(
             Column(modifier = Modifier.weight(1f)) {
                 Text(movement.label, fontWeight = FontWeight.Medium, fontSize = 14.sp)
                 Text(
-                    "${AppLocale.dayMonth(movement.date)} · ${movement.method.localizedLabel()}",
+                    "${AppLocale.dayMonth(movement.date)} ï¿½ ${movement.method.localizedLabel()}",
                     fontSize = 12.sp,
                     color = Color(0xFF64748B)
                 )
@@ -518,24 +593,11 @@ fun BankAccountFormSheet(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-            val openingLocked = initialAccount != null
             OutlinedTextField(
                 value = openingText,
-                onValueChange = { if (!openingLocked) openingText = it },
+                onValueChange = { openingText = it },
                 label = { Text(stringResource(R.string.bank_account_opening_balance)) },
-                supportingText = {
-                    Text(
-                        stringResource(
-                            if (openingLocked) {
-                                R.string.bank_account_opening_balance_locked
-                            } else {
-                                R.string.bank_account_opening_balance_hint
-                            }
-                        )
-                    )
-                },
-                readOnly = openingLocked,
-                enabled = !openingLocked,
+                supportingText = { Text(stringResource(R.string.bank_account_opening_balance_hint)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),

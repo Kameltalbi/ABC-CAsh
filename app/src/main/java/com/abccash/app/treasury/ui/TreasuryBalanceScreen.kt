@@ -65,6 +65,7 @@ private object TreasuryScreenTheme {
     val ForecastAccent = Color(0xFF10B981)  // emerald green
     val IncomeAccent = Color(0xFF16A34A)    // leaf green
     val ExpenseAccent = Color(0xFFEF4444)   // red
+    val NetFlowAccent = Color(0xFFF59E0B)   // amber (flux net mensuel)
 }
 
 @Composable
@@ -128,13 +129,13 @@ fun TreasuryBalanceScreen(
 
     val yearTotals = remember(invoices, expenses, bankAccounts, displayYear) {
         val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
-        val rows = TreasuryCalculations.calendarYearChartRows(
+        val rows = TreasuryCalculations.yearlyRows(
             invoices = invoices,
             expenses = expenses,
             year = displayYear,
             openingBalance = openingBalance
         )
-        val yearEndForecast = rows.lastOrNull()?.forecastCumulative ?: openingBalance
+        val yearEndForecast = rows.lastOrNull()?.forecastBalance ?: openingBalance
         TreasuryYearTotals(
             collected = TreasuryCalculations.yearlyCollections(invoices, displayYear),
             pendingIncome = TreasuryCalculations.yearlyPendingIncome(invoices, displayYear),
@@ -401,12 +402,9 @@ private fun TreasuryKpiCard(
     }
 }
 
-private fun TreasuryCalculations.RollingTreasuryRow.displayBalance(now: YearMonth): Double =
-    if (month < now) realizedCumulative else forecastCumulative
-
 @Composable
 private fun TreasuryTimelineChart(
-    rows: List<TreasuryCalculations.RollingTreasuryRow>,
+    rows: List<TreasuryCalculations.MonthlyTreasuryRow>,
     formatChartAmount: (Double) -> String,
     formatWhole: (Double) -> String,
     yearEndForecast: Double
@@ -429,12 +427,12 @@ private fun TreasuryTimelineChart(
             )
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 ChartLegendDot(
-                    color = TreasuryScreenTheme.Positive,
-                    label = stringResource(R.string.treasury_chart_realized)
+                    color = TreasuryScreenTheme.NetFlowAccent,
+                    label = stringResource(R.string.treasury_chart_net_flow)
                 )
                 ChartLegendDot(
                     color = AppColors.BrandBlue,
-                    label = stringResource(R.string.treasury_chart_forecast)
+                    label = stringResource(R.string.treasury_chart_balance)
                 )
             }
             Text(
@@ -444,9 +442,11 @@ private fun TreasuryTimelineChart(
             )
 
             val now = YearMonth.now()
-            val balances = rows.map { it.displayBalance(now) }
-            val minY = balances.minOrNull() ?: 0.0
-            val maxY = balances.maxOrNull() ?: 0.0
+            val balances = rows.map { it.forecastBalance }
+            val netFlows = rows.map { it.totalIncome - it.totalExpenses }
+            val allValues = balances + netFlows
+            val minY = allValues.minOrNull() ?: 0.0
+            val maxY = allValues.maxOrNull() ?: 0.0
             val range = max(maxY - minY, 1.0)
             val yAxisWidth = 34.dp
             val chartHeight = 130.dp
@@ -457,17 +457,13 @@ private fun TreasuryTimelineChart(
             ) {
                 Spacer(modifier = Modifier.width(yAxisWidth))
                 rows.forEach { row ->
-                    val balance = row.displayBalance(now)
+                    val balance = row.forecastBalance
                     Text(
                         text = formatChartAmount(balance),
                         modifier = Modifier.weight(1f),
                         fontSize = 7.sp,
                         fontWeight = FontWeight.Bold,
-                        color = when {
-                            balance < 0 -> TreasuryScreenTheme.Negative
-                            row.month >= now -> AppColors.BrandBlue
-                            else -> TreasuryScreenTheme.Positive
-                        },
+                        color = if (balance < 0) TreasuryScreenTheme.Negative else AppColors.BrandBlue,
                         textAlign = TextAlign.Center,
                         maxLines = 1,
                         overflow = TextOverflow.Clip
@@ -498,7 +494,12 @@ private fun TreasuryTimelineChart(
                     }
                 }
                 TreasuryForecastLineChart(
-                    balances = balances,
+                    series = listOf(
+                        TreasuryChartSeries(values = netFlows, color = TreasuryScreenTheme.NetFlowAccent),
+                        TreasuryChartSeries(values = balances, color = AppColors.BrandBlue)
+                    ),
+                    minY = minY,
+                    maxY = maxY,
                     modifier = Modifier
                         .weight(1f)
                         .height(chartHeight)
@@ -541,7 +542,7 @@ private data class TreasuryYearTotals(
     val pendingExpenses: Double,
     val balance: Double,
     val openingFromAccounts: Double,
-    val rows: List<TreasuryCalculations.RollingTreasuryRow>
+    val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
 )
 
 @Composable
@@ -659,17 +660,22 @@ private fun TreasuryUpcomingRow(
     }
 }
 
+private data class TreasuryChartSeries(
+    val values: List<Double>,
+    val color: Color
+)
+
 @Composable
 private fun TreasuryForecastLineChart(
-    balances: List<Double>,
+    series: List<TreasuryChartSeries>,
+    minY: Double,
+    maxY: Double,
     modifier: Modifier = Modifier
 ) {
-    if (balances.isEmpty()) return
+    val allValues = series.flatMap { it.values }
+    if (allValues.isEmpty()) return
 
-    val minY = balances.minOrNull() ?: 0.0
-    val maxY = balances.maxOrNull() ?: 0.0
     val range = max(maxY - minY, 1.0)
-    val lineColor = AppColors.BrandBlue
 
     Canvas(modifier = modifier) {
         val padH = 4.dp.toPx()
@@ -701,22 +707,36 @@ private fun TreasuryForecastLineChart(
             )
         }
 
-        val path = Path().apply {
-            balances.forEachIndexed { index, value ->
-                val x = xAt(index, balances.size)
-                val y = yAt(value)
-                if (index == 0) moveTo(x, y) else lineTo(x, y)
-            }
+        // Ligne zéro (utile pour le flux net qui peut être négatif)
+        if (minY < 0.0 && maxY > 0.0) {
+            val zeroY = yAt(0.0)
+            drawLine(
+                color = TreasuryScreenTheme.Muted,
+                start = Offset(padH, zeroY),
+                end = Offset(size.width - padH, zeroY),
+                strokeWidth = 1.dp.toPx()
+            )
         }
-        drawPath(
-            path = path,
-            color = lineColor,
-            style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
-        )
-        balances.forEachIndexed { index, value ->
-            val point = Offset(xAt(index, balances.size), yAt(value))
-            drawCircle(color = TreasuryScreenTheme.Card, radius = 4.dp.toPx(), center = point)
-            drawCircle(color = lineColor, radius = 3.dp.toPx(), center = point)
+
+        series.forEach { s ->
+            if (s.values.isEmpty()) return@forEach
+            val path = Path().apply {
+                s.values.forEachIndexed { index, value ->
+                    val x = xAt(index, s.values.size)
+                    val y = yAt(value)
+                    if (index == 0) moveTo(x, y) else lineTo(x, y)
+                }
+            }
+            drawPath(
+                path = path,
+                color = s.color,
+                style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round)
+            )
+            s.values.forEachIndexed { index, value ->
+                val point = Offset(xAt(index, s.values.size), yAt(value))
+                drawCircle(color = TreasuryScreenTheme.Card, radius = 4.dp.toPx(), center = point)
+                drawCircle(color = s.color, radius = 3.dp.toPx(), center = point)
+            }
         }
     }
 }

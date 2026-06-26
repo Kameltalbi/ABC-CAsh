@@ -455,6 +455,13 @@ fun TreasuryApp(
                 onOpenAccount = { accountId ->
                     navController.navigate("bank_account/$accountId")
                 },
+                onEditAccount = { account ->
+                    saveError = null
+                    editingAccount = account
+                },
+                onDeleteAccount = { account ->
+                    viewModel.deleteBankAccount(account.id) {}
+                },
                 onOpenManualReconciliation = {
                     navController.navigate(Screen.BankReconciliation.route)
                 }
