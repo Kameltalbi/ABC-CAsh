@@ -637,6 +637,8 @@
     <string name="treasury_year_title">Trésorerie %1$d</string>
     <string name="treasury_year_range">Janvier → Décembre</string>
     <string name="treasury_month_end_balance">Solde de fin de mois</string>
+    <string name="treasury_monthly_balance_hint">Solde reporté chaque mois (transactions + prévisions)</string>
+    <string name="treasury_balance_as_of">Au %1$s</string>
     <string name="treasury_cumulative_formula">Cumul : solde précédent + encaissements − dépenses</string>
     <string name="treasury_december_end">Fin décembre : %1$s</string>
     <string name="treasury_upcoming_part">Dont %1$s à venir</string>

@@ -23,13 +23,14 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 71
-        versionName = "1.20.25"
+        versionCode = 76
+        versionName = "1.20.30"
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
             "\"${secret("GOOGLE_WEB_CLIENT_ID").orEmpty()}\""
         )
+        buildConfigField("boolean", "SIDELOAD_PRO", "false")
     }
 
     signingConfigs {
@@ -60,6 +61,8 @@ android {
             matchingFallbacks += listOf("release", "debug")
             isMinifyEnabled = false
             isShrinkResources = false
+            // APK de test hors Play Store : pas de billing, on active Pro pour tester.
+            buildConfigField("boolean", "SIDELOAD_PRO", "true")
         }
     }
 

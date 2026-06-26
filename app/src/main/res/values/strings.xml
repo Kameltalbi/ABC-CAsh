@@ -637,6 +637,8 @@
     <string name="treasury_year_title">Treasury %1$d</string>
     <string name="treasury_year_range">January → December</string>
     <string name="treasury_month_end_balance">End-of-month balance</string>
+    <string name="treasury_monthly_balance_hint">Balance carried over each month (transactions + forecasts)</string>
+    <string name="treasury_balance_as_of">As of %1$s</string>
     <string name="treasury_cumulative_formula">Cumulative: previous balance + income − expenses</string>
     <string name="treasury_december_end">End of December: %1$s</string>
     <string name="treasury_upcoming_part">Including %1$s upcoming</string>

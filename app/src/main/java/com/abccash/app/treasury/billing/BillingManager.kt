@@ -39,6 +39,9 @@ class BillingManager(
             val savedPlan = userPreferences.readSubscriptionPlan()
             if (savedPlan != SubscriptionPlan.FREE) {
                 _subscriptionPlan.value = savedPlan
+            } else if (com.abccash.app.BuildConfig.SIDELOAD_PRO) {
+                // APK de test hors Play Store : pas d'achat possible, on active Pro.
+                persistPlan(SubscriptionPlan.PRO)
             }
         }
         billingClient.startConnection(this)
@@ -95,6 +98,10 @@ class BillingManager(
                     activePlan = SubscriptionPlan.PRO
                 }
             }
+        }
+        // APK de test : ne pas rétrograder en Free faute d'achat Play.
+        if (activePlan == SubscriptionPlan.FREE && com.abccash.app.BuildConfig.SIDELOAD_PRO) {
+            activePlan = SubscriptionPlan.PRO
         }
         persistPlan(activePlan)
     }
