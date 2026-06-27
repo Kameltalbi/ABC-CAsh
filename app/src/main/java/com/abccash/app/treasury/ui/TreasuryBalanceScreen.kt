@@ -293,8 +293,9 @@ fun TreasuryBalanceScreen(
 
         // ---- 2. Cartes KPI ----
         val netBalance = (totalCredits + yearTotals.pendingIncome) - (totalDebits + yearTotals.pendingExpenses)
+        val cumulativeBalance = initialBalance + netBalance
         val netColor = if (netBalance >= 0) TreasuryScreenTheme.IncomeAccent else TreasuryScreenTheme.Negative
-        val cumColor = if (calculatedBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
+        val cumColor = if (cumulativeBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
         val yearLabel = stringResource(R.string.treasury_kpi_year_range, displayYear)
         Row(
             modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
@@ -335,7 +336,7 @@ fun TreasuryBalanceScreen(
             )
             TreasuryKpiCard(
                 title = stringResource(R.string.treasury_kpi_cumulative),
-                amount = formatWhole(calculatedBalance),
+                amount = formatWhole(cumulativeBalance),
                 subtitle = stringResource(R.string.treasury_kpi_cumulative_hint),
                 amountColor = cumColor,
                 accent = cumColor,
