@@ -44,6 +44,7 @@ fun SettingsBackupScreen(
 ) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     var backupError by remember { mutableStateOf<String?>(null) }
     var showRestoreConfirm by remember { mutableStateOf(false) }
     var pendingRestoreJson by remember { mutableStateOf<String?>(null) }
@@ -68,6 +69,11 @@ fun SettingsBackupScreen(
                 signedInEmail = account.email
                 onGoogleSignedIn(account.email)
                 backupError = null
+                scope.launch {
+                    snackbarHostState.showSnackbar(
+                        context.getString(R.string.google_sign_in_success, account.email ?: "")
+                    )
+                }
             }
             .onFailure { error ->
                 backupError = googleSignInErrorMessage(context, error)
@@ -142,7 +148,7 @@ fun SettingsBackupScreen(
         )
     }
 
-    SettingsDetailScaffold(title = stringResource(R.string.backup_restore), onBack = onBack) { padding ->
+    SettingsDetailScaffold(title = stringResource(R.string.backup_restore), onBack = onBack, snackbarHost = { SnackbarHost(snackbarHostState) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()

@@ -678,6 +678,7 @@
     <string name="google_backup_now">Back up now</string>
     <string name="google_restore">Restore</string>
     <string name="google_account_connected">Connected: %1$s</string>
+    <string name="google_sign_in_success">✅ Connected successfully: %1$s</string>
     <string name="google_sign_in_failed">Google sign-in failed</string>
     <string name="google_sign_in_cancelled">Google sign-in cancelled</string>
     <string name="google_sign_in_config_error">Google sign-in is not configured for this app. Contact support or try again later.</string>

@@ -678,6 +678,7 @@
     <string name="google_backup_now">Sauvegarder</string>
     <string name="google_restore">Restaurer</string>
     <string name="google_account_connected">Connecté : %1$s</string>
+    <string name="google_sign_in_success">✅ Connecté avec succès : %1$s</string>
     <string name="google_sign_in_failed">Connexion Google échouée</string>
     <string name="google_sign_in_cancelled">Connexion Google annulée</string>
     <string name="google_sign_in_config_error">La connexion Google n’est pas configurée pour cette application. Réessayez plus tard ou contactez le support.</string>

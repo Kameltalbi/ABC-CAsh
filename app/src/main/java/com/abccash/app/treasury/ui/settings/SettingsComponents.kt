@@ -37,10 +37,12 @@ data class SettingsMenuEntry(
 fun SettingsDetailScaffold(
     title: String,
     onBack: () -> Unit,
+    snackbarHost: @Composable () -> Unit = {},
     content: @Composable (PaddingValues) -> Unit
 ) {
     Scaffold(
         containerColor = Color.White,
+        snackbarHost = snackbarHost,
         topBar = {
             TopAppBar(
                 title = { Text(title) },
