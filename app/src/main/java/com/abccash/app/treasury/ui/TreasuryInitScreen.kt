@@ -3,7 +3,6 @@ package com.abccash.app.treasury.ui
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
@@ -13,24 +12,23 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun TreasuryInitScreen(
     onValidate: (balance: Double, date: LocalDate) -> Unit
 ) {
     var amountText by remember { mutableStateOf("") }
-    var dateText by remember { mutableStateOf("") }
+    var selectedDate by remember { mutableStateOf(LocalDate.now()) }
     var amountError by remember { mutableStateOf<String?>(null) }
     var dateError by remember { mutableStateOf<String?>(null) }
 
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
     val emptyError = stringResource(R.string.treasury_init_empty_error)
     val dateRequired = stringResource(R.string.treasury_init_date_required)
 
@@ -90,19 +88,13 @@ fun TreasuryInitScreen(
                     singleLine = true
                 )
 
-                OutlinedTextField(
-                    value = dateText,
-                    onValueChange = {
-                        dateText = it
+                TreasuryDateField(
+                    label = stringResource(R.string.treasury_init_balance_date),
+                    date = selectedDate,
+                    onDateChange = {
+                        selectedDate = it
                         dateError = null
-                    },
-                    label = { Text(stringResource(R.string.treasury_init_balance_date)) },
-                    placeholder = { Text("JJ/MM/AAAA") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    isError = dateError != null,
-                    supportingText = dateError?.let { { Text(it) } },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
+                    }
                 )
 
                 Card(
@@ -132,21 +124,14 @@ fun TreasuryInitScreen(
                     onClick = {
                         val rawAmount = amountText.trim().replace(",", ".").replace(" ", "")
                         val parsedAmount = rawAmount.toDoubleOrNull()
-                        val parsedDate = runCatching {
-                            LocalDate.parse(dateText.trim(), dateFormatter)
-                        }.getOrNull()
 
                         var hasError = false
                         if (rawAmount.isEmpty() || parsedAmount == null) {
                             amountError = emptyError
                             hasError = true
                         }
-                        if (dateText.isBlank() || parsedDate == null) {
-                            dateError = dateRequired
-                            hasError = true
-                        }
-                        if (!hasError && parsedAmount != null && parsedDate != null) {
-                            onValidate(parsedAmount, parsedDate)
+                        if (!hasError && parsedAmount != null) {
+                            onValidate(parsedAmount, selectedDate)
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
