@@ -53,6 +53,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            setProperty("archivesBaseName", "AbcCash-V${defaultConfig.versionName}")
         }
         // APK bureau : même clé release, sans minify (évite crash ProGuard/Room au démarrage).
         create("sideload") {
