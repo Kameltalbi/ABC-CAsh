@@ -215,6 +215,24 @@ data class ContactEntity(
 )
 
 @Entity(
+    tableName = "balance_corrections",
+    indices = [Index(value = ["entrepriseId"]), Index(value = ["bankAccountId"])]
+)
+data class BalanceCorrectionEntity(
+    @PrimaryKey val id: String,
+    val entrepriseId: String,
+    val bankAccountId: String,
+    val type: String,
+    val oldBalance: Double,
+    val newBalance: Double,
+    val correctionDate: LocalDate,
+    val motif: String,
+    val userId: String,
+    val userName: String,
+    val createdAt: LocalDate
+)
+
+@Entity(
     tableName = "expenses",
     indices = [Index(value = ["entrepriseId"])]
 )

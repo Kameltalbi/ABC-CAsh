@@ -302,3 +302,26 @@ val MIGRATION_20_21 = object : Migration(20, 21) {
         db.execSQL("DROP TABLE IF EXISTS `products`")
     }
 }
+
+val MIGRATION_21_22 = object : Migration(21, 22) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("""
+            CREATE TABLE IF NOT EXISTS `balance_corrections` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `bankAccountId` TEXT NOT NULL,
+                `type` TEXT NOT NULL,
+                `oldBalance` REAL NOT NULL,
+                `newBalance` REAL NOT NULL,
+                `correctionDate` TEXT NOT NULL,
+                `motif` TEXT NOT NULL,
+                `userId` TEXT NOT NULL,
+                `userName` TEXT NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+        """.trimIndent())
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_balance_corrections_entrepriseId` ON `balance_corrections` (`entrepriseId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_balance_corrections_bankAccountId` ON `balance_corrections` (`bankAccountId`)")
+    }
+}

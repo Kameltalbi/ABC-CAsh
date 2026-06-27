@@ -11,8 +11,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.ArrowDownward
-import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,11 +30,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abccash.app.locale.AppLocale
+import com.abccash.app.treasury.data.BalanceCorrection
 import com.abccash.app.treasury.data.BankAccount
-import com.abccash.app.treasury.data.EcheanceForecast
-import com.abccash.app.treasury.data.EcheanceItem
-import com.abccash.app.treasury.data.EcheanceType
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.TreasuryCalculations
@@ -46,8 +43,11 @@ import com.abccash.app.treasury.data.hasPermission
 import com.abccash.app.ui.theme.AppColors
 import java.time.LocalDate
 import java.time.YearMonth
+import java.time.format.DateTimeFormatter
+import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
+import kotlinx.coroutines.flow.Flow
 
 private object TreasuryScreenTheme {
     val Background = Color.White
@@ -76,7 +76,15 @@ fun TreasuryBalanceScreen(
     bankAccounts: List<BankAccount> = emptyList(),
     onExportCsv: (Int) -> String?,
     onNavigateToBankReconciliation: () -> Unit,
-    onOpenDrawer: () -> Unit = {}
+    onOpenDrawer: () -> Unit = {},
+    // Treasury init & correction
+    isTreasuryInitialized: Boolean = true,
+    initialBalance: Double = 0.0,
+    latestBankBalance: Double? = null,
+    correctionsFlow: Flow<List<BalanceCorrection>>? = null,
+    onInitTreasury: ((balance: Double, date: LocalDate) -> Unit)? = null,
+    onSaveCorrection: ((newBalance: Double, date: LocalDate, motif: String) -> Unit)? = null,
+    onNavigateToCorrectionHistory: (() -> Unit)? = null
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)) {
         Box(
@@ -115,16 +123,29 @@ fun TreasuryBalanceScreen(
         return
     }
 
+    // Gate : si non initialisé, afficher l'écran d'initialisation
+    if (!isTreasuryInitialized && onInitTreasury != null) {
+        TreasuryInitScreen(onValidate = onInitTreasury)
+        return
+    }
+
     val context = LocalContext.current
     val displayYear = remember { YearMonth.now().year }
     val today = remember { LocalDate.now() }
     var pendingCsv by remember { mutableStateOf<String?>(null) }
+    var showCorrectionDialog by remember { mutableStateOf(false) }
+    var showConfirmDialog by remember { mutableStateOf(false) }
+    var pendingNewBalance by remember { mutableStateOf(0.0) }
+    var pendingCorrectionDate by remember { mutableStateOf(LocalDate.now()) }
+    var pendingMotif by remember { mutableStateOf("") }
+    val snackbarHostState = remember { SnackbarHostState() }
+    val correctionSuccessMsg = stringResource(R.string.treasury_correction_success, "")
+    val formatMoney = rememberFormatMoney()
     val canManageBank = userRole == UserRole.ADMIN ||
         hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
 
     val formatWhole = rememberFormatMoneyWhole()
     val formatChartAmount = rememberFormatTreasuryChartAmount()
-    val shortDateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
 
     val yearTotals = remember(invoices, expenses, bankAccounts, displayYear) {
         val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
@@ -145,15 +166,6 @@ fun TreasuryBalanceScreen(
             rows = rows
         )
     }
-    val upcomingItems = remember(invoices, expenses, today) {
-        EcheanceForecast.buildItems(
-            invoices = invoices,
-            expenses = expenses,
-            from = today,
-            to = today.plusDays(90)
-        ).sortedBy { it.dueDate }
-    }
-
     val exportLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri: Uri? ->
@@ -166,11 +178,72 @@ fun TreasuryBalanceScreen(
         pendingCsv = null
     }
 
+    // Calculs solde enrichi
+    val totalCredits = remember(invoices, displayYear) {
+        TreasuryCalculations.yearlyCollections(invoices, displayYear)
+    }
+    val totalDebits = remember(expenses, displayYear) {
+        TreasuryCalculations.yearlyPaidExpenses(expenses, displayYear)
+    }
+    val calculatedBalance = initialBalance + totalCredits - totalDebits
+
+    // Calcul runway : jours avant solde zéro basé sur dépenses mensuelles moyennes (3 derniers mois)
+    val runwayDays = remember(expenses, today, calculatedBalance) {
+        val threeMonthsAgo = today.minusMonths(3)
+        val recentExpenses = expenses.filter {
+            it.isPaid && !it.date.isBefore(threeMonthsAgo) && !it.date.isAfter(today)
+        }
+        val totalRecentExpenses = recentExpenses.sumOf { it.amount }
+        val dailyBurn = totalRecentExpenses / 90.0
+        if (dailyBurn > 0.001 && calculatedBalance > 0) {
+            (calculatedBalance / dailyBurn).toInt()
+        } else null
+    }
+    val realBankBalance = latestBankBalance ?: calculatedBalance
+    val ecart = realBankBalance - calculatedBalance
+    val isNegative = calculatedBalance < 0
+    val hasGap = abs(ecart) > 0.001
+
+    if (showCorrectionDialog) {
+        TreasuryCorrectionDialog(
+            calculatedBalance = calculatedBalance,
+            currentBankBalance = realBankBalance,
+            formatAmount = formatMoney,
+            onDismiss = { showCorrectionDialog = false },
+            onValidate = { newBal, date, motif ->
+                pendingNewBalance = newBal
+                pendingCorrectionDate = date
+                pendingMotif = motif
+                showCorrectionDialog = false
+                showConfirmDialog = true
+            }
+        )
+    }
+
+    if (showConfirmDialog) {
+        TreasuryCorrectionConfirmDialog(
+            oldBalance = realBankBalance,
+            newBalance = pendingNewBalance,
+            correctionDate = pendingCorrectionDate,
+            formatAmount = formatMoney,
+            onDismiss = { showConfirmDialog = false },
+            onConfirm = {
+                showConfirmDialog = false
+                onSaveCorrection?.invoke(pendingNewBalance, pendingCorrectionDate, pendingMotif)
+            }
+        )
+    }
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = TreasuryScreenTheme.Background
+    ) { scaffoldPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(TreasuryScreenTheme.Background)
             .verticalScroll(rememberScrollState())
+            .padding(scaffoldPadding)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -186,6 +259,7 @@ fun TreasuryBalanceScreen(
             onOpenDrawer = onOpenDrawer
         )
 
+        // ---- Calculs KPI & graphique ----
         val opening = yearTotals.openingFromAccounts
         val realizedMonthlyBalances = remember(yearTotals.rows, opening) {
             var running = opening
@@ -195,90 +269,13 @@ fun TreasuryBalanceScreen(
             }
         }
         val lastTxIndex = yearTotals.rows.indexOfLast { it.collected != 0.0 || it.expenses != 0.0 }
-        val lastActivityIndex = yearTotals.rows.indexOfLast {
-            it.totalIncome != 0.0 || it.totalExpenses != 0.0
-        }
         val totalAccountsBalance = if (lastTxIndex >= 0) realizedMonthlyBalances[lastTxIndex] else opening
-        val forecastBalance = if (lastActivityIndex >= 0) yearTotals.rows[lastActivityIndex].forecastBalance else opening
         val totalAccountsMonth = lastTxIndex.takeIf { it >= 0 }?.let { yearTotals.rows[it].month }
-        val forecastMonth = lastActivityIndex.takeIf { it >= 0 }?.let { yearTotals.rows[it].month }
-
         val totalAccountsColor = if (totalAccountsBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
-        val forecastColor = if (forecastBalance >= 0) TreasuryScreenTheme.ForecastAccent else TreasuryScreenTheme.Negative
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TreasuryKpiCard(
-                title = stringResource(R.string.treasury_total_accounts_balance),
-                amount = formatWhole(totalAccountsBalance),
-                subtitle = totalAccountsMonth?.let {
-                    stringResource(R.string.treasury_balance_as_of, AppLocale.monthYear(it))
-                } ?: stringResource(R.string.treasury_total_accounts_balance_hint),
-                amountColor = totalAccountsColor,
-                accent = totalAccountsColor,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            )
-            TreasuryKpiCard(
-                title = stringResource(R.string.forecast_balance),
-                amount = formatWhole(forecastBalance),
-                subtitle = forecastMonth?.let {
-                    stringResource(R.string.treasury_balance_as_of, AppLocale.monthYear(it))
-                } ?: stringResource(R.string.treasury_total_accounts_balance_hint),
-                amountColor = forecastColor,
-                accent = forecastColor,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(IntrinsicSize.Min),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            TreasuryKpiCard(
-                title = stringResource(R.string.collections),
-                amount = formatWhole(yearTotals.collected + yearTotals.pendingIncome),
-                subtitle = if (yearTotals.pendingIncome > 0) {
-                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingIncome))
-                } else {
-                    null
-                },
-                amountColor = TreasuryScreenTheme.IncomeAccent,
-                accent = TreasuryScreenTheme.IncomeAccent,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            )
-            TreasuryKpiCard(
-                title = stringResource(R.string.expenses),
-                amount = formatWhole(yearTotals.expenses + yearTotals.pendingExpenses),
-                subtitle = if (yearTotals.pendingExpenses > 0) {
-                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingExpenses))
-                } else {
-                    null
-                },
-                amountColor = TreasuryScreenTheme.ExpenseAccent,
-                accent = TreasuryScreenTheme.ExpenseAccent,
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            )
-        }
-
         val todayYearMonth = remember { YearMonth.now() }
         val splitIndex = remember(yearTotals.rows, todayYearMonth) {
             yearTotals.rows.indexOfLast { it.month <= todayYearMonth }
         }
-        // Une seule courbe continue : réalisé jusqu'au mois courant, forecast après
         val chartBalances = remember(yearTotals.rows, splitIndex, todayYearMonth) {
             yearTotals.rows.mapIndexed { index, row ->
                 if (index <= splitIndex) row.collected - row.expenses
@@ -286,6 +283,7 @@ fun TreasuryBalanceScreen(
             }
         }
 
+        // ---- 1. Graphique en premier ----
         TreasuryTimelineChart(
             rows = yearTotals.rows,
             balances = chartBalances,
@@ -293,16 +291,314 @@ fun TreasuryBalanceScreen(
             formatChartAmount = formatChartAmount
         )
 
-        TreasuryUpcomingSection(
-            items = upcomingItems,
-            formatAmount = rememberFormatMoney(),
-            dateFormatter = shortDateFormatter,
-            today = today
-        )
+        // ---- 2. Cartes KPI ----
+        val netBalance = totalCredits - totalDebits
+        val netColor = if (netBalance >= 0) TreasuryScreenTheme.IncomeAccent else TreasuryScreenTheme.Negative
+        val cumColor = if (calculatedBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
+        val yearLabel = stringResource(R.string.treasury_kpi_year_range, displayYear)
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_kpi_total_income),
+                amount = formatWhole(totalCredits + yearTotals.pendingIncome),
+                subtitle = if (yearTotals.pendingIncome > 0)
+                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingIncome))
+                else yearLabel,
+                amountColor = TreasuryScreenTheme.IncomeAccent,
+                accent = TreasuryScreenTheme.IncomeAccent,
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_kpi_total_expenses),
+                amount = formatWhole(totalDebits + yearTotals.pendingExpenses),
+                subtitle = if (yearTotals.pendingExpenses > 0)
+                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingExpenses))
+                else yearLabel,
+                amountColor = TreasuryScreenTheme.ExpenseAccent,
+                accent = TreasuryScreenTheme.ExpenseAccent,
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_kpi_net),
+                amount = formatWhole(netBalance),
+                subtitle = stringResource(R.string.treasury_kpi_net_hint),
+                amountColor = netColor,
+                accent = netColor,
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+            TreasuryKpiCard(
+                title = stringResource(R.string.treasury_kpi_cumulative),
+                amount = formatWhole(calculatedBalance),
+                subtitle = stringResource(R.string.treasury_kpi_cumulative_hint),
+                amountColor = cumColor,
+                accent = cumColor,
+                modifier = Modifier.weight(1f).fillMaxHeight()
+            )
+        }
+
+        // ---- 3. Bloc solde enrichi ----
+        if (isTreasuryInitialized) {
+            TreasuryBalanceSummaryCard(
+                initialBalance = initialBalance,
+                totalCredits = totalCredits,
+                totalDebits = totalDebits,
+                calculatedBalance = calculatedBalance,
+                realBankBalance = realBankBalance,
+                ecart = ecart,
+                formatAmount = formatMoney,
+                canManageBank = canManageBank,
+                onCorrectionClick = { showCorrectionDialog = true },
+                onHistoryClick = onNavigateToCorrectionHistory
+            )
+            TreasuryRunwayCard(runwayDays = runwayDays, isNegative = isNegative)
+        }
+
+        // ---- 4. Alertes ----
+        if (isNegative) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = TreasuryScreenTheme.Negative.copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.treasury_negative_warning),
+                    color = TreasuryScreenTheme.Negative,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
+        if (hasGap) {
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFF59E0B).copy(alpha = 0.12f)),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.treasury_gap_warning, formatMoney(ecart)),
+                    color = Color(0xFFB45309),
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 13.sp,
+                    modifier = Modifier.padding(12.dp)
+                )
+            }
+        }
 
         Spacer(modifier = Modifier.height(80.dp))
     }
+    } // end Scaffold
 }
+
+@Composable
+private fun TreasuryBalanceSummaryCard(
+    initialBalance: Double,
+    totalCredits: Double,
+    totalDebits: Double,
+    calculatedBalance: Double,
+    realBankBalance: Double,
+    ecart: Double,
+    formatAmount: (Double) -> String,
+    canManageBank: Boolean,
+    onCorrectionClick: () -> Unit,
+    onHistoryClick: (() -> Unit)?
+) {
+    val ecartColor = when {
+        kotlin.math.abs(ecart) < 0.001 -> TreasuryScreenTheme.Positive
+        ecart < 0 -> TreasuryScreenTheme.Negative
+        else -> Color(0xFFB45309)
+    }
+    val calculatedColor = if (calculatedBalance >= 0) TreasuryScreenTheme.Positive else TreasuryScreenTheme.Negative
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(R.string.treasury_opening_balance),
+                fontSize = 11.sp,
+                color = TreasuryScreenTheme.Muted,
+                fontWeight = FontWeight.SemiBold
+            )
+            // Solde initial
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_opening_balance),
+                value = formatAmount(initialBalance),
+                valueColor = TreasuryScreenTheme.Primary
+            )
+            // + Total crédits
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_total_credits),
+                value = formatAmount(totalCredits),
+                valueColor = TreasuryScreenTheme.IncomeAccent
+            )
+            // - Total débits
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_total_debits),
+                value = formatAmount(totalDebits),
+                valueColor = TreasuryScreenTheme.ExpenseAccent
+            )
+            HorizontalDivider(thickness = 0.5.dp)
+            // = Solde actuel calculé
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_calculated_balance),
+                value = formatAmount(calculatedBalance) + if (calculatedBalance >= 0) " ✅" else " 🔴",
+                valueColor = calculatedColor,
+                isBold = true
+            )
+            // Solde bancaire réel
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_real_bank_balance),
+                value = formatAmount(realBankBalance),
+                valueColor = TreasuryScreenTheme.Primary
+            )
+            // Écart
+            BalanceSummaryRow(
+                label = stringResource(R.string.treasury_gap),
+                value = formatAmount(ecart) + if (kotlin.math.abs(ecart) < 0.001) " ✅" else "",
+                valueColor = ecartColor,
+                isBold = true
+            )
+
+            if (canManageBank) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Button(
+                    onClick = onCorrectionClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.treasury_modify_bank_balance))
+                }
+                if (onHistoryClick != null) {
+                    OutlinedButton(
+                        onClick = onHistoryClick,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text(stringResource(R.string.treasury_view_history))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun BalanceSummaryRow(
+    label: String,
+    value: String,
+    valueColor: Color,
+    isBold: Boolean = false
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = label,
+            fontSize = 13.sp,
+            color = TreasuryScreenTheme.Muted,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = if (isBold) FontWeight.Bold else FontWeight.SemiBold,
+            color = valueColor
+        )
+    }
+}
+
+@Composable
+private fun TreasuryRunwayCard(
+    runwayDays: Int?,
+    isNegative: Boolean
+) {
+    val (bgColor, textColor, icon, label) = when {
+        isNegative -> RunwayStyle(
+            bg = TreasuryScreenTheme.Negative.copy(alpha = 0.10f),
+            text = TreasuryScreenTheme.Negative,
+            icon = "🔴",
+            label = stringResource(R.string.treasury_runway_negative)
+        )
+        runwayDays == null -> RunwayStyle(
+            bg = TreasuryScreenTheme.Grid,
+            text = TreasuryScreenTheme.Muted,
+            icon = "📊",
+            label = stringResource(R.string.treasury_runway_no_data)
+        )
+        runwayDays < 30 -> RunwayStyle(
+            bg = TreasuryScreenTheme.Negative.copy(alpha = 0.10f),
+            text = TreasuryScreenTheme.Negative,
+            icon = "🔴",
+            label = stringResource(R.string.treasury_runway_critical, runwayDays)
+        )
+        runwayDays < 90 -> RunwayStyle(
+            bg = Color(0xFFFEF3C7),
+            text = Color(0xFFB45309),
+            icon = "🟡",
+            label = stringResource(R.string.treasury_runway_warning, runwayDays)
+        )
+        else -> RunwayStyle(
+            bg = Color(0xFFDCFCE7),
+            text = Color(0xFF16A34A),
+            icon = "🟢",
+            label = stringResource(R.string.treasury_runway_ok, runwayDays)
+        )
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(14.dp),
+        colors = CardDefaults.cardColors(containerColor = bgColor),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 14.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        ) {
+            Text(text = icon, fontSize = 22.sp)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = stringResource(R.string.treasury_runway_title),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = textColor.copy(alpha = 0.75f)
+                )
+                Text(
+                    text = label,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = textColor
+                )
+            }
+        }
+    }
+}
+
+private data class RunwayStyle(
+    val bg: Color,
+    val text: Color,
+    val icon: String,
+    val label: String
+)
 
 @Composable
 private fun TreasuryHeader(
@@ -396,8 +692,8 @@ private fun TreasuryKpiCard(
             subtitle?.let {
                 Text(
                     text = it,
-                    fontSize = 9.sp,
-                    color = TreasuryScreenTheme.Muted,
+                    fontSize = 11.sp,
+                    color = Color(0xFFFF9800),
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -576,109 +872,6 @@ private data class TreasuryYearTotals(
     val openingFromAccounts: Double,
     val rows: List<TreasuryCalculations.MonthlyTreasuryRow>
 )
-
-@Composable
-private fun TreasuryUpcomingSection(
-    items: List<EcheanceItem>,
-    formatAmount: (Double) -> String,
-    dateFormatter: java.time.format.DateTimeFormatter,
-    today: LocalDate
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = TreasuryScreenTheme.Card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            Text(
-                text = stringResource(R.string.treasury_upcoming_forecasts),
-                fontSize = 15.sp,
-                fontWeight = FontWeight.Bold,
-                color = TreasuryScreenTheme.Primary
-            )
-            Text(
-                text = stringResource(R.string.treasury_next_90_days),
-                fontSize = 12.sp,
-                color = TreasuryScreenTheme.Muted
-            )
-            if (items.isEmpty()) {
-                Text(
-                    text = stringResource(R.string.treasury_no_upcoming),
-                    fontSize = 13.sp,
-                    color = TreasuryScreenTheme.Muted,
-                    modifier = Modifier.padding(vertical = 8.dp)
-                )
-            } else {
-                items.take(12).forEach { item ->
-                    TreasuryUpcomingRow(
-                        item = item,
-                        formatAmount = formatAmount,
-                        dateFormatter = dateFormatter,
-                        today = today
-                    )
-                }
-                if (items.size > 12) {
-                    Text(
-                        text = "+${items.size - 12}",
-                        fontSize = 12.sp,
-                        color = TreasuryScreenTheme.Muted
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun TreasuryUpcomingRow(
-    item: EcheanceItem,
-    formatAmount: (Double) -> String,
-    dateFormatter: java.time.format.DateTimeFormatter,
-    today: LocalDate
-) {
-    val isIncome = item.type == EcheanceType.INCOME
-    val iconTint = if (isIncome) TreasuryScreenTheme.Positive else TreasuryScreenTheme.Accent
-    val isOverdue = item.dueDate.isBefore(today)
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Icon(
-            imageVector = if (isIncome) Icons.Default.ArrowUpward else Icons.Default.ArrowDownward,
-            contentDescription = null,
-            tint = iconTint,
-            modifier = Modifier.size(18.dp)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.label,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = TreasuryScreenTheme.Primary,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
-            Text(
-                text = dateFormatter.format(item.dueDate),
-                fontSize = 11.sp,
-                color = if (isOverdue) TreasuryScreenTheme.Negative else TreasuryScreenTheme.Muted
-            )
-        }
-        Text(
-            text = formatAmount(item.amount),
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Bold,
-            color = iconTint
-        )
-    }
-}
 
 @Composable
 private fun TreasuryDualLineChart(

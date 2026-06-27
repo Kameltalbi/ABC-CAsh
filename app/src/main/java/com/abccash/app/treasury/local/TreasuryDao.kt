@@ -251,4 +251,31 @@ interface TreasuryDao {
 
     @Query("DELETE FROM entreprises WHERE id = :entrepriseId")
     suspend fun deleteEntrepriseById(entrepriseId: String)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertBalanceCorrection(correction: BalanceCorrectionEntity)
+
+    @Query("""
+        SELECT * FROM balance_corrections
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY correctionDate DESC, createdAt DESC
+    """)
+    fun observeBalanceCorrections(entrepriseId: String): Flow<List<BalanceCorrectionEntity>>
+
+    @Query("""
+        SELECT * FROM balance_corrections
+        WHERE entrepriseId = :entrepriseId AND type = 'INITIAL'
+        ORDER BY createdAt ASC LIMIT 1
+    """)
+    suspend fun findInitialBalance(entrepriseId: String): BalanceCorrectionEntity?
+
+    @Query("""
+        SELECT * FROM balance_corrections
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY correctionDate DESC, createdAt DESC LIMIT 1
+    """)
+    suspend fun findLatestCorrection(entrepriseId: String): BalanceCorrectionEntity?
+
+    @Query("DELETE FROM balance_corrections WHERE entrepriseId = :entrepriseId")
+    suspend fun deleteCorrectionsForEntreprise(entrepriseId: String)
 }

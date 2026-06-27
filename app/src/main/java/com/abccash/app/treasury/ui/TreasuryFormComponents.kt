@@ -6,11 +6,13 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -18,8 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.time.format.DateTimeParseException
 import com.abccash.app.treasury.data.PaymentMethod
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
@@ -137,7 +141,17 @@ fun TreasuryDateField(
     enabled: Boolean = true
 ) {
     var showPicker by remember { mutableStateOf(false) }
-    val interactionSource = remember { MutableInteractionSource() }
+    var textValue by remember(date) { mutableStateOf(date.format(TreasuryFormDateFormatter)) }
+    var isError by remember { mutableStateOf(false) }
+
+    // Sync text when date changes externally (ex: calendrier)
+    LaunchedEffect(date) {
+        val formatted = date.format(TreasuryFormDateFormatter)
+        if (textValue != formatted) {
+            textValue = formatted
+            isError = false
+        }
+    }
 
     TreasuryDatePickerDialog(
         visible = showPicker,
@@ -149,41 +163,62 @@ fun TreasuryDateField(
         }
     )
 
-    OutlinedTextField(
-        value = date.format(TreasuryFormDateFormatter),
-        onValueChange = {},
-        modifier = modifier
-            .fillMaxWidth()
-            .then(
-                if (enabled) {
-                    Modifier.clickable(
-                        interactionSource = interactionSource,
-                        indication = null
-                    ) { showPicker = true }
-                } else {
-                    Modifier
+    Column(modifier = modifier.fillMaxWidth()) {
+        OutlinedTextField(
+            value = textValue,
+            onValueChange = { raw ->
+                // Auto-insert slashes: 2 -> 2/, 5 -> 2/05/
+                val digits = raw.filter { it.isDigit() }
+                val formatted = buildString {
+                    digits.forEachIndexed { i, c ->
+                        if (i == 2 || i == 4) append('/')
+                        if (length < 10) append(c)
+                    }
                 }
-            ),
-        label = { Text(label) },
-        readOnly = true,
-        enabled = enabled,
-        singleLine = true,
-        shape = TreasuryFieldShape,
-        interactionSource = interactionSource,
-        trailingIcon = {
-            IconButton(
-                onClick = { if (enabled) showPicker = true },
-                enabled = enabled
-            ) {
-                Icon(
-                    Icons.Default.CalendarToday,
-                    contentDescription = label,
-                    tint = if (enabled) MaterialTheme.colorScheme.primary else Color(0xFFBDBDBD)
-                )
-            }
-        },
-        colors = treasuryOutlinedFieldColors()
-    )
+                textValue = formatted
+
+                if (formatted.length == 10) {
+                    try {
+                        val parsed = LocalDate.parse(formatted, TreasuryFormDateFormatter)
+                        isError = false
+                        onDateChange(parsed)
+                    } catch (e: DateTimeParseException) {
+                        isError = true
+                    }
+                } else {
+                    isError = false
+                }
+            },
+            modifier = Modifier.fillMaxWidth(),
+            label = { Text(label) },
+            placeholder = { Text("JJ/MM/AAAA", color = Color(0xFFBDBDBD)) },
+            isError = isError,
+            enabled = enabled,
+            singleLine = true,
+            shape = TreasuryFieldShape,
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            trailingIcon = {
+                IconButton(
+                    onClick = { if (enabled) showPicker = true },
+                    enabled = enabled
+                ) {
+                    Icon(
+                        Icons.Default.CalendarToday,
+                        contentDescription = label,
+                        tint = when {
+                            !enabled -> Color(0xFFBDBDBD)
+                            isError -> MaterialTheme.colorScheme.error
+                            else -> MaterialTheme.colorScheme.primary
+                        }
+                    )
+                }
+            },
+            supportingText = if (isError) {
+                { Text(stringResource(R.string.date_format_hint), color = MaterialTheme.colorScheme.error, fontSize = 11.sp) }
+            } else null,
+            colors = treasuryOutlinedFieldColors()
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

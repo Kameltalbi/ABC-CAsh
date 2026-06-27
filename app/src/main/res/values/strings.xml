@@ -976,4 +976,77 @@
         <item quantity="other">You have %d overdue due dates today</item>
     </plurals>
 
+    <!-- TREASURY INIT -->
+    <string name="treasury_init_title">Treasury Initialization</string>
+    <string name="treasury_init_subtitle">Enter your current bank account balance to get started</string>
+    <string name="treasury_init_opening_balance">Opening balance</string>
+    <string name="treasury_init_balance_date">Balance date</string>
+    <string name="treasury_init_zero_hint">0 is a valid amount</string>
+    <string name="treasury_init_locked_hint">This amount can only be changed via "Balance Correction"</string>
+    <string name="treasury_init_validate">Validate and Start</string>
+    <string name="treasury_init_empty_error">Balance cannot be empty — enter 0 if needed</string>
+    <string name="treasury_init_date_required">Balance date is required</string>
+
+    <!-- TREASURY BALANCE SCREEN -->
+    <string name="treasury_opening_balance">Opening balance</string>
+    <string name="treasury_total_credits">+ Total credits</string>
+    <string name="treasury_total_debits">- Total debits</string>
+    <string name="treasury_calculated_balance">= Calculated balance</string>
+    <string name="treasury_real_bank_balance">Real bank balance</string>
+    <string name="treasury_gap">Gap</string>
+    <string name="treasury_modify_bank_balance">Modify bank balance</string>
+    <string name="treasury_view_history">View History</string>
+    <string name="treasury_gap_warning">Gap detected between treasury and bank balance: %1$s</string>
+    <string name="treasury_negative_warning">Warning: your balance is negative</string>
+    <!-- TREASURY RUNWAY -->
+    <string name="treasury_runway_title">Runway</string>
+    <string name="treasury_runway_ok">%1$d days before zero balance</string>
+    <string name="treasury_runway_warning">Only %1$d days of cash left</string>
+    <string name="treasury_runway_critical">Critical: %1$d days remaining</string>
+    <string name="treasury_runway_negative">Balance already negative</string>
+    <string name="treasury_runway_no_data">No expenses recorded yet</string>
+    <string name="date_format_hint">Format: DD/MM/YYYY</string>
+    <string name="treasury_projection_label">Projection</string>
+    <string name="treasury_calculated_balance_label">Balance</string>
+    <string name="treasury_kpi_balance_hint">Opening + income - expenses</string>
+    <string name="treasury_kpi_total_income">Total Income</string>
+    <string name="treasury_kpi_total_expenses">Total Expenses</string>
+    <string name="treasury_kpi_net">Net (income - exp.)</string>
+    <string name="treasury_kpi_net_hint">Income minus expenses</string>
+    <string name="treasury_kpi_cumulative">Cumulative balance</string>
+    <string name="treasury_kpi_cumulative_hint">Opening + income - expenses</string>
+    <string name="treasury_kpi_year_range">Jan → Dec %1$d</string>
+
+    <!-- TREASURY CORRECTION -->
+    <string name="treasury_correction_title">Bank Balance Correction</string>
+    <string name="treasury_correction_calculated">Calculated balance</string>
+    <string name="treasury_correction_current_bank">Current bank balance</string>
+    <string name="treasury_correction_new_balance">New bank balance</string>
+    <string name="treasury_correction_date">Correction date</string>
+    <string name="treasury_correction_motif">Reason (required)</string>
+    <string name="treasury_correction_motif_hint">e.g. BIAT statement February 2026</string>
+    <string name="treasury_correction_motif_required">Correction reason is required</string>
+    <string name="treasury_correction_date_required">Correction date is required</string>
+
+    <!-- TREASURY CORRECTION CONFIRM -->
+    <string name="treasury_confirm_title">Warning</string>
+    <string name="treasury_confirm_body">You are about to modify the bank balance</string>
+    <string name="treasury_confirm_old_balance">Old balance</string>
+    <string name="treasury_confirm_new_balance">New balance</string>
+    <string name="treasury_confirm_gap">Gap</string>
+    <string name="treasury_confirm_reference_note">This new balance will become your treasury reference from %1$s</string>
+    <string name="treasury_confirm_question">Are you sure you want to continue?</string>
+    <string name="treasury_confirm_yes">Yes, confirm</string>
+    <string name="treasury_correction_success">Balance updated. New reference: %1$s</string>
+
+    <!-- TREASURY HISTORY -->
+    <string name="treasury_history_title">Correction History</string>
+    <string name="treasury_history_empty">No corrections recorded</string>
+    <string name="treasury_history_old_balance">Old balance</string>
+    <string name="treasury_history_new_balance">New balance</string>
+    <string name="treasury_history_gap">Gap</string>
+    <string name="treasury_history_motif">Reason</string>
+    <string name="treasury_history_user">User</string>
+    <string name="treasury_history_initial">Initial balance</string>
+
 </resources>

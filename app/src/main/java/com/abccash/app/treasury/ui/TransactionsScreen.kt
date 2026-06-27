@@ -126,12 +126,8 @@ fun TransactionsScreen(
 
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var invoiceToDelete by remember { mutableStateOf<Invoice?>(null) }
-    var invoiceForPartialPayment by remember { mutableStateOf<Invoice?>(null) }
-    var invoiceToMarkPaid by remember { mutableStateOf<Invoice?>(null) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
     var expenseToDelete by remember { mutableStateOf<Expense?>(null) }
-    var expenseToValidate by remember { mutableStateOf<Expense?>(null) }
-    var paymentError by remember { mutableStateOf<String?>(null) }
     var editError by remember { mutableStateOf<String?>(null) }
     var deleteError by remember { mutableStateOf<String?>(null) }
 
@@ -275,12 +271,9 @@ fun TransactionsScreen(
                                 displayDate = row.date,
                                 datePattern = datePattern,
                                 isAdmin = isAdmin,
-                                canAddPayment = canAddPayment,
-                                onMarkPaid = { invoiceToMarkPaid = row.invoice },
-                                onPartialPayment = {
-                                    paymentError = null
-                                    invoiceForPartialPayment = row.invoice
-                                },
+                                canAddPayment = false,
+                                onMarkPaid = {},
+                                onPartialPayment = {},
                                 onEdit = { invoiceToEdit = row.invoice },
                                 onDelete = { invoiceToDelete = row.invoice }
                             )
@@ -291,7 +284,7 @@ fun TransactionsScreen(
                                 isAdmin = isAdmin,
                                 canManage = canManageExpense,
                                 onEdit = { expenseToEdit = row.expense },
-                                onValidate = { expenseToValidate = row.expense },
+                                onValidate = {},
                                 onDelete = { expenseToDelete = row.expense }
                             )
                         }
@@ -315,44 +308,6 @@ fun TransactionsScreen(
             onSelectExpense = {
                 showTypeSheet = false
                 onNavigateToAddExpense()
-            }
-        )
-    }
-
-    invoiceToMarkPaid?.let { invoice ->
-        FullPaymentConfirmDialog(
-            invoice = invoice,
-            onDismiss = { invoiceToMarkPaid = null },
-            onConfirm = { date, method ->
-                onRecordPayment(
-                    invoice.id,
-                    invoice.remainingAmount,
-                    date,
-                    method
-                ) { error ->
-                    if (error == null) invoiceToMarkPaid = null else paymentError = error
-                }
-            }
-        )
-    }
-
-    invoiceForPartialPayment?.let { invoice ->
-        PartialPaymentDialog(
-            invoice = invoice,
-            errorMessage = paymentError,
-            onDismiss = {
-                invoiceForPartialPayment = null
-                paymentError = null
-            },
-            onConfirm = { amount, date, method ->
-                onRecordPayment(invoice.id, amount, date, method) { error ->
-                    if (error == null) {
-                        invoiceForPartialPayment = null
-                        paymentError = null
-                    } else {
-                        paymentError = error
-                    }
-                }
             }
         )
     }
@@ -418,20 +373,6 @@ fun TransactionsScreen(
             onStopRecurrence = { endDate ->
                 onStopRecurrence(expense.id, endDate)
                 expenseToEdit = null
-            }
-        )
-    }
-
-    expenseToValidate?.let { expense ->
-        ExpensePaymentConfirmDialog(
-            expense = expense,
-            dueDate = expense.occurrenceDateIn(selectedMonth) ?: expense.date,
-            onDismiss = { expenseToValidate = null },
-            onConfirm = { paymentDate, method ->
-                val occurrenceDueDate = expense.occurrenceDateIn(selectedMonth) ?: expense.date
-                onValidateExpense(expense.id, paymentDate, method, occurrenceDueDate) { error ->
-                    if (error == null) expenseToValidate = null
-                }
             }
         )
     }

@@ -4,6 +4,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.abccash.app.treasury.data.*
+import com.abccash.app.treasury.data.BalanceCorrection
+import com.abccash.app.treasury.data.BalanceCorrectionType
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.export.TreasuryCsvExporter
@@ -75,6 +77,67 @@ class TreasuryViewModel(
         val defaultBankId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.BANK)
         val defaultCashId = BankAccountCalculations.defaultAccountId(state.bankAccounts, TreasuryAccountKind.CASH)
         return BankAccountCalculations.balance(account, state.invoices, state.expenses, defaultBankId, defaultCashId)
+    }
+
+    fun observeTreasuryInitialized(entrepriseId: String) =
+        repository.observeTreasuryInitialized(entrepriseId)
+
+    fun observeBalanceCorrections(entrepriseId: String) =
+        repository.observeBalanceCorrections(entrepriseId)
+
+    fun initTreasury(
+        entrepriseId: String,
+        bankAccountId: String,
+        initialBalance: Double,
+        balanceDate: java.time.LocalDate,
+        onResult: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val userId = state.currentUserId ?: ""
+            val userName = state.users.firstOrNull { it.id == userId }?.nom
+                ?: state.entreprise?.nom ?: ""
+            val error = repository.initTreasury(
+                entrepriseId = entrepriseId,
+                bankAccountId = bankAccountId,
+                initialBalance = initialBalance,
+                balanceDate = balanceDate,
+                userId = userId,
+                userName = userName
+            )
+            onResult(error)
+        }
+    }
+
+    fun saveBalanceCorrection(
+        entrepriseId: String,
+        bankAccountId: String,
+        oldBalance: Double,
+        newBalance: Double,
+        correctionDate: java.time.LocalDate,
+        motif: String,
+        onResult: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val userId = state.currentUserId ?: ""
+            val userName = state.users.firstOrNull { it.id == userId }?.nom
+                ?: state.entreprise?.nom ?: ""
+            val correction = BalanceCorrection(
+                entrepriseId = entrepriseId,
+                bankAccountId = bankAccountId,
+                type = BalanceCorrectionType.CORRECTION,
+                oldBalance = oldBalance,
+                newBalance = newBalance,
+                correctionDate = correctionDate,
+                motif = motif,
+                userId = userId,
+                userName = userName
+            )
+            val error = repository.saveBalanceCorrection(correction)
+            onResult(error)
+            if (error == null) scheduleGoogleBackup()
+        }
     }
 
     fun saveBankAccount(account: BankAccount, onResult: (String?) -> Unit) {

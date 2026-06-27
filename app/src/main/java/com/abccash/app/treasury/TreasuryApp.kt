@@ -66,6 +66,7 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object BankAccountDetail : Screen("bank_account/{accountId}", R.string.bank_account_detail, Icons.Default.AccountBalance)
     object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
     object Subscription : Screen("subscription", R.string.plan_free, Icons.Default.Payments)
+    object TreasuryCorrectionHistory : Screen("treasury_correction_history", R.string.treasury_history_title, Icons.Default.AccountBalance)
 }
 
 @Composable
@@ -573,12 +574,7 @@ fun TreasuryApp(
                                 client, amount, date, category, categoryLabel, markAsCollected, paymentMethod,
                                 clientContactId = null,
                                 invoiceNumber = invNumber,
-                                onResult = { error ->
-                                    if (error == null) {
-                                        viewModel.setSelectedMonth(YearMonth.from(date))
-                                    }
-                                    onResult(error)
-                                }
+                                onResult = onResult
                             )
                         },
                         onSaveExpense = { _, _, _, _, _, _, _, _, _, _, _, _, onResult -> onResult(null) }
@@ -605,12 +601,7 @@ fun TreasuryApp(
                                 isRecurring, recurrence, recurrenceEndDate,
                                 isPaid, paymentMethod, note = note,
                                 receiptImagePath = receiptImagePath,
-                                onResult = { error ->
-                                    if (error == null) {
-                                        viewModel.setSelectedMonth(YearMonth.from(date))
-                                    }
-                                    onResult(error)
-                                }
+                                onResult = onResult
                             )
                         }
                     )
@@ -682,6 +673,23 @@ fun TreasuryApp(
                     onBack = { navController.popBackStack() }
                 )
             }
+        }
+
+        composable(Screen.TreasuryCorrectionHistory.route) {
+            val entrepriseId = uiState.entrepriseId.orEmpty()
+            val corrections by viewModel
+                .observeBalanceCorrections(entrepriseId)
+                .collectAsStateWithLifecycle(initialValue = emptyList())
+            TreasuryCorrectionHistoryScreen(
+                corrections = corrections,
+                formatAmount = { amount ->
+                    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.FRANCE)
+                    fmt.minimumFractionDigits = 3
+                    fmt.maximumFractionDigits = 3
+                    fmt.format(amount)
+                },
+                onBack = { navController.popBackStack() }
+            )
         }
     }
     }
@@ -876,6 +884,27 @@ private fun MainAppScaffold(
                     )
                 }
                 Screen.Treasury.route -> {
+                    val entrepriseId = uiState.entrepriseId.orEmpty()
+                    val isTreasuryInitialized by viewModel
+                        .observeTreasuryInitialized(entrepriseId)
+                        .collectAsStateWithLifecycle(initialValue = true)
+                    val corrections by viewModel
+                        .observeBalanceCorrections(entrepriseId)
+                        .collectAsStateWithLifecycle(initialValue = emptyList())
+                    val initialBalance = remember(corrections) {
+                        corrections.firstOrNull {
+                            it.type == com.abccash.app.treasury.data.BalanceCorrectionType.INITIAL
+                        }?.newBalance ?: 0.0
+                    }
+                    val latestBankBalance = remember(corrections) {
+                        corrections
+                            .filter { it.type == com.abccash.app.treasury.data.BalanceCorrectionType.CORRECTION }
+                            .maxByOrNull { it.correctionDate }?.newBalance
+                    }
+                    val defaultBankAccountId = remember(uiState.bankAccounts) {
+                        uiState.bankAccounts.firstOrNull { it.isDefault } ?.id
+                            ?: uiState.bankAccounts.firstOrNull()?.id ?: ""
+                    }
                     TreasuryBalanceScreen(
                         userRole = userRole,
                         permissions = permissions,
@@ -886,7 +915,33 @@ private fun MainAppScaffold(
                         onNavigateToBankReconciliation = {
                             navController.navigate(Screen.BankReconciliation.route)
                         },
-                        onOpenDrawer = { openDrawer() }
+                        onOpenDrawer = { openDrawer() },
+                        isTreasuryInitialized = isTreasuryInitialized,
+                        initialBalance = initialBalance,
+                        latestBankBalance = latestBankBalance,
+                        onInitTreasury = { balance, date ->
+                            viewModel.initTreasury(
+                                entrepriseId = entrepriseId,
+                                bankAccountId = defaultBankAccountId,
+                                initialBalance = balance,
+                                balanceDate = date,
+                                onResult = {}
+                            )
+                        },
+                        onSaveCorrection = { newBalance, date, motif ->
+                            viewModel.saveBalanceCorrection(
+                                entrepriseId = entrepriseId,
+                                bankAccountId = defaultBankAccountId,
+                                oldBalance = latestBankBalance ?: 0.0,
+                                newBalance = newBalance,
+                                correctionDate = date,
+                                motif = motif,
+                                onResult = {}
+                            )
+                        },
+                        onNavigateToCorrectionHistory = {
+                            navController.navigate(Screen.TreasuryCorrectionHistory.route)
+                        }
                     )
                 }
                 Screen.Previsions.route -> {

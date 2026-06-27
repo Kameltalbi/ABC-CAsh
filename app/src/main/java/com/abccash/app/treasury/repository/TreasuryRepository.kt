@@ -1,5 +1,7 @@
 package com.abccash.app.treasury.repository
 
+import com.abccash.app.treasury.data.BalanceCorrection
+import com.abccash.app.treasury.data.BalanceCorrectionType
 import com.abccash.app.treasury.data.BankAccount
 import com.abccash.app.treasury.data.BankAccountSource
 import com.abccash.app.treasury.data.Contact
@@ -23,6 +25,7 @@ import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
 import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.UserSubscription
+import com.abccash.app.treasury.local.BalanceCorrectionEntity
 import com.abccash.app.treasury.local.BankAccountEntity
 import com.abccash.app.treasury.local.ContactEntity
 import com.abccash.app.treasury.local.EntrepriseEntity
@@ -816,6 +819,7 @@ class TreasuryRepository(
                 dao.deleteExpensesForEntreprise(entrepriseId)
                 dao.deleteQuotesForEntreprise(entrepriseId)
                 dao.deleteBankAccountsForEntreprise(entrepriseId)
+                dao.deleteCorrectionsForEntreprise(entrepriseId)
                 dao.deleteContactsForEntreprise(entrepriseId)
                 dao.deleteUsersForEntreprise(entrepriseId)
                 dao.deleteEntrepriseById(entrepriseId)
@@ -825,6 +829,52 @@ class TreasuryRepository(
             e.message ?: TreasuryMessage.DELETE_ERROR
         }
     }
+
+    fun observeBalanceCorrections(entrepriseId: String): Flow<List<BalanceCorrection>> =
+        dao.observeBalanceCorrections(entrepriseId).map { entities -> entities.map { it.toDomain() } }
+
+    suspend fun getInitialBalance(entrepriseId: String): BalanceCorrection? =
+        dao.findInitialBalance(entrepriseId)?.toDomain()
+
+    suspend fun getLatestCorrection(entrepriseId: String): BalanceCorrection? =
+        dao.findLatestCorrection(entrepriseId)?.toDomain()
+
+    suspend fun initTreasury(
+        entrepriseId: String,
+        bankAccountId: String,
+        initialBalance: Double,
+        balanceDate: java.time.LocalDate,
+        userId: String,
+        userName: String
+    ): String? {
+        if (dao.findInitialBalance(entrepriseId) != null) return "Treasury already initialized"
+        val correction = BalanceCorrection(
+            entrepriseId = entrepriseId,
+            bankAccountId = bankAccountId,
+            type = BalanceCorrectionType.INITIAL,
+            oldBalance = 0.0,
+            newBalance = initialBalance,
+            correctionDate = balanceDate,
+            motif = "Solde initial",
+            userId = userId,
+            userName = userName,
+            createdAt = java.time.LocalDate.now()
+        )
+        dao.upsertBalanceCorrection(correction.toEntity())
+        userPreferences.setTreasuryInitialized(entrepriseId, true)
+        return null
+    }
+
+    suspend fun saveBalanceCorrection(
+        correction: BalanceCorrection
+    ): String? {
+        if (correction.motif.isBlank()) return TreasuryMessage.MOTIF_REQUIRED
+        dao.upsertBalanceCorrection(correction.toEntity())
+        return null
+    }
+
+    fun observeTreasuryInitialized(entrepriseId: String) =
+        userPreferences.observeTreasuryInitialized(entrepriseId)
 
     private suspend fun countTransactionsThisMonth(entrepriseId: String, month: YearMonth): Int {
         // Free-plan quota resets on the 1st of each calendar month (YearMonth.now()).
@@ -1076,6 +1126,34 @@ private fun BankAccountEntity.toDomain(): BankAccount = BankAccount(
     kind = kind,
     source = source,
     createdDate = createdDate
+)
+
+private fun BalanceCorrectionEntity.toDomain(): BalanceCorrection = BalanceCorrection(
+    id = id,
+    entrepriseId = entrepriseId,
+    bankAccountId = bankAccountId,
+    type = runCatching { BalanceCorrectionType.valueOf(type) }.getOrDefault(BalanceCorrectionType.CORRECTION),
+    oldBalance = oldBalance,
+    newBalance = newBalance,
+    correctionDate = correctionDate,
+    motif = motif,
+    userId = userId,
+    userName = userName,
+    createdAt = createdAt
+)
+
+private fun BalanceCorrection.toEntity(): BalanceCorrectionEntity = BalanceCorrectionEntity(
+    id = id,
+    entrepriseId = entrepriseId,
+    bankAccountId = bankAccountId,
+    type = type.name,
+    oldBalance = oldBalance,
+    newBalance = newBalance,
+    correctionDate = correctionDate,
+    motif = motif,
+    userId = userId,
+    userName = userName,
+    createdAt = createdAt
 )
 
 private fun BankAccount.toEntity(): BankAccountEntity = BankAccountEntity(

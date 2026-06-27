@@ -31,6 +31,7 @@ object UserPreferencesKeys {
     val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
     val GOOGLE_LAST_BACKUP_AT = stringPreferencesKey("google_last_backup_at")
     val SUBSCRIPTION_PLAN = stringPreferencesKey("subscription_plan")
+    fun TREASURY_INITIALIZED(entrepriseId: String) = booleanPreferencesKey("treasury_initialized_$entrepriseId")
 }
 
 class UserPreferences(private val context: Context) {
@@ -172,6 +173,20 @@ class UserPreferences(private val context: Context) {
     suspend fun clearSubscriptionPlan() {
         context.userDataStore.edit { preferences ->
             preferences.remove(UserPreferencesKeys.SUBSCRIPTION_PLAN)
+        }
+    }
+
+    fun observeTreasuryInitialized(entrepriseId: String): Flow<Boolean> =
+        context.userDataStore.data.map { preferences ->
+            preferences[UserPreferencesKeys.TREASURY_INITIALIZED(entrepriseId)] ?: false
+        }
+
+    suspend fun readTreasuryInitialized(entrepriseId: String): Boolean =
+        context.userDataStore.data.first()[UserPreferencesKeys.TREASURY_INITIALIZED(entrepriseId)] ?: false
+
+    suspend fun setTreasuryInitialized(entrepriseId: String, initialized: Boolean = true) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.TREASURY_INITIALIZED(entrepriseId)] = initialized
         }
     }
 
