@@ -16,7 +16,8 @@ data class EcheanceItem(
     val amount: Double,
     val dueDate: LocalDate,
     val invoiceId: String? = null,
-    val expenseId: String? = null
+    val expenseId: String? = null,
+    val isRecurring: Boolean = false
 )
 
 data class EcheanceMonthSection(
@@ -59,7 +60,8 @@ object EcheanceForecast {
                     label = expense.label,
                     amount = expense.amount,
                     dueDate = dueDate,
-                    expenseId = expense.id
+                    expenseId = expense.id,
+                    isRecurring = expense.isRecurring
                 )
             }
 
@@ -125,7 +127,8 @@ object EcheanceForecast {
                             label = expense.label,
                             amount = expense.amount,
                             dueDate = expense.date,
-                            expenseId = expense.id
+                            expenseId = expense.id,
+                            isRecurring = false
                         )
                     )
                 }
@@ -142,7 +145,8 @@ object EcheanceForecast {
                                     label = expense.label,
                                     amount = expense.amount,
                                     dueDate = occurrence,
-                                    expenseId = expense.id
+                                    expenseId = expense.id,
+                                    isRecurring = true
                                 )
                             )
                         }

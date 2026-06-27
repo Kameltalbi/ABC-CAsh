@@ -384,10 +384,11 @@ fun PrevisionsScreen(
                             EcheanceType.INCOME -> isAdmin
                             EcheanceType.EXPENSE -> canManageExpense
                         }
-                        val detail = if (isIncome) {
-                            stringResource(R.string.upcoming_forecast)
-                        } else {
-                            null
+                        val recurringLabel = if (item.isRecurring) "🔁 ${stringResource(R.string.recurring_badge)}" else null
+                        val detail = when {
+                            isIncome && item.isRecurring -> "${stringResource(R.string.upcoming_forecast)} · 🔁 ${stringResource(R.string.recurring_badge)}"
+                            isIncome -> stringResource(R.string.upcoming_forecast)
+                            else -> recurringLabel
                         }
 
                         PrevisionLineRow(

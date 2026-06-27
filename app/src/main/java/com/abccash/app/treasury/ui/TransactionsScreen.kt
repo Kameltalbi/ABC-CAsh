@@ -564,7 +564,7 @@ private fun TransactionExpenseLine(
 
     val detailParts = buildList {
         if (expense.isRecurring) {
-            add(expense.recurrence?.localizedLabel() ?: recurringBadge)
+            add("🔁 ${expense.recurrence?.localizedLabel() ?: recurringBadge}")
         }
     }
     val detail = detailParts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
