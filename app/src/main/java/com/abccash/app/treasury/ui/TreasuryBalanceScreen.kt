@@ -347,8 +347,8 @@ fun TreasuryBalanceScreen(
         if (isTreasuryInitialized) {
             TreasuryBalanceSummaryCard(
                 initialBalance = initialBalance,
-                totalCredits = totalCredits,
-                totalDebits = totalDebits,
+                totalCredits = totalCredits + yearTotals.pendingIncome,
+                totalDebits = totalDebits + yearTotals.pendingExpenses,
                 calculatedBalance = calculatedBalance,
                 realBankBalance = realBankBalance,
                 ecart = ecart,
@@ -438,18 +438,6 @@ private fun TreasuryBalanceSummaryCard(
                 label = stringResource(R.string.treasury_opening_balance),
                 value = formatAmount(initialBalance),
                 valueColor = TreasuryScreenTheme.Primary
-            )
-            // + Total crédits
-            BalanceSummaryRow(
-                label = stringResource(R.string.treasury_total_credits),
-                value = formatAmount(totalCredits),
-                valueColor = TreasuryScreenTheme.IncomeAccent
-            )
-            // - Total débits
-            BalanceSummaryRow(
-                label = stringResource(R.string.treasury_total_debits),
-                value = formatAmount(totalDebits),
-                valueColor = TreasuryScreenTheme.ExpenseAccent
             )
             HorizontalDivider(thickness = 0.5.dp)
             // = Solde actuel calculé
