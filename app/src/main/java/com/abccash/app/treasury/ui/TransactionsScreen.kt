@@ -636,9 +636,9 @@ private fun TransactionLineRow(
         modifier = Modifier
             .fillMaxWidth()
             .background(Color.White)
-            .padding(horizontal = if (showSelection) 8.dp else 20.dp, vertical = 11.dp),
+            .padding(horizontal = if (showSelection) 8.dp else 16.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         if (showSelection) {
             Checkbox(
@@ -648,7 +648,7 @@ private fun TransactionLineRow(
         }
         Box(
             modifier = Modifier
-                .size(38.dp)
+                .size(32.dp)
                 .border(1.dp, iconTint.copy(alpha = 0.35f), CircleShape)
                 .background(iconTint.copy(alpha = 0.08f), CircleShape),
             contentAlignment = Alignment.Center
@@ -657,35 +657,26 @@ private fun TransactionLineRow(
                 imageVector = icon,
                 contentDescription = null,
                 tint = iconTint,
-                modifier = Modifier.size(17.dp)
+                modifier = Modifier.size(14.dp)
             )
         }
 
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                fontSize = 14.sp,
+                fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TransactionsTheme.TextPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
-                text = subtitle,
+                text = if (detail != null) "$subtitle · $detail" else subtitle,
                 fontSize = 11.sp,
                 color = subtitleColor,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
-            detail?.let {
-                Text(
-                    text = it,
-                    fontSize = 10.sp,
-                    color = TransactionsTheme.Muted,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
         }
 
         Column(horizontalAlignment = Alignment.End) {
