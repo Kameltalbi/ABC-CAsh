@@ -10,6 +10,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material3.*
@@ -80,7 +82,7 @@ fun ModernDashboardScreen(
     val formatAmount = rememberFormatMoney()
     val formatSummaryAmount = rememberFormatDashboardSummary()
     val today = remember { LocalDate.now() }
-    val focusMonth = remember { YearMonth.now() }
+    var focusMonth by remember { mutableStateOf(YearMonth.now()) }
     val bankBalance by userPreferences
         .observeBankBalance(entrepriseId.orEmpty(), focusMonth.year)
         .collectAsStateWithLifecycle(initialValue = null)
@@ -217,8 +219,18 @@ fun ModernDashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
+                    MonthNavigatorBar(
+                        monthLabel = AppLocale.monthYear(focusMonth),
+                        isCurrentMonth = focusMonth == YearMonth.now(),
+                        onPrevious = { focusMonth = focusMonth.minusMonths(1) },
+                        onNext = { focusMonth = focusMonth.plusMonths(1) },
+                        onReset = { focusMonth = YearMonth.now() }
+                    )
+                }
+                item {
                     BreakEvenCard(
                         summary = breakEven,
+                        periodLabel = AppLocale.monthYear(focusMonth),
                         formatAmount = formatSummaryAmount
                     )
                 }
@@ -228,6 +240,13 @@ fun ModernDashboardScreen(
                             points = annualTreasury,
                             formatAmount = formatSummaryAmount,
                             onMonthClick = { /* TODO: open month detail */ }
+                        )
+                    }
+                    item {
+                        MonthlyBarsCard(
+                            monthlyBars = monthlyBars,
+                            showIncome = canViewIncome || isAdmin,
+                            showExpenses = canManageExpense || isAdmin
                         )
                     }
                     item {
@@ -321,6 +340,67 @@ private fun FastBudgetHeader(
                     contentDescription = null,
                     tint = Color.White,
                     modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthNavigatorBar(
+    monthLabel: String,
+    isCurrentMonth: Boolean,
+    onPrevious: () -> Unit,
+    onNext: () -> Unit,
+    onReset: () -> Unit
+) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = DashboardTheme.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            IconButton(onClick = onPrevious) {
+                Icon(
+                    Icons.Default.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.previous_month),
+                    tint = DashboardTheme.TextPrimary
+                )
+            }
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(enabled = !isCurrentMonth, onClick = onReset),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = monthLabel.replaceFirstChar { it.uppercase() },
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = DashboardTheme.TextPrimary,
+                    maxLines = 1
+                )
+                if (!isCurrentMonth) {
+                    Text(
+                        text = stringResource(R.string.dashboard_back_to_current_month),
+                        fontSize = 11.sp,
+                        color = DashboardTheme.Income,
+                        maxLines = 1
+                    )
+                }
+            }
+            IconButton(onClick = onNext) {
+                Icon(
+                    Icons.Default.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.next_month),
+                    tint = DashboardTheme.TextPrimary
                 )
             }
         }
@@ -770,6 +850,43 @@ private fun TransactionsChartsCard(
 }
 
 @Composable
+private fun MonthlyBarsCard(
+    monthlyBars: List<MonthlyBarPoint>,
+    showIncome: Boolean,
+    showExpenses: Boolean
+) {
+    DashboardSectionCard(
+        title = stringResource(R.string.dashboard_monthly_bars_title),
+        subtitle = stringResource(R.string.dashboard_monthly_bars_subtitle_6m)
+    ) {
+        MonthlyIncomeExpenseBarChart(
+            bars = monthlyBars,
+            showIncome = showIncome,
+            showExpenses = showExpenses
+        )
+        if (showIncome || showExpenses) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+            ) {
+                if (showIncome) {
+                    ChartLegendDot(
+                        color = DashboardTheme.Income,
+                        label = stringResource(R.string.income_title)
+                    )
+                }
+                if (showExpenses) {
+                    ChartLegendDot(
+                        color = DashboardTheme.Expense,
+                        label = stringResource(R.string.expense_title)
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun ChartLegendDot(color: Color, label: String) {
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -1023,6 +1140,7 @@ private fun TopCategoriesCard(
 @Composable
 private fun BreakEvenCard(
     summary: BreakEvenSummary,
+    periodLabel: String,
     formatAmount: (Double) -> String
 ) {
     val progress = if (summary.targetRevenue > 0) {
@@ -1032,7 +1150,7 @@ private fun BreakEvenCard(
     }
     DashboardSectionCard(
         title = stringResource(R.string.dashboard_break_even_title),
-        subtitle = stringResource(R.string.dashboard_break_even_subtitle)
+        subtitle = stringResource(R.string.dashboard_break_even_subtitle, periodLabel)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             if (summary.isAchieved) {
