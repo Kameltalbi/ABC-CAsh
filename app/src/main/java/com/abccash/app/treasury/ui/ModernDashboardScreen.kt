@@ -10,10 +10,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.ArrowDownward
+import androidx.compose.material.icons.filled.ArrowUpward
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -124,8 +129,8 @@ fun ModernDashboardScreen(
             today = today
         )
     }
-    val breakEven = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
-        DashboardCalculations.buildBreakEvenSummary(
+    val financialHealth = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
+        DashboardCalculations.buildFinancialHealth(
             invoices = visibleInvoices,
             expenses = visibleExpenses,
             bankAccounts = bankAccounts,
@@ -228,8 +233,8 @@ fun ModernDashboardScreen(
                     )
                 }
                 item {
-                    BreakEvenCard(
-                        summary = breakEven,
+                    FinancialHealthCard(
+                        summary = financialHealth,
                         periodLabel = AppLocale.monthYear(focusMonth),
                         formatAmount = formatSummaryAmount
                     )
@@ -1138,72 +1143,209 @@ private fun TopCategoriesCard(
 }
 
 @Composable
-private fun BreakEvenCard(
-    summary: BreakEvenSummary,
+private fun FinancialHealthCard(
+    summary: FinancialHealthSummary,
     periodLabel: String,
     formatAmount: (Double) -> String
 ) {
-    val progress = if (summary.targetRevenue > 0) {
-        (summary.achievedRevenue / summary.targetRevenue).toFloat().coerceIn(0f, 1f)
-    } else {
-        1f
+    val statusColor = when (summary.status) {
+        FinancialHealthStatus.EXCELLENT -> Color(0xFF16A34A)
+        FinancialHealthStatus.WATCH -> Color(0xFFF59E0B)
+        FinancialHealthStatus.CRITICAL -> Color(0xFFDC2626)
     }
-    DashboardSectionCard(
-        title = stringResource(R.string.dashboard_break_even_title),
-        subtitle = stringResource(R.string.dashboard_break_even_subtitle, periodLabel)
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            if (summary.isAchieved) {
-                Text(
-                    text = stringResource(R.string.dashboard_break_even_achieved),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF4CAF50)
-                )
-                Text(
-                    text = stringResource(R.string.dashboard_break_even_additional_margin, formatAmount(summary.additionalMargin)),
-                    fontSize = 12.sp,
-                    color = DashboardTheme.TextSecondary
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.dashboard_break_even_target, formatAmount(summary.targetRevenue)),
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = DashboardTheme.TextPrimary
-                )
-                Text(
-                    text = stringResource(R.string.dashboard_break_even_remaining, formatAmount(summary.remainingRevenue)),
-                    fontSize = 12.sp,
-                    color = Color(0xFFFF9800)
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp)),
-                color = if (summary.isAchieved) Color(0xFF4CAF50) else Color(0xFFFF9800),
-                trackColor = DashboardTheme.Track
+    val statusLabel = when (summary.status) {
+        FinancialHealthStatus.EXCELLENT -> stringResource(R.string.health_status_excellent)
+        FinancialHealthStatus.WATCH -> stringResource(R.string.health_status_watch)
+        FinancialHealthStatus.CRITICAL -> stringResource(R.string.health_status_critical)
+    }
+    val autonomyText = when (val days = summary.autonomyDays) {
+        null -> stringResource(R.string.health_value_infinite)
+        else -> stringResource(R.string.health_value_days, days)
+    }
+    val comment = when (summary.reason) {
+        FinancialHealthReason.HEALTHY -> stringResource(R.string.health_comment_healthy)
+        FinancialHealthReason.NEGATIVE_BALANCE -> stringResource(R.string.health_comment_negative_balance)
+        FinancialHealthReason.CRITICAL_AUTONOMY ->
+            stringResource(R.string.health_comment_critical_autonomy, summary.autonomyDays ?: 0)
+        FinancialHealthReason.UPCOMING_RISK ->
+            stringResource(
+                R.string.health_comment_upcoming_risk,
+                summary.riskMonth?.let { AppLocale.monthYear(it) }.orEmpty()
             )
-            Spacer(Modifier.height(8.dp))
+        FinancialHealthReason.NEGATIVE_RESULT -> stringResource(R.string.health_comment_negative_result)
+        FinancialHealthReason.LOW_AUTONOMY ->
+            stringResource(R.string.health_comment_low_autonomy, summary.autonomyDays ?: 0)
+        FinancialHealthReason.DECLINING_TREND -> stringResource(R.string.health_comment_declining_trend)
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = DashboardTheme.Card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 3.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(18.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp)
+        ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(12.dp)
+                            .clip(CircleShape)
+                            .background(statusColor)
+                    )
+                    Column {
+                        Text(
+                            text = statusLabel,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = statusColor,
+                            maxLines = 1
+                        )
+                        Text(
+                            text = stringResource(R.string.health_card_title),
+                            fontSize = 11.sp,
+                            color = DashboardTheme.TextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                }
                 Text(
-                    text = stringResource(R.string.dashboard_break_even_achieved_label, formatAmount(summary.achievedRevenue)),
-                    fontSize = 10.sp,
-                    color = DashboardTheme.TextSecondary
-                )
-                Text(
-                    text = stringResource(R.string.dashboard_break_even_expenses_label, formatAmount(summary.projectedExpenses)),
-                    fontSize = 10.sp,
-                    color = DashboardTheme.TextSecondary
+                    text = periodLabel.replaceFirstChar { it.uppercase() },
+                    fontSize = 12.sp,
+                    color = DashboardTheme.TextSecondary,
+                    maxLines = 1
                 )
             }
+
+            Text(
+                text = comment,
+                fontSize = 13.sp,
+                lineHeight = 18.sp,
+                color = DashboardTheme.TextPrimary
+            )
+
+            val resultColor = if (summary.monthResult < 0) DashboardTheme.Expense else DashboardTheme.Income
+            val resultIcon = if (summary.monthResult < 0) Icons.Default.ArrowDownward else Icons.Default.ArrowUpward
+
+            val trendLabel = when (summary.trend) {
+                FinancialTrend.UP -> stringResource(R.string.health_trend_up)
+                FinancialTrend.STABLE -> stringResource(R.string.health_trend_stable)
+                FinancialTrend.DOWN -> stringResource(R.string.health_trend_down)
+            }
+            val trendIcon: ImageVector? = when (summary.trend) {
+                FinancialTrend.UP -> Icons.Default.ArrowUpward
+                FinancialTrend.DOWN -> Icons.Default.ArrowDownward
+                FinancialTrend.STABLE -> null
+            }
+            val trendColor = when (summary.trend) {
+                FinancialTrend.UP -> DashboardTheme.Income
+                FinancialTrend.DOWN -> DashboardTheme.Expense
+                FinancialTrend.STABLE -> DashboardTheme.TextSecondary
+            }
+
+            val riskLabel = summary.riskMonth?.let { AppLocale.monthYear(it).replaceFirstChar { c -> c.uppercase() } }
+                ?: stringResource(R.string.health_value_none)
+            val riskColor = if (summary.riskMonth != null) DashboardTheme.Expense else DashboardTheme.Income
+            val riskIcon = if (summary.riskMonth != null) Icons.Default.Warning else Icons.Default.CheckCircle
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HealthTile(
+                    label = stringResource(R.string.health_tile_result),
+                    value = formatAmount(summary.monthResult),
+                    valueColor = resultColor,
+                    icon = resultIcon,
+                    iconTint = resultColor,
+                    modifier = Modifier.weight(1f)
+                )
+                HealthTile(
+                    label = stringResource(R.string.health_tile_autonomy),
+                    value = autonomyText,
+                    valueColor = DashboardTheme.TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            ) {
+                HealthTile(
+                    label = stringResource(R.string.health_tile_trend),
+                    value = trendLabel,
+                    valueColor = trendColor,
+                    icon = trendIcon,
+                    iconTint = trendColor,
+                    modifier = Modifier.weight(1f)
+                )
+                HealthTile(
+                    label = stringResource(R.string.health_tile_risk),
+                    value = riskLabel,
+                    valueColor = riskColor,
+                    icon = riskIcon,
+                    iconTint = riskColor,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HealthTile(
+    label: String,
+    value: String,
+    valueColor: Color,
+    modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
+    iconTint: Color = DashboardTheme.TextSecondary
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(Color(0xFFF4F6F8))
+            .padding(horizontal = 12.dp, vertical = 10.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        Text(
+            text = label,
+            fontSize = 11.sp,
+            color = DashboardTheme.TextSecondary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+            lineHeight = 13.sp
+        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            if (icon != null) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(15.dp)
+                )
+            }
+            Text(
+                text = value,
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = valueColor,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
         }
     }
 }

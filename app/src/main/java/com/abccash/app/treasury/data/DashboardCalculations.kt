@@ -106,6 +106,30 @@ enum class RecommendationSeverity {
     CRITICAL
 }
 
+enum class FinancialHealthStatus { EXCELLENT, WATCH, CRITICAL }
+
+enum class FinancialTrend { UP, STABLE, DOWN }
+
+enum class FinancialHealthReason {
+    HEALTHY,
+    NEGATIVE_BALANCE,
+    CRITICAL_AUTONOMY,
+    UPCOMING_RISK,
+    NEGATIVE_RESULT,
+    LOW_AUTONOMY,
+    DECLINING_TREND
+}
+
+data class FinancialHealthSummary(
+    val status: FinancialHealthStatus,
+    val reason: FinancialHealthReason,
+    val monthResult: Double,
+    val currentBalance: Double,
+    val autonomyDays: Int?,
+    val trend: FinancialTrend,
+    val riskMonth: YearMonth?
+)
+
 object DashboardCalculations {
 
     private const val HISTORY_DAYS = 30
@@ -347,6 +371,83 @@ object DashboardCalculations {
             previousMonthBalance = previousMonthBalance,
             additionalMargin = additionalMargin,
             isAchieved = isAchieved
+        )
+    }
+
+    fun buildFinancialHealth(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankAccounts: List<BankAccount>,
+        focusMonth: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
+    ): FinancialHealthSummary {
+        val opening = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val currentBalance = opening + TreasuryCalculations.currentRealizedBalance(invoices, expenses)
+
+        val monthIncome = TreasuryCalculations.monthlyCollections(invoices, focusMonth)
+        val monthExpenses = TreasuryCalculations.monthlyPaidExpenses(expenses, focusMonth)
+        val monthResult = monthIncome - monthExpenses
+
+        // Charge mensuelle moyenne (6 derniers mois, hors mois vides) → rythme de consommation
+        val pastExpenses = (1..6).map {
+            TreasuryCalculations.monthlyPaidExpenses(expenses, focusMonth.minusMonths(it.toLong()))
+        }
+        val nonZeroPast = pastExpenses.filter { it > 0 }
+        val avgMonthlyExpenses = when {
+            nonZeroPast.isNotEmpty() -> nonZeroPast.average()
+            monthExpenses > 0 -> monthExpenses
+            else -> 0.0
+        }
+
+        val autonomyDays: Int? = when {
+            avgMonthlyExpenses <= 0.0 -> null
+            currentBalance <= 0.0 -> 0
+            else -> (currentBalance / (avgMonthlyExpenses / 30.0)).toInt().coerceAtMost(999)
+        }
+
+        fun netOf(m: YearMonth) =
+            TreasuryCalculations.monthlyCollections(invoices, m) -
+                TreasuryCalculations.monthlyPaidExpenses(expenses, m)
+        val recent = netOf(focusMonth) + netOf(focusMonth.minusMonths(1))
+        val older = netOf(focusMonth.minusMonths(2)) + netOf(focusMonth.minusMonths(3))
+        val trendThreshold = (avgMonthlyExpenses * 0.10).coerceAtLeast(1.0)
+        val trend = when {
+            recent - older > trendThreshold -> FinancialTrend.UP
+            older - recent > trendThreshold -> FinancialTrend.DOWN
+            else -> FinancialTrend.STABLE
+        }
+
+        val rows = TreasuryCalculations.yearlyRows(invoices, expenses, focusMonth.year, opening)
+        val riskMonth = rows.firstOrNull { it.month.isAfter(focusMonth) && it.forecastBalance < 0 }?.month
+        val riskWithinOneMonth = riskMonth != null && !riskMonth.isAfter(focusMonth.plusMonths(1))
+
+        val (status, reason) = when {
+            currentBalance < 0 ->
+                FinancialHealthStatus.CRITICAL to FinancialHealthReason.NEGATIVE_BALANCE
+            autonomyDays != null && autonomyDays < 30 ->
+                FinancialHealthStatus.CRITICAL to FinancialHealthReason.CRITICAL_AUTONOMY
+            riskWithinOneMonth ->
+                FinancialHealthStatus.CRITICAL to FinancialHealthReason.UPCOMING_RISK
+            monthResult < 0 ->
+                FinancialHealthStatus.WATCH to FinancialHealthReason.NEGATIVE_RESULT
+            autonomyDays != null && autonomyDays < 90 ->
+                FinancialHealthStatus.WATCH to FinancialHealthReason.LOW_AUTONOMY
+            riskMonth != null ->
+                FinancialHealthStatus.WATCH to FinancialHealthReason.UPCOMING_RISK
+            trend == FinancialTrend.DOWN ->
+                FinancialHealthStatus.WATCH to FinancialHealthReason.DECLINING_TREND
+            else ->
+                FinancialHealthStatus.EXCELLENT to FinancialHealthReason.HEALTHY
+        }
+
+        return FinancialHealthSummary(
+            status = status,
+            reason = reason,
+            monthResult = monthResult,
+            currentBalance = currentBalance,
+            autonomyDays = autonomyDays,
+            trend = trend,
+            riskMonth = riskMonth
         )
     }
 
