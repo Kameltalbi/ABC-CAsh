@@ -468,16 +468,10 @@ object DashboardCalculations {
             openingBalance = openingBalance
         )
         return rows.map { row ->
-            val isPastOrCurrent = !row.month.isAfter(todayMonth)
-            val net = if (isPastOrCurrent) {
-                row.balance
-            } else {
-                row.totalIncome - row.totalExpenses
-            }
             AnnualTreasuryPoint(
                 month = row.month,
                 label = row.month.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
-                forecastBalance = net,
+                forecastBalance = row.forecastBalance,
                 income = row.collected + row.pendingIncome,
                 expenses = row.expenses + row.pendingExpenses
             )
