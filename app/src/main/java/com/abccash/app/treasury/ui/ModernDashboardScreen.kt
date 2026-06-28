@@ -122,6 +122,15 @@ fun ModernDashboardScreen(
             today = today
         )
     }
+    val breakEven = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
+        DashboardCalculations.buildBreakEvenSummary(
+            invoices = visibleInvoices,
+            expenses = visibleExpenses,
+            bankAccounts = bankAccounts,
+            focusMonth = focusMonth,
+            today = today
+        )
+    }
     val expenseCategories = remember(visibleExpenses, focusMonth) {
         DashboardCalculations.buildInnovativeDashboard(
             invoices = visibleInvoices,
@@ -208,9 +217,8 @@ fun ModernDashboardScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 item {
-                    MiniTreasurySummary(
-                        currentBalance = treasuryBalance,
-                        endOfMonthEstimate = monthComparison.first.total,
+                    BreakEvenCard(
+                        summary = breakEven,
                         formatAmount = formatSummaryAmount
                     )
                 }
@@ -1013,43 +1021,69 @@ private fun TopCategoriesCard(
 }
 
 @Composable
-private fun MiniTreasurySummary(
-    currentBalance: Double,
-    endOfMonthEstimate: Double,
+private fun BreakEvenCard(
+    summary: BreakEvenSummary,
     formatAmount: (Double) -> String
 ) {
+    val progress = if (summary.targetRevenue > 0) {
+        (summary.achievedRevenue / summary.targetRevenue).toFloat().coerceIn(0f, 1f)
+    } else {
+        1f
+    }
     DashboardSectionCard(
-        title = stringResource(R.string.dashboard_treasury_wallet),
-        subtitle = stringResource(R.string.dashboard_treasury_summary_subtitle)
+        title = stringResource(R.string.dashboard_break_even_title),
+        subtitle = stringResource(R.string.dashboard_break_even_subtitle)
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceEvenly
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            if (summary.isAchieved) {
                 Text(
-                    text = stringResource(R.string.dashboard_balance_today),
-                    fontSize = 11.sp,
-                    color = DashboardTheme.TextSecondary
+                    text = stringResource(R.string.dashboard_break_even_achieved),
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF4CAF50)
                 )
                 Text(
-                    text = formatAmount(currentBalance),
-                    fontSize = 18.sp,
+                    text = stringResource(R.string.dashboard_break_even_additional_margin, formatAmount(summary.additionalMargin)),
+                    fontSize = 12.sp,
+                    color = DashboardTheme.TextSecondary
+                )
+            } else {
+                Text(
+                    text = stringResource(R.string.dashboard_break_even_target, formatAmount(summary.targetRevenue)),
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold,
-                    color = if (currentBalance >= 0) DashboardTheme.Income else DashboardTheme.Expense
+                    color = DashboardTheme.TextPrimary
+                )
+                Text(
+                    text = stringResource(R.string.dashboard_break_even_remaining, formatAmount(summary.remainingRevenue)),
+                    fontSize = 12.sp,
+                    color = Color(0xFFFF9800)
                 )
             }
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Spacer(Modifier.height(8.dp))
+            LinearProgressIndicator(
+                progress = { progress },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = if (summary.isAchieved) Color(0xFF4CAF50) else Color(0xFFFF9800),
+                trackColor = DashboardTheme.Track
+            )
+            Spacer(Modifier.height(8.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
                 Text(
-                    text = stringResource(R.string.end_of_month_estimate),
-                    fontSize = 11.sp,
+                    text = stringResource(R.string.dashboard_break_even_achieved_label, formatAmount(summary.achievedRevenue)),
+                    fontSize = 10.sp,
                     color = DashboardTheme.TextSecondary
                 )
                 Text(
-                    text = formatAmount(endOfMonthEstimate),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = if (endOfMonthEstimate >= 0) DashboardTheme.Income else DashboardTheme.Expense
+                    text = stringResource(R.string.dashboard_break_even_expenses_label, formatAmount(summary.projectedExpenses)),
+                    fontSize = 10.sp,
+                    color = DashboardTheme.TextSecondary
                 )
             }
         }
@@ -1201,6 +1235,11 @@ private fun AnnualTreasuryHeatmap(
 ) {
     if (points.isEmpty()) return
     val todayMonth = remember { YearMonth.now() }
+    val formatK = remember { { value: Double ->
+        val k = value / 1000.0
+        val rounded = kotlin.math.round(k).toInt()
+        "${rounded}k"
+    } }
     val maxAbs = remember(points) {
         points.maxOf { kotlin.math.abs(it.forecastBalance) }.coerceAtLeast(1.0)
     }
@@ -1213,17 +1252,14 @@ private fun AnnualTreasuryHeatmap(
         title = stringResource(R.string.dashboard_annual_treasury),
         subtitle = buildString {
             append("$positiveCount mois positifs · $negativeCount à risque")
-            worstMonth?.takeIf { it.forecastBalance < 0 }?.let {
-                append(" · pire : ${it.label} ${formatAmount(it.forecastBalance)}")
-            }
         }
     ) {
         Column {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(110.dp)
-                    .padding(horizontal = 4.dp),
+                    .height(70.dp)
+                    .padding(horizontal = 2.dp),
                 verticalAlignment = Alignment.Bottom,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
@@ -1237,36 +1273,35 @@ private fun AnnualTreasuryHeatmap(
                     val heightFraction = (kotlin.math.abs(point.forecastBalance) / maxAbs)
                         .toFloat()
                         .coerceIn(0.05f, 1f)
-                    val direction = if (point.forecastBalance >= 0) 1f else -1f
 
                     Column(
                         modifier = Modifier
-                            .width(24.dp)
+                            .width(22.dp)
                             .fillMaxHeight()
                             .clickable { onMonthClick(point) },
                         horizontalAlignment = Alignment.CenterHorizontally,
                         verticalArrangement = Arrangement.Bottom
                     ) {
                         Text(
-                            text = formatAmount(point.forecastBalance),
-                            fontSize = 8.sp,
+                            text = formatK(point.forecastBalance),
+                            fontSize = 7.sp,
                             color = if (point.forecastBalance < 0) Color(0xFFF44336) else DashboardTheme.TextSecondary,
                             maxLines = 1,
                             textAlign = TextAlign.Center
                         )
-                        Spacer(Modifier.height(2.dp))
+                        Spacer(Modifier.height(1.dp))
                         Box(
                             modifier = Modifier
-                                .width(16.dp)
+                                .width(12.dp)
                                 .fillMaxHeight(heightFraction)
-                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .clip(RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp))
                                 .background(color)
-                                .then(if (isCurrent) Modifier.border(1.dp, Color(0xFF1976D2), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)) else Modifier)
+                                .then(if (isCurrent) Modifier.border(1.dp, Color(0xFF1976D2), RoundedCornerShape(topStart = 3.dp, topEnd = 3.dp)) else Modifier)
                         )
-                        Spacer(Modifier.height(4.dp))
+                        Spacer(Modifier.height(2.dp))
                         Text(
-                            text = point.label.uppercase(),
-                            fontSize = 9.sp,
+                            text = point.label.uppercase().take(3),
+                            fontSize = 8.sp,
                             fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
                             color = if (isCurrent) Color(0xFF1976D2) else DashboardTheme.TextSecondary,
                             maxLines = 1
@@ -1275,7 +1310,7 @@ private fun AnnualTreasuryHeatmap(
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(8.dp))
 
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -1284,13 +1319,13 @@ private fun AnnualTreasuryHeatmap(
                 bestMonth?.let {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Meilleur mois", fontSize = 10.sp, color = DashboardTheme.TextSecondary)
-                        Text("${it.label} ${formatAmount(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF4CAF50))
+                        Text("${it.label} ${formatK(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF4CAF50))
                     }
                 }
                 worstMonth?.takeIf { it.forecastBalance < 0 }?.let {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Pire mois", fontSize = 10.sp, color = DashboardTheme.TextSecondary)
-                        Text("${it.label} ${formatAmount(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF44336))
+                        Text("${it.label} ${formatK(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF44336))
                     }
                 }
             }

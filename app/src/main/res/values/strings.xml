@@ -143,6 +143,14 @@
     <string name="dashboard_last_used">Last used: %1$s</string>
     <string name="dashboard_treasury_wallet">Treasury</string>
     <string name="dashboard_treasury_summary_subtitle">Quick overview, not a full treasury report</string>
+    <string name="dashboard_break_even_title">Break-even target</string>
+    <string name="dashboard_break_even_subtitle">Based on your expenses and previous balance</string>
+    <string name="dashboard_break_even_achieved">Target reached</string>
+    <string name="dashboard_break_even_additional_margin">Additional margin: %1$s</string>
+    <string name="dashboard_break_even_target">You need to invoice %1$s this month</string>
+    <string name="dashboard_break_even_remaining">%1$s remaining to invoice</string>
+    <string name="dashboard_break_even_achieved_label">Invoiced: %1$s</string>
+    <string name="dashboard_break_even_expenses_label">Expenses: %1$s</string>
     <string name="dashboard_trial_version">Trial version</string>
     <string name="dashboard_test_data">Your business data</string>
     <string name="dashboard_upgrade">Upgrade</string>

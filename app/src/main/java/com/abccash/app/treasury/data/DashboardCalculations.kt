@@ -89,6 +89,16 @@ data class TreasuryRecommendation(
     val estimateImpact: String? = null
 )
 
+data class BreakEvenSummary(
+    val targetRevenue: Double,
+    val achievedRevenue: Double,
+    val remainingRevenue: Double,
+    val projectedExpenses: Double,
+    val previousMonthBalance: Double,
+    val additionalMargin: Double,
+    val isAchieved: Boolean
+)
+
 enum class RecommendationSeverity {
     LIGHT,
     MODERATE,
@@ -163,7 +173,8 @@ object DashboardCalculations {
         val upcomingExpenses7Days = upcoming7Days.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
         val annualForecast = buildAnnualTreasuryForecast(invoices, expenses, bankAccounts, focusYear = focusMonth.year, today = today)
         val negativeMonths = annualForecast.count { it.forecastBalance < 0 }
-        val currentForecastBalance = annualForecast.find { it.month == focusMonth }?.forecastBalance ?: (openingBalance + currentMonthNet)
+        val yearlyRows = TreasuryCalculations.yearlyRows(invoices, expenses, focusMonth.year, openingBalance)
+        val currentForecastBalance = yearlyRows.find { it.month == focusMonth }?.forecastBalance ?: (openingBalance + currentMonthNet)
 
         val recommendations = mutableListOf<TreasuryRecommendation>()
 
@@ -293,6 +304,52 @@ object DashboardCalculations {
     private fun formatDouble(value: Double): String =
         java.text.NumberFormat.getInstance(Locale.getDefault()).apply { maximumFractionDigits = 0 }.format(value)
 
+    fun buildBreakEvenSummary(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankAccounts: List<BankAccount>,
+        focusMonth: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
+    ): BreakEvenSummary {
+        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val previousMonth = focusMonth.minusMonths(1)
+        val previousMonthBalance = TreasuryCalculations.calendarYearChartRows(
+            invoices = invoices,
+            expenses = expenses,
+            year = previousMonth.year,
+            today = YearMonth.from(today),
+            openingBalance = openingBalance
+        ).find { it.month == previousMonth }?.forecastCumulative
+            ?: TreasuryCalculations.yearlyForecastBalance(invoices, expenses, previousMonth.year, openingBalance)
+
+        val projectedExpenses = TreasuryCalculations.monthlyDepenses(expenses, focusMonth)
+        val historicalAverageExpenses = if (projectedExpenses > 0) {
+            projectedExpenses
+        } else {
+            val pastMonths = (1..6).map { focusMonth.minusMonths(it.toLong()) }
+            val pastTotals = pastMonths.map { TreasuryCalculations.monthlyDepenses(expenses, it) }
+            val nonZero = pastTotals.filter { it > 0 }
+            if (nonZero.isNotEmpty()) nonZero.average() else 0.0
+        }
+
+        val expensesToCover = projectedExpenses.coerceAtLeast(historicalAverageExpenses)
+        val targetRevenue = (expensesToCover - previousMonthBalance).coerceAtLeast(0.0)
+        val achievedRevenue = TreasuryCalculations.monthlyEncaissements(invoices, focusMonth)
+        val remainingRevenue = (targetRevenue - achievedRevenue).coerceAtLeast(0.0)
+        val isAchieved = achievedRevenue >= targetRevenue
+        val additionalMargin = if (isAchieved) achievedRevenue - targetRevenue else 0.0
+
+        return BreakEvenSummary(
+            targetRevenue = targetRevenue,
+            achievedRevenue = achievedRevenue,
+            remainingRevenue = remainingRevenue,
+            projectedExpenses = expensesToCover,
+            previousMonthBalance = previousMonthBalance,
+            additionalMargin = additionalMargin,
+            isAchieved = isAchieved
+        )
+    }
+
     fun buildAnnualTreasuryForecast(
         invoices: List<Invoice>,
         expenses: List<Expense>,
@@ -303,19 +360,25 @@ object DashboardCalculations {
         val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
         val todayMonth = YearMonth.from(today)
         val year = if (focusYear == todayMonth.year) todayMonth.year else focusYear
-        return TreasuryCalculations.calendarYearChartRows(
+        val rows = TreasuryCalculations.yearlyRows(
             invoices = invoices,
             expenses = expenses,
             year = year,
-            today = todayMonth,
             openingBalance = openingBalance
-        ).map { row ->
+        )
+        return rows.map { row ->
+            val isPastOrCurrent = !row.month.isAfter(todayMonth)
+            val net = if (isPastOrCurrent) {
+                row.balance
+            } else {
+                row.totalIncome - row.totalExpenses
+            }
             AnnualTreasuryPoint(
                 month = row.month,
                 label = row.month.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
-                forecastBalance = row.forecastCumulative,
+                forecastBalance = net,
                 income = row.collected + row.pendingIncome,
-                expenses = row.paidExpenses + row.pendingExpenses
+                expenses = row.expenses + row.pendingExpenses
             )
         }
     }
