@@ -2,6 +2,7 @@ package com.abccash.app.treasury.ui
 
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -104,6 +105,23 @@ fun ModernDashboardScreen(
             monthCount = 6
         )
     }
+    val annualTreasury = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth) {
+        DashboardCalculations.buildAnnualTreasuryForecast(
+            invoices = visibleInvoices,
+            expenses = visibleExpenses,
+            bankAccounts = bankAccounts,
+            focusYear = focusMonth.year
+        )
+    }
+    val recommendations = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
+        DashboardCalculations.buildTreasuryRecommendations(
+            invoices = visibleInvoices,
+            expenses = visibleExpenses,
+            bankAccounts = bankAccounts,
+            focusMonth = focusMonth,
+            today = today
+        )
+    }
     val expenseCategories = remember(visibleExpenses, focusMonth) {
         DashboardCalculations.buildInnovativeDashboard(
             invoices = visibleInvoices,
@@ -189,37 +207,25 @@ fun ModernDashboardScreen(
                 contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                if (canViewIncome || canManageExpense || isAdmin) {
-                    item {
-                        SummaryComparisonCard(
-                            current = monthComparison.first,
-                            previous = monthComparison.second,
-                            formatAmount = formatSummaryAmount,
-                            showIncome = canViewIncome || isAdmin,
-                            showExpenses = canManageExpense || isAdmin
-                        )
-                    }
-                }
                 item {
-                    AccountsCard(
-                        summaries = accountSummaries,
-                        treasuryBalance = treasuryBalance,
-                        invoices = visibleInvoices,
-                        expenses = visibleExpenses,
-                        defaultAccountId = defaultAccountId,
-                        defaultCashAccountId = defaultCashAccountId,
-                        formatAmount = formatSummaryAmount,
-                        onAddAccount = onNavigateToBankAccounts
+                    MiniTreasurySummary(
+                        currentBalance = treasuryBalance,
+                        endOfMonthEstimate = monthComparison.first.total,
+                        formatAmount = formatSummaryAmount
                     )
                 }
                 if (canViewIncome || canManageExpense || isAdmin) {
                     item {
-                        TransactionsChartsCard(
-                            upcomingBars = upcomingPayments,
-                            monthlyBars = monthlyBars,
-                            formatAmount = formatAmount,
-                            showIncome = canViewIncome || isAdmin,
-                            showExpenses = canManageExpense || isAdmin
+                        AnnualTreasuryHeatmap(
+                            points = annualTreasury,
+                            formatAmount = formatSummaryAmount,
+                            onMonthClick = { /* TODO: open month detail */ }
+                        )
+                    }
+                    item {
+                        RecommendedActionsCard(
+                            recommendations = recommendations,
+                            onActionClick = { /* TODO: navigate based on action */ }
                         )
                     }
                 }
@@ -317,6 +323,7 @@ private fun FastBudgetHeader(
 private fun DashboardSectionCard(
     title: String,
     modifier: Modifier = Modifier,
+    subtitle: String? = null,
     onMenuClick: (() -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -351,6 +358,15 @@ private fun DashboardSectionCard(
                             .clickable(onClick = onMenuClick)
                     )
                 }
+            }
+            if (subtitle != null) {
+                Text(
+                    text = subtitle,
+                    fontSize = 12.sp,
+                    color = DashboardTheme.TextSecondary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
             content()
         }
@@ -991,6 +1007,314 @@ private fun TopCategoriesCard(
             }
             if (index < slices.lastIndex) {
                 Spacer(Modifier.height(4.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun MiniTreasurySummary(
+    currentBalance: Double,
+    endOfMonthEstimate: Double,
+    formatAmount: (Double) -> String
+) {
+    DashboardSectionCard(
+        title = stringResource(R.string.dashboard_treasury_wallet),
+        subtitle = stringResource(R.string.dashboard_treasury_summary_subtitle)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.dashboard_balance_today),
+                    fontSize = 11.sp,
+                    color = DashboardTheme.TextSecondary
+                )
+                Text(
+                    text = formatAmount(currentBalance),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (currentBalance >= 0) DashboardTheme.Income else DashboardTheme.Expense
+                )
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = stringResource(R.string.end_of_month_estimate),
+                    fontSize = 11.sp,
+                    color = DashboardTheme.TextSecondary
+                )
+                Text(
+                    text = formatAmount(endOfMonthEstimate),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (endOfMonthEstimate >= 0) DashboardTheme.Income else DashboardTheme.Expense
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun RecommendedActionsCard(
+    recommendations: List<TreasuryRecommendation>,
+    onActionClick: (TreasuryRecommendation) -> Unit
+) {
+    if (recommendations.isEmpty()) return
+    val severityColor = when (recommendations.maxOf { it.severity }) {
+        RecommendationSeverity.CRITICAL -> Color(0xFFB71C1C)
+        RecommendationSeverity.SEVERE -> Color(0xFFF44336)
+        RecommendationSeverity.MODERATE -> Color(0xFFFF9800)
+        RecommendationSeverity.LIGHT -> Color(0xFF4CAF50)
+    }
+    val severityTitle = when (recommendations.maxOf { it.severity }) {
+        RecommendationSeverity.CRITICAL -> "Trésorerie en crise"
+        RecommendationSeverity.SEVERE -> "Trésorerie sous tension"
+        RecommendationSeverity.MODERATE -> "Attention trésorerie"
+        RecommendationSeverity.LIGHT -> "Situation maîtrisée"
+    }
+
+    val titleMap = mapOf(
+        "credit_financing" to R.string.recommendation_credit_financing,
+        "partner_contribution" to R.string.recommendation_partner_contribution,
+        "cut_expenses" to R.string.recommendation_cut_expenses,
+        "accelerate_collection" to R.string.recommendation_accelerate_collection,
+        "cash_sale" to R.string.recommendation_cash_sale,
+        "postpone_expenses" to R.string.recommendation_postpone_expenses,
+        "send_reminders" to R.string.recommendation_send_reminders,
+        "advance_invoice" to R.string.recommendation_advance_invoice,
+        "partner_advance" to R.string.recommendation_partner_advance,
+        "light_reminder" to R.string.recommendation_light_reminder,
+        "healthy_treasury" to R.string.recommendation_healthy_treasury
+    )
+    val descMap = mapOf(
+        "credit_financing" to R.string.recommendation_credit_financing_desc,
+        "partner_contribution" to R.string.recommendation_partner_contribution_desc,
+        "cut_expenses" to R.string.recommendation_cut_expenses_desc,
+        "accelerate_collection" to R.string.recommendation_accelerate_collection_desc,
+        "cash_sale" to R.string.recommendation_cash_sale_desc,
+        "postpone_expenses" to R.string.recommendation_postpone_expenses_desc,
+        "send_reminders" to R.string.recommendation_send_reminders_desc,
+        "advance_invoice" to R.string.recommendation_advance_invoice_desc,
+        "partner_advance" to R.string.recommendation_partner_advance_desc,
+        "light_reminder" to R.string.recommendation_light_reminder_desc,
+        "healthy_treasury" to R.string.recommendation_healthy_treasury_desc
+    )
+    val actionMap = mapOf(
+        "view_overdue" to R.string.recommendation_action_view_overdue,
+        "contact_bank" to R.string.recommendation_action_contact_bank,
+        "ask_associates" to R.string.recommendation_action_ask_associates,
+        "review_expenses" to R.string.recommendation_action_review_expenses,
+        "add_income" to R.string.recommendation_action_add_income,
+        "view_upcoming" to R.string.recommendation_action_view_upcoming,
+        "view_invoices" to R.string.recommendation_action_view_invoices,
+        "view_forecasts" to R.string.recommendation_action_view_forecasts
+    )
+
+    DashboardSectionCard(
+        title = stringResource(R.string.dashboard_recommended_actions),
+        subtitle = severityTitle
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            recommendations.forEachIndexed { index, recommendation ->
+                val color = when (recommendation.severity) {
+                    RecommendationSeverity.CRITICAL -> Color(0xFFB71C1C)
+                    RecommendationSeverity.SEVERE -> Color(0xFFF44336)
+                    RecommendationSeverity.MODERATE -> Color(0xFFFF9800)
+                    RecommendationSeverity.LIGHT -> Color(0xFF4CAF50)
+                }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                    verticalAlignment = Alignment.Top
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(22.dp)
+                            .clip(CircleShape)
+                            .background(color.copy(alpha = 0.15f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = "${index + 1}",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = color
+                        )
+                    }
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(titleMap[recommendation.title] ?: R.string.dashboard_recommended_actions),
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = DashboardTheme.TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Text(
+                            text = stringResource(descMap[recommendation.description] ?: R.string.dashboard_recommended_actions),
+                            fontSize = 11.sp,
+                            color = DashboardTheme.TextSecondary,
+                            lineHeight = 16.sp
+                        )
+                        recommendation.estimateImpact?.let { impact ->
+                            Text(
+                                text = impact,
+                                fontSize = 10.sp,
+                                color = color,
+                                fontWeight = FontWeight.Medium
+                            )
+                        }
+                    }
+                    recommendation.actionLabel?.let { actionKey ->
+                        val actionRes = actionMap[actionKey]
+                        if (actionRes != null) {
+                            TextButton(
+                                onClick = { onActionClick(recommendation) },
+                                modifier = Modifier.height(32.dp),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Text(
+                                    text = stringResource(actionRes),
+                                    fontSize = 11.sp,
+                                    color = color,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+                }
+                if (index < recommendations.lastIndex) {
+                    HorizontalDivider(thickness = 0.5.dp, color = DashboardTheme.Track)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AnnualTreasuryHeatmap(
+    points: List<AnnualTreasuryPoint>,
+    formatAmount: (Double) -> String,
+    onMonthClick: (AnnualTreasuryPoint) -> Unit
+) {
+    if (points.isEmpty()) return
+    val todayMonth = remember { YearMonth.now() }
+    val maxAbs = remember(points) {
+        points.maxOf { kotlin.math.abs(it.forecastBalance) }.coerceAtLeast(1.0)
+    }
+    val positiveCount = points.count { it.forecastBalance >= 0 }
+    val negativeCount = points.size - positiveCount
+    val worstMonth = points.minByOrNull { it.forecastBalance }
+    val bestMonth = points.maxByOrNull { it.forecastBalance }
+
+    DashboardSectionCard(
+        title = stringResource(R.string.dashboard_annual_treasury),
+        subtitle = buildString {
+            append("$positiveCount mois positifs · $negativeCount à risque")
+            worstMonth?.takeIf { it.forecastBalance < 0 }?.let {
+                append(" · pire : ${it.label} ${formatAmount(it.forecastBalance)}")
+            }
+        }
+    ) {
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(110.dp)
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.Bottom,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                points.forEach { point ->
+                    val isCurrent = point.month == todayMonth
+                    val color = when {
+                        point.forecastBalance < 0 -> Color(0xFFF44336)
+                        point.forecastBalance < maxAbs * 0.15 -> Color(0xFFFF9800)
+                        else -> Color(0xFF4CAF50)
+                    }
+                    val heightFraction = (kotlin.math.abs(point.forecastBalance) / maxAbs)
+                        .toFloat()
+                        .coerceIn(0.05f, 1f)
+                    val direction = if (point.forecastBalance >= 0) 1f else -1f
+
+                    Column(
+                        modifier = Modifier
+                            .width(24.dp)
+                            .fillMaxHeight()
+                            .clickable { onMonthClick(point) },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Bottom
+                    ) {
+                        Text(
+                            text = formatAmount(point.forecastBalance),
+                            fontSize = 8.sp,
+                            color = if (point.forecastBalance < 0) Color(0xFFF44336) else DashboardTheme.TextSecondary,
+                            maxLines = 1,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(2.dp))
+                        Box(
+                            modifier = Modifier
+                                .width(16.dp)
+                                .fillMaxHeight(heightFraction)
+                                .clip(RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp))
+                                .background(color)
+                                .then(if (isCurrent) Modifier.border(1.dp, Color(0xFF1976D2), RoundedCornerShape(topStart = 4.dp, topEnd = 4.dp)) else Modifier)
+                        )
+                        Spacer(Modifier.height(4.dp))
+                        Text(
+                            text = point.label.uppercase(),
+                            fontSize = 9.sp,
+                            fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isCurrent) Color(0xFF1976D2) else DashboardTheme.TextSecondary,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                bestMonth?.let {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Meilleur mois", fontSize = 10.sp, color = DashboardTheme.TextSecondary)
+                        Text("${it.label} ${formatAmount(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFF4CAF50))
+                    }
+                }
+                worstMonth?.takeIf { it.forecastBalance < 0 }?.let {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Pire mois", fontSize = 10.sp, color = DashboardTheme.TextSecondary)
+                        Text("${it.label} ${formatAmount(it.forecastBalance)}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFF44336))
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(8.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                val advice = when {
+                    negativeCount >= 3 -> "Plusieurs mois de déficit prévus. Envisagez un apport de trésorerie ou un report de dépenses."
+                    negativeCount >= 1 -> "Un déficit est prévu. Relancez les encaissements ou négociez les échéances."
+                    positiveCount >= 10 -> "Trésorerie saine sur l'année. Vous pouvez investir ou constituer une réserve."
+                    else -> "Situation globalement positive. Surveillez les mois en orange."
+                }
+                Text(
+                    text = advice,
+                    fontSize = 11.sp,
+                    color = DashboardTheme.TextSecondary,
+                    lineHeight = 16.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             }
         }
     }

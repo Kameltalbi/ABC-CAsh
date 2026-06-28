@@ -73,6 +73,29 @@ data class DashboardSnapshot(
     val isHealthy: Boolean
 )
 
+data class AnnualTreasuryPoint(
+    val month: YearMonth,
+    val label: String,
+    val forecastBalance: Double,
+    val income: Double,
+    val expenses: Double
+)
+
+data class TreasuryRecommendation(
+    val title: String,
+    val description: String,
+    val severity: RecommendationSeverity,
+    val actionLabel: String? = null,
+    val estimateImpact: String? = null
+)
+
+enum class RecommendationSeverity {
+    LIGHT,
+    MODERATE,
+    SEVERE,
+    CRITICAL
+}
+
 object DashboardCalculations {
 
     private const val HISTORY_DAYS = 30
@@ -120,6 +143,181 @@ object DashboardCalculations {
     ): Boolean = when (viewMode) {
         DashboardViewMode.YEAR -> focusMonth.year == today.year
         DashboardViewMode.MONTH -> focusMonth == YearMonth.from(today)
+    }
+
+    fun buildTreasuryRecommendations(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankAccounts: List<BankAccount>,
+        focusMonth: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
+    ): List<TreasuryRecommendation> {
+        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val currentMonthNet = TreasuryCalculations.monthlyTreasuryNet(invoices, expenses, focusMonth)
+        val currentMonthExpenses = TreasuryCalculations.monthlyDepenses(expenses, focusMonth)
+        val deficit = -currentMonthNet.coerceAtMost(0.0)
+        val deficitRatio = if (currentMonthExpenses > 0) deficit / currentMonthExpenses else 0.0
+        val overdueInvoices = invoices.filter { it.status != InvoiceStatus.PAID && it.dueDate.isBefore(today) }
+        val overdueAmount = overdueInvoices.sumOf { it.remainingAmount }
+        val upcoming7Days = EcheanceForecast.buildItems(invoices, expenses, from = today, to = today.plusDays(7))
+        val upcomingExpenses7Days = upcoming7Days.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
+        val annualForecast = buildAnnualTreasuryForecast(invoices, expenses, bankAccounts, focusYear = focusMonth.year, today = today)
+        val negativeMonths = annualForecast.count { it.forecastBalance < 0 }
+        val currentForecastBalance = annualForecast.find { it.month == focusMonth }?.forecastBalance ?: (openingBalance + currentMonthNet)
+
+        val recommendations = mutableListOf<TreasuryRecommendation>()
+
+        // Niveau critique : solde prévisionnel négatif + plusieurs mois déficitaires
+        if (currentForecastBalance < 0 && negativeMonths >= 3) {
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "credit_financing",
+                    description = "multiple_negative_months",
+                    severity = RecommendationSeverity.CRITICAL,
+                    actionLabel = "contact_bank",
+                    estimateImpact = "évite le découvert"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "partner_contribution",
+                    description = "urgent_cash_injection",
+                    severity = RecommendationSeverity.CRITICAL,
+                    actionLabel = "ask_associates",
+                    estimateImpact = "apport rapide"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "cut_expenses",
+                    description = "cancel_postpone_expenses",
+                    severity = RecommendationSeverity.CRITICAL,
+                    actionLabel = "review_expenses",
+                    estimateImpact = "réduit le besoin"
+                )
+            )
+            return recommendations
+        }
+
+        // Niveau grave : solde négatif ou déficit > 50%
+        if (currentForecastBalance < 0 || deficitRatio > 0.5) {
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "accelerate_collection",
+                    description = "call_overdue_clients",
+                    severity = RecommendationSeverity.SEVERE,
+                    actionLabel = "view_overdue",
+                    estimateImpact = "+ ${formatDouble(overdueAmount)} DT potentiel"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "cash_sale",
+                    description = "propose_cash_payment",
+                    severity = RecommendationSeverity.SEVERE,
+                    actionLabel = "add_income",
+                    estimateImpact = "entrée immédiate"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "postpone_expenses",
+                    description = "postpone_non_urgent",
+                    severity = RecommendationSeverity.SEVERE,
+                    actionLabel = "view_upcoming",
+                    estimateImpact = "-${formatDouble(upcomingExpenses7Days)} DT reportable"
+                )
+            )
+            return recommendations
+        }
+
+        // Niveau modéré : déficit 10-50%
+        if (deficitRatio in 0.1..0.5) {
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "send_reminders",
+                    description = "remind_overdue_clients",
+                    severity = RecommendationSeverity.MODERATE,
+                    actionLabel = "view_overdue",
+                    estimateImpact = "+ ${formatDouble(overdueAmount)} DT"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "advance_invoice",
+                    description = "ask_client_advance",
+                    severity = RecommendationSeverity.MODERATE,
+                    actionLabel = "view_invoices",
+                    estimateImpact = "accélère l'encaissement"
+                )
+            )
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "partner_advance",
+                    description = "ask_partner_contribution",
+                    severity = RecommendationSeverity.MODERATE,
+                    actionLabel = "ask_associates",
+                    estimateImpact = "solution interne"
+                )
+            )
+            return recommendations
+        }
+
+        // Niveau léger : déficit < 10% ou tout va bien
+        if (deficitRatio > 0.0 && deficitRatio < 0.1) {
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "light_reminder",
+                    description = "send_friendly_reminder",
+                    severity = RecommendationSeverity.LIGHT,
+                    actionLabel = "view_overdue",
+                    estimateImpact = "+ ${formatDouble(overdueAmount)} DT"
+                )
+            )
+        }
+        if (currentForecastBalance >= 0 && negativeMonths == 0) {
+            recommendations.add(
+                TreasuryRecommendation(
+                    title = "healthy_treasury",
+                    description = "build_reserve_or_invest",
+                    severity = RecommendationSeverity.LIGHT,
+                    actionLabel = "view_forecasts",
+                    estimateImpact = "sécurise l'avenir"
+                )
+            )
+        }
+
+        return recommendations.take(3)
+    }
+
+    private fun formatDouble(value: Double): String =
+        java.text.NumberFormat.getInstance(Locale.getDefault()).apply { maximumFractionDigits = 0 }.format(value)
+
+    fun buildAnnualTreasuryForecast(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        bankAccounts: List<BankAccount>,
+        focusYear: Int = YearMonth.now().year,
+        today: LocalDate = LocalDate.now()
+    ): List<AnnualTreasuryPoint> {
+        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val todayMonth = YearMonth.from(today)
+        val year = if (focusYear == todayMonth.year) todayMonth.year else focusYear
+        return TreasuryCalculations.calendarYearChartRows(
+            invoices = invoices,
+            expenses = expenses,
+            year = year,
+            today = todayMonth,
+            openingBalance = openingBalance
+        ).map { row ->
+            AnnualTreasuryPoint(
+                month = row.month,
+                label = row.month.month.getDisplayName(java.time.format.TextStyle.SHORT, Locale.getDefault()),
+                forecastBalance = row.forecastCumulative,
+                income = row.collected + row.pendingIncome,
+                expenses = row.paidExpenses + row.pendingExpenses
+            )
+        }
     }
 
     fun buildMonthlyBarChart(
