@@ -4,8 +4,9 @@ import java.time.LocalDate
 import java.util.UUID
 
 enum class BalanceCorrectionType {
-    INITIAL,     // Solde initial saisi au démarrage
-    CORRECTION   // Correction manuelle ultérieure
+    INITIAL,           // Solde initial saisi au démarrage
+    CORRECTION,        // Correction manuelle du solde bancaire
+    OPENING_REVISION   // Modification du solde initial (trace d'audit)
 }
 
 data class BalanceCorrection(

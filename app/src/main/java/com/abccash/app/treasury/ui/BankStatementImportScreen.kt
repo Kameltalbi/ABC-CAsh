@@ -276,6 +276,14 @@ private fun StatementSummaryCard(
                 )
             }
         }
+        if (result.skippedSummaryRows > 0) {
+            Text(
+                text = stringResource(R.string.import_statement_skipped_summary, result.skippedSummaryRows),
+                modifier = Modifier.padding(horizontal = 14.dp, vertical = 0.dp).padding(bottom = 10.dp),
+                fontSize = 11.sp,
+                color = Color(0xFF64748B)
+            )
+        }
     }
 }
 

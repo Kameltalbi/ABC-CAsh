@@ -23,8 +23,10 @@ fun MonthSelectorRow(
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
     compact: Boolean = false,
+    minMonth: YearMonth? = null,
     modifier: Modifier = Modifier
 ) {
+    val canGoPrevious = minMonth == null || selectedMonth.isAfter(minMonth)
     if (compact) {
         Row(
             modifier = modifier
@@ -34,7 +36,10 @@ fun MonthSelectorRow(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(
-                onClick = { onMonthChange(selectedMonth.minusMonths(1)) },
+                onClick = {
+                    if (canGoPrevious) onMonthChange(selectedMonth.minusMonths(1))
+                },
+                enabled = canGoPrevious,
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(
@@ -76,7 +81,7 @@ fun MonthSelectorRow(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { onMonthChange(selectedMonth.minusMonths(1)) }) {
+            IconButton(onClick = { onMonthChange(selectedMonth.minusMonths(1)) }, enabled = canGoPrevious) {
                 Icon(Icons.Default.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_month))
             }
             Text(

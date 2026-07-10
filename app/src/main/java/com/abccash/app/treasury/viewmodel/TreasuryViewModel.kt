@@ -10,6 +10,7 @@ import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.export.TreasuryCsvExporter
 import com.abccash.app.treasury.importer.BankStatementEntry
+import com.abccash.app.treasury.importer.BankStatementImportParser
 import com.abccash.app.treasury.repository.TreasuryRepository
 import java.time.Instant
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -123,6 +124,12 @@ class TreasuryViewModel(
             val userId = state.currentUserId ?: ""
             val userName = state.users.firstOrNull { it.id == userId }?.nom
                 ?: state.entreprise?.nom ?: ""
+            val initial = repository.getInitialBalance(entrepriseId)?.newBalance ?: 0.0
+            val calculated = TreasuryCalculations.realizedBalance(
+                state.invoices,
+                state.expenses,
+                initial
+            )
             val correction = BalanceCorrection(
                 entrepriseId = entrepriseId,
                 bankAccountId = bankAccountId,
@@ -134,7 +141,103 @@ class TreasuryViewModel(
                 userId = userId,
                 userName = userName
             )
-            val error = repository.saveBalanceCorrection(correction)
+            val saveError = repository.saveBalanceCorrection(correction)
+            if (saveError != null) {
+                onResult(saveError)
+                return@launch
+            }
+            userPreferences.saveBankBalance(entrepriseId, correctionDate.year, newBalance)
+
+            val gap = newBalance - calculated
+            val adjustmentError = createBankBalanceAdjustment(
+                entrepriseId = entrepriseId,
+                bankAccountId = bankAccountId,
+                gap = gap,
+                date = correctionDate,
+                note = motif.ifBlank { "Ajustement solde bancaire" },
+                userRole = state.currentUserRole ?: UserRole.ADMIN
+            )
+            onResult(adjustmentError)
+            if (adjustmentError == null) scheduleGoogleBackup()
+        }
+    }
+
+    /**
+     * Crée une écriture d'ajustement pour aligner la trésorerie sur le solde bancaire.
+     * gap > 0 → encaissement ; gap < 0 → dépense.
+     */
+    private suspend fun createBankBalanceAdjustment(
+        entrepriseId: String,
+        bankAccountId: String,
+        gap: Double,
+        date: LocalDate,
+        note: String,
+        userRole: UserRole
+    ): String? {
+        if (kotlin.math.abs(gap) <= 0.001) return null
+        if (gap > 0 && userRole != UserRole.ADMIN) {
+            return TreasuryMessage.ADMIN_ONLY_COLLECTION_ADJUSTMENT
+        }
+        return if (gap > 0) {
+            val invoice = Invoice(
+                invoiceNumber = TreasuryAdjustmentLabels.invoiceNumber(date),
+                clientName = TreasuryAdjustmentLabels.INVOICE_CLIENT,
+                totalAmount = gap,
+                dueDate = date,
+                entrepriseId = entrepriseId,
+                category = RevenueCategory.OTHER,
+                categoryLabel = TreasuryAdjustmentLabels.EXPENSE
+            )
+            val invoiceError = repository.addInvoice(invoice)
+            if (invoiceError != null) return invoiceError
+            repository.addPayment(
+                Payment(
+                    invoiceId = invoice.id,
+                    amount = gap,
+                    date = date,
+                    method = PaymentMethod.TRANSFER,
+                    note = note,
+                    bankAccountId = bankAccountId.ifBlank { null }
+                )
+            )
+        } else {
+            repository.addExpense(
+                Expense(
+                    label = TreasuryAdjustmentLabels.EXPENSE,
+                    amount = kotlin.math.abs(gap),
+                    date = date,
+                    isPaid = true,
+                    paymentMethod = PaymentMethod.TRANSFER,
+                    bankAccountId = bankAccountId.ifBlank { null },
+                    entrepriseId = entrepriseId,
+                    category = ExpenseCategory.OTHER,
+                    categoryLabel = TreasuryAdjustmentLabels.EXPENSE,
+                    note = note
+                )
+            )
+        }
+    }
+
+    fun updateOpeningBalance(
+        entrepriseId: String,
+        newBalance: Double,
+        balanceDate: java.time.LocalDate,
+        motif: String,
+        onResult: (String?) -> Unit
+    ) {
+        viewModelScope.launch {
+            val state = _uiState.value
+            val userId = state.currentUserId ?: ""
+            val userName = state.users.firstOrNull { it.id == userId }?.nom
+                ?: state.entreprise?.nom ?: ""
+            val error = repository.updateOpeningBalance(
+                entrepriseId = entrepriseId,
+                newBalance = newBalance,
+                balanceDate = balanceDate,
+                motif = motif,
+                userId = userId,
+                userName = userName
+            )
             onResult(error)
             if (error == null) scheduleGoogleBackup()
         }
@@ -297,6 +400,9 @@ class TreasuryViewModel(
             )
         }
         refreshSubscription()
+        viewModelScope.launch {
+            repository.purgeDuplicateTransactions(entrepriseId)
+        }
     }
 
     fun syncSubscriptionPlan(plan: SubscriptionPlan) {
@@ -1010,26 +1116,53 @@ class TreasuryViewModel(
             return
         }
         viewModelScope.launch {
-            val error = repository.addExpense(
-                Expense(
-                    id = expenseId ?: java.util.UUID.randomUUID().toString(),
-                    label = label,
-                    amount = amount,
-                    date = date,
-                    isRecurring = isRecurring,
-                    recurrence = if (isRecurring) recurrence else null,
-                    recurrenceEndDate = if (isRecurring) recurrenceEndDate else null,
-                    isPaid = isPaid,
-                    paymentMethod = if (isPaid) paymentMethod else null,
-                    entrepriseId = entrepriseId,
-                    category = category,
-                    categoryLabel = categoryLabel,
-                    supplierContactId = supplierContactId,
-                    note = note,
-                    receiptImagePath = receiptImagePath,
-                    isExpenseNote = isExpenseNote
-                )
+            val baseExpense = Expense(
+                id = expenseId ?: java.util.UUID.randomUUID().toString(),
+                label = label,
+                amount = amount,
+                date = date,
+                isRecurring = isRecurring,
+                recurrence = if (isRecurring) recurrence else null,
+                recurrenceEndDate = if (isRecurring) recurrenceEndDate else null,
+                isPaid = isPaid,
+                paymentMethod = if (isPaid) paymentMethod else null,
+                entrepriseId = entrepriseId,
+                category = category,
+                categoryLabel = categoryLabel,
+                supplierContactId = supplierContactId,
+                note = note,
+                receiptImagePath = receiptImagePath,
+                isExpenseNote = isExpenseNote
             )
+            val error = if (isRecurring && isPaid) {
+                val paidOccurrence = baseExpense.copy(
+                    isRecurring = false,
+                    recurrence = null,
+                    recurrenceEndDate = null,
+                    isPaid = true,
+                    paymentMethod = paymentMethod
+                )
+                val paidError = repository.addExpense(paidOccurrence)
+                if (paidError != null) {
+                    onResult(paidError)
+                    return@launch
+                }
+                val nextDue = baseExpense.nextOccurrenceAfter(date)
+                if (nextDue == null) {
+                    null
+                } else {
+                    repository.addExpense(
+                        baseExpense.copy(
+                            id = java.util.UUID.randomUUID().toString(),
+                            date = nextDue,
+                            isPaid = false,
+                            paymentMethod = null
+                        )
+                    )
+                }
+            } else {
+                repository.addExpense(baseExpense)
+            }
             onResult(error)
             if (error == null) {
                 scheduleGoogleBackup()
@@ -1187,17 +1320,26 @@ class TreasuryViewModel(
             val settings = userPreferences.observeInvoiceSettings(entrepriseId).first()
             val current = _uiState.value
             val incomeSignatures = current.invoices
-                .map { transactionSignature(it.dueDate, it.totalAmount, it.clientName) }
+                .flatMap { invoice ->
+                    val base = TransactionSignature.of(invoice.dueDate, invoice.totalAmount, invoice.clientName)
+                    invoice.payments.map { payment ->
+                        TransactionSignature.of(payment.date, payment.amount, invoice.clientName)
+                    } + base
+                }
                 .toMutableSet()
             val expenseSignatures = current.expenses
-                .map { transactionSignature(it.date, it.amount, it.label) }
+                .map { TransactionSignature.expense(it) }
                 .toMutableSet()
 
             var imported = 0
             var skipped = 0
 
             for (entry in entries) {
-                val signature = transactionSignature(entry.date, entry.amount, entry.label)
+                if (BankStatementImportParser.isNonTransactionalLabel(entry.label)) {
+                    skipped++
+                    continue
+                }
+                val signature = TransactionSignature.of(entry.date, entry.amount, entry.label)
                 if (entry.isCredit) {
                     if (!incomeSignatures.add(signature)) {
                         skipped++
@@ -1253,12 +1395,6 @@ class TreasuryViewModel(
                 refreshSubscription()
             }
         }
-    }
-
-    private fun transactionSignature(date: LocalDate, amount: Double, label: String): String {
-        val normalizedAmount = Math.round(amount * 1000.0)
-        val normalizedLabel = label.trim().lowercase(Locale.ROOT)
-        return "$date|$normalizedAmount|$normalizedLabel"
     }
 
     fun updateInvoice(
@@ -1364,6 +1500,15 @@ class TreasuryViewModel(
         if (expenseIds.isEmpty()) return
         viewModelScope.launch {
             expenseIds.forEach { repository.deleteExpense(it) }
+            scheduleGoogleBackup()
+        }
+    }
+
+    fun purgeExpiredForecastExpenses() {
+        viewModelScope.launch {
+            val toDelete = ForecastMonthPolicy.expensesToPurge(_uiState.value.expenses)
+            if (toDelete.isEmpty()) return@launch
+            toDelete.forEach { repository.deleteExpense(it.id) }
             scheduleGoogleBackup()
         }
     }
@@ -1620,49 +1765,25 @@ class TreasuryViewModel(
             onResult(null)
             return
         }
-        if (gap > 0 && userRole != UserRole.ADMIN) {
-            onResult(TreasuryMessage.ADMIN_ONLY_COLLECTION_ADJUSTMENT)
-            return
-        }
         viewModelScope.launch {
             val today = LocalDate.now()
-            val error = if (gap > 0) {
-                val invoice = Invoice(
-                    invoiceNumber = TreasuryAdjustmentLabels.invoiceNumber(today),
-                    clientName = TreasuryAdjustmentLabels.INVOICE_CLIENT,
-                    totalAmount = gap,
-                    dueDate = today,
-                    entrepriseId = entrepriseId
-                )
-                val invoiceError = repository.addInvoice(invoice)
-                if (invoiceError == null) {
-                    val paymentError = repository.addPayment(
-                        Payment(
-                            invoiceId = invoice.id,
-                            amount = gap,
-                            date = today,
-                            method = PaymentMethod.TRANSFER,
-                            note = "Ajustement automatique solde bancaire"
-                        )
-                    )
-                    paymentError
-                } else {
-                    invoiceError
-                }
-            } else {
-                repository.addExpense(
-                    Expense(
-                        label = TreasuryAdjustmentLabels.EXPENSE,
-                        amount = kotlin.math.abs(gap),
-                        date = today,
-                        isPaid = true,
-                        paymentMethod = PaymentMethod.TRANSFER,
-                        entrepriseId = entrepriseId
-                    )
-                )
+            val bankAccountId = _uiState.value.bankAccounts
+                .firstOrNull { it.isDefault && it.kind == TreasuryAccountKind.BANK }?.id
+                ?: _uiState.value.bankAccounts.firstOrNull { it.kind == TreasuryAccountKind.BANK }?.id
+                ?: ""
+            val error = createBankBalanceAdjustment(
+                entrepriseId = entrepriseId,
+                bankAccountId = bankAccountId,
+                gap = gap,
+                date = today,
+                note = "Ajustement automatique solde bancaire",
+                userRole = userRole
+            )
+            if (error == null) {
+                userPreferences.saveBankBalance(entrepriseId, today.year, bankBalance)
+                scheduleGoogleBackup()
             }
             onResult(error)
-            if (error == null) scheduleGoogleBackup()
         }
     }
 }

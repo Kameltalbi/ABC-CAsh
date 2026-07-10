@@ -31,13 +31,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
+import com.abccash.app.treasury.data.ForecastMonthPolicy
 import com.abccash.app.ui.theme.AppColors
 
 private data class OnboardingPage(
     val icon: ImageVector,
     val iconBg: Color,
     @StringRes val titleRes: Int,
-    @StringRes val descriptionRes: Int
+    @StringRes val descriptionRes: Int,
+    val descriptionArgs: Array<Any> = emptyArray()
 )
 
 @Composable
@@ -59,7 +61,8 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             icon = Icons.Default.EventNote,
             iconBg = AppColors.Warning,
             titleRes = R.string.onboarding_tour_forecasts_title,
-            descriptionRes = R.string.onboarding_tour_forecasts_desc
+            descriptionRes = R.string.onboarding_tour_forecasts_desc,
+            descriptionArgs = arrayOf(ForecastMonthPolicy.GRACE_DAYS)
         ),
         OnboardingPage(
             icon = Icons.Default.SwapVert,
@@ -137,7 +140,11 @@ fun OnboardingScreen(onFinish: () -> Unit) {
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        text = stringResource(page.descriptionRes),
+                        text = if (page.descriptionArgs.isEmpty()) {
+                            stringResource(page.descriptionRes)
+                        } else {
+                            stringResource(page.descriptionRes, *page.descriptionArgs)
+                        },
                         fontSize = 16.sp,
                         color = AppColors.TextSecondary,
                         textAlign = TextAlign.Center,

@@ -18,6 +18,8 @@ import com.abccash.app.treasury.data.InvoiceSettings
 import com.abccash.app.treasury.data.Payment
 import com.abccash.app.treasury.data.Quote
 import com.abccash.app.treasury.data.QuoteStatus
+import com.abccash.app.treasury.data.TransactionSignature
+import com.abccash.app.treasury.data.isTreasuryAdjustment
 import com.abccash.app.treasury.data.affectsBankTreasury
 import com.abccash.app.treasury.data.affectsCashTreasury
 import com.abccash.app.treasury.data.User
@@ -425,8 +427,62 @@ class TreasuryRepository(
     suspend fun deleteInvoice(invoiceId: String): String? {
         if (invoiceId.isBlank()) return TreasuryMessage.INVOICE_ID_REQUIRED
         if (dao.findInvoiceById(invoiceId) == null) return TreasuryMessage.INVOICE_NOT_FOUND
-        dao.deleteInvoiceById(invoiceId)
+        database.withTransaction {
+            dao.deletePaymentsForInvoice(invoiceId)
+            dao.deleteInvoiceById(invoiceId)
+        }
         return null
+    }
+
+    /**
+     * Supprime les encaissements et dépenses en double (même date, montant et libellé).
+     * Conserve l'opération la plus ancienne.
+     */
+    suspend fun purgeDuplicateTransactions(entrepriseId: String): Int {
+        if (entrepriseId.isBlank()) return 0
+        val invoiceEntities = dao.getInvoicesForBackup(entrepriseId)
+        val invoiceIds = invoiceEntities.map { it.id }
+        val paymentEntities = if (invoiceIds.isEmpty()) {
+            emptyList()
+        } else {
+            dao.getPaymentsForInvoices(invoiceIds)
+        }
+        val invoices = invoiceEntities
+            .map { entity ->
+                val payments = paymentEntities
+                    .filter { it.invoiceId == entity.id }
+                    .map { it.toDomain() }
+                entity.toDomain(payments)
+            }
+            .sortedBy { it.createdDate }
+
+        var removed = 0
+        val seenIncome = mutableSetOf<String>()
+        for (invoice in invoices) {
+            if (invoice.isTreasuryAdjustment()) continue
+            val payment = invoice.payments.minByOrNull { it.date } ?: continue
+            val signature = TransactionSignature.payment(invoice, payment)
+            if (!seenIncome.add(signature)) {
+                deleteInvoice(invoice.id)
+                removed++
+            }
+        }
+
+        val seenExpenses = mutableSetOf<String>()
+        val expenses = dao.getExpensesForBackup(entrepriseId)
+            .map { it.toDomain() }
+            .sortedBy { it.createdDate }
+        for (expense in expenses) {
+            if (!expense.isPaid || expense.isTreasuryAdjustment()) continue
+            val signature = TransactionSignature.expense(expense)
+            if (!seenExpenses.add(signature)) {
+                deleteExpense(expense.id)
+                removed++
+            }
+        }
+
+        dao.deleteOrphanPayments()
+        return removed
     }
 
     suspend fun saveQuoteDraft(quote: Quote): String? =
@@ -734,6 +790,7 @@ class TreasuryRepository(
             backup.invoices.flatMap { it.payments }.forEach { dao.upsertPayment(it.toEntity()) }
             backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
             backup.users.forEach { dao.upsertUser(it.toEntity()) }
+            dao.deleteOrphanPayments()
         }
         return Result.success(owner)
     }
@@ -747,10 +804,15 @@ class TreasuryRepository(
         }
 
         database.withTransaction {
+            // Remplacement complet : évite de réinjecter des transactions supprimées localement.
+            dao.deletePaymentsForEntreprise(backup.entrepriseId)
+            dao.deleteInvoicesForEntreprise(backup.entrepriseId)
+            dao.deleteExpensesForEntreprise(backup.entrepriseId)
             backup.invoices.forEach { dao.upsertInvoice(it.toEntity()) }
             backup.invoices.flatMap { it.payments }.forEach { dao.upsertPayment(it.toEntity()) }
             backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
             backup.users.forEach { dao.upsertUser(it.toEntity()) }
+            dao.deleteOrphanPayments()
         }
         return null
     }
@@ -804,6 +866,7 @@ class TreasuryRepository(
                 dao.deletePaymentsForEntreprise(entrepriseId)
                 dao.deleteInvoicesForEntreprise(entrepriseId)
                 dao.deleteExpensesForEntreprise(entrepriseId)
+                dao.deleteOrphanPayments()
             }
             null
         } catch (e: Exception) {
@@ -870,6 +933,40 @@ class TreasuryRepository(
     ): String? {
         if (correction.motif.isBlank()) return TreasuryMessage.MOTIF_REQUIRED
         dao.upsertBalanceCorrection(correction.toEntity())
+        return null
+    }
+
+    suspend fun updateOpeningBalance(
+        entrepriseId: String,
+        newBalance: Double,
+        balanceDate: java.time.LocalDate,
+        motif: String,
+        userId: String,
+        userName: String
+    ): String? {
+        if (motif.isBlank()) return TreasuryMessage.MOTIF_REQUIRED
+        val existing = dao.findInitialBalance(entrepriseId) ?: return TreasuryMessage.TREASURY_NOT_INITIALIZED
+        val previousBalance = existing.newBalance
+        if (previousBalance == newBalance && existing.correctionDate == balanceDate) return null
+
+        val revision = BalanceCorrection(
+            entrepriseId = entrepriseId,
+            bankAccountId = existing.bankAccountId,
+            type = BalanceCorrectionType.OPENING_REVISION,
+            oldBalance = previousBalance,
+            newBalance = newBalance,
+            correctionDate = balanceDate,
+            motif = motif,
+            userId = userId,
+            userName = userName
+        )
+        dao.upsertBalanceCorrection(revision.toEntity())
+        dao.upsertBalanceCorrection(
+            existing.copy(
+                newBalance = newBalance,
+                correctionDate = balanceDate
+            )
+        )
         return null
     }
 

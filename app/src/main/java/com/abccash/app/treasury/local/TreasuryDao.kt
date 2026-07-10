@@ -122,6 +122,12 @@ interface TreasuryDao {
     @Query("SELECT * FROM invoices WHERE id = :id LIMIT 1")
     suspend fun findInvoiceById(id: String): InvoiceEntity?
 
+    @Query("DELETE FROM payments WHERE invoiceId = :invoiceId")
+    suspend fun deletePaymentsForInvoice(invoiceId: String)
+
+    @Query("DELETE FROM payments WHERE invoiceId NOT IN (SELECT id FROM invoices)")
+    suspend fun deleteOrphanPayments()
+
     @Query("DELETE FROM invoices WHERE id = :invoiceId")
     suspend fun deleteInvoiceById(invoiceId: String)
 

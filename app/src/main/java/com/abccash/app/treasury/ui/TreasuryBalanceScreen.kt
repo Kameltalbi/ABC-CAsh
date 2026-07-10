@@ -14,6 +14,7 @@ import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -34,6 +35,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.data.BalanceCorrection
 import com.abccash.app.treasury.data.BankAccount
+import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.TreasuryCalculations
@@ -48,6 +50,7 @@ import kotlin.math.abs
 import kotlin.math.max
 import kotlin.math.min
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.launch
 
 private object TreasuryScreenTheme {
     val Background = Color.White
@@ -65,6 +68,10 @@ private object TreasuryScreenTheme {
     val ForecastAccent = Color(0xFF10B981)  // emerald green
     val IncomeAccent = Color(0xFF16A34A)    // leaf green
     val ExpenseAccent = Color(0xFFEF4444)   // red
+
+    // Courbes du graphique de trésorerie
+    val MonthlyLine = Color(0xFF3B82F6)     // bleu — solde du mois (flux mensuel)
+    val CumulativeLine = RealizedAccent     // teal — solde cumulé (neutre, rassurant)
 }
 
 @Composable
@@ -80,10 +87,12 @@ fun TreasuryBalanceScreen(
     // Treasury init & correction
     isTreasuryInitialized: Boolean = true,
     initialBalance: Double = 0.0,
+    initialBalanceDate: LocalDate = LocalDate.now(),
     latestBankBalance: Double? = null,
     correctionsFlow: Flow<List<BalanceCorrection>>? = null,
     onInitTreasury: ((balance: Double, date: LocalDate) -> Unit)? = null,
-    onSaveCorrection: ((newBalance: Double, date: LocalDate, motif: String) -> Unit)? = null,
+    onSaveCorrection: ((newBalance: Double, date: LocalDate, motif: String, onResult: (String?) -> Unit) -> Unit)? = null,
+    onUpdateOpeningBalance: ((newBalance: Double, date: LocalDate, motif: String, onResult: (String?) -> Unit) -> Unit)? = null,
     onNavigateToCorrectionHistory: (() -> Unit)? = null
 ) {
     if (!hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)) {
@@ -135,11 +144,15 @@ fun TreasuryBalanceScreen(
     var pendingCsv by remember { mutableStateOf<String?>(null) }
     var showCorrectionDialog by remember { mutableStateOf(false) }
     var showConfirmDialog by remember { mutableStateOf(false) }
+    var showOpeningBalanceDialog by remember { mutableStateOf(false) }
+    var showOpeningConfirmDialog by remember { mutableStateOf(false) }
     var pendingNewBalance by remember { mutableStateOf(0.0) }
     var pendingCorrectionDate by remember { mutableStateOf(LocalDate.now()) }
     var pendingMotif by remember { mutableStateOf("") }
     val snackbarHostState = remember { SnackbarHostState() }
     val correctionSuccessMsg = stringResource(R.string.treasury_correction_success, "")
+    val openingRevisionConfirmNote = stringResource(R.string.treasury_opening_revision_confirm_note)
+    val scope = rememberCoroutineScope()
     val formatMoney = rememberFormatMoney()
     val canManageBank = userRole == UserRole.ADMIN ||
         hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
@@ -147,8 +160,8 @@ fun TreasuryBalanceScreen(
     val formatWhole = rememberFormatMoneyWhole()
     val formatChartAmount = rememberFormatTreasuryChartAmount()
 
-    val yearTotals = remember(invoices, expenses, bankAccounts, displayYear) {
-        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+    val yearTotals = remember(invoices, expenses, initialBalance, displayYear) {
+        val openingBalance = initialBalance
         val rows = TreasuryCalculations.yearlyRows(
             invoices = invoices,
             expenses = expenses,
@@ -185,7 +198,8 @@ fun TreasuryBalanceScreen(
     val totalDebits = remember(expenses, displayYear) {
         TreasuryCalculations.yearlyPaidExpenses(expenses, displayYear)
     }
-    val calculatedBalance = initialBalance + totalCredits - totalDebits
+    // Solde actuel réalisé (espèces + banque, tout l'historique) — source unique partagée avec le Dashboard
+    val calculatedBalance = TreasuryCalculations.realizedBalance(invoices, expenses, initialBalance)
 
     // Calcul runway : jours avant solde zéro basé sur dépenses mensuelles moyennes (3 derniers mois)
     val runwayDays = remember(expenses, today, calculatedBalance) {
@@ -203,6 +217,53 @@ fun TreasuryBalanceScreen(
     val ecart = realBankBalance - calculatedBalance
     val isNegative = calculatedBalance < 0
     val hasGap = abs(ecart) > 0.001
+
+    if (showOpeningBalanceDialog) {
+        TreasuryOpeningBalanceDialog(
+            currentBalance = initialBalance,
+            currentDate = initialBalanceDate,
+            formatAmount = formatMoney,
+            onDismiss = { showOpeningBalanceDialog = false },
+            onValidate = { newBal, date, motif ->
+                pendingNewBalance = newBal
+                pendingCorrectionDate = date
+                pendingMotif = motif
+                showOpeningBalanceDialog = false
+                showOpeningConfirmDialog = true
+            }
+        )
+    }
+
+    if (showOpeningConfirmDialog) {
+        TreasuryCorrectionConfirmDialog(
+            oldBalance = initialBalance,
+            newBalance = pendingNewBalance,
+            correctionDate = pendingCorrectionDate,
+            formatAmount = formatMoney,
+            titleRes = R.string.treasury_confirm_title,
+            bodyRes = R.string.treasury_opening_revision_confirm_body,
+            referenceNoteText = openingRevisionConfirmNote,
+            onDismiss = { showOpeningConfirmDialog = false },
+            onConfirm = {
+                showOpeningConfirmDialog = false
+                val formattedBalance = formatMoney(pendingNewBalance)
+                onUpdateOpeningBalance?.invoke(
+                    pendingNewBalance,
+                    pendingCorrectionDate,
+                    pendingMotif
+                ) { error ->
+                    scope.launch {
+                        val message = if (error == null) {
+                            context.getString(R.string.treasury_opening_revision_success, formattedBalance)
+                        } else {
+                            context.resolveTreasuryMessage(error) ?: error
+                        }
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
+            }
+        )
+    }
 
     if (showCorrectionDialog) {
         TreasuryCorrectionDialog(
@@ -229,7 +290,21 @@ fun TreasuryBalanceScreen(
             onDismiss = { showConfirmDialog = false },
             onConfirm = {
                 showConfirmDialog = false
-                onSaveCorrection?.invoke(pendingNewBalance, pendingCorrectionDate, pendingMotif)
+                val formattedBalance = formatMoney(pendingNewBalance)
+                onSaveCorrection?.invoke(
+                    pendingNewBalance,
+                    pendingCorrectionDate,
+                    pendingMotif
+                ) { error ->
+                    scope.launch {
+                        val message = if (error == null) {
+                            context.getString(R.string.treasury_correction_success, formattedBalance)
+                        } else {
+                            context.resolveTreasuryMessage(error) ?: error
+                        }
+                        snackbarHostState.showSnackbar(message)
+                    }
+                }
             }
         )
     }
@@ -260,66 +335,88 @@ fun TreasuryBalanceScreen(
         )
 
         // ---- Calculs KPI & graphique ----
-        val opening = yearTotals.openingFromAccounts
-        val realizedMonthlyBalances = remember(yearTotals.rows, opening) {
-            var running = opening
-            yearTotals.rows.map { row ->
-                running += row.collected - row.expenses
-                running
-            }
-        }
-        val lastTxIndex = yearTotals.rows.indexOfLast { it.collected != 0.0 || it.expenses != 0.0 }
-        val totalAccountsBalance = if (lastTxIndex >= 0) realizedMonthlyBalances[lastTxIndex] else opening
-        val totalAccountsMonth = lastTxIndex.takeIf { it >= 0 }?.let { yearTotals.rows[it].month }
-        val totalAccountsColor = if (totalAccountsBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
         val todayYearMonth = remember { YearMonth.now() }
         val splitIndex = remember(yearTotals.rows, todayYearMonth) {
             yearTotals.rows.indexOfLast { it.month <= todayYearMonth }
         }
-        val chartBalances = remember(yearTotals.rows, splitIndex, todayYearMonth) {
+        // Série 1 — Solde du mois : flux net de chaque mois (réalisé avant aujourd'hui, prévisionnel après)
+        val monthlyNet = remember(yearTotals.rows, splitIndex) {
             yearTotals.rows.mapIndexed { index, row ->
                 if (index <= splitIndex) row.collected - row.expenses
                 else row.totalIncome - row.totalExpenses
+            }
+        }
+        // Série 2 — Solde cumulé : report progressif depuis le solde d'ouverture (espèces + banque)
+        val cumulativeBalances = remember(invoices, expenses, displayYear, initialBalance, splitIndex, todayYearMonth) {
+            TreasuryCalculations.calendarYearChartRows(
+                invoices = invoices,
+                expenses = expenses,
+                year = displayYear,
+                today = todayYearMonth,
+                openingBalance = initialBalance
+            ).mapIndexed { index, row ->
+                if (index <= splitIndex) row.realizedCumulative else row.forecastCumulative
             }
         }
 
         // ---- 1. Graphique en premier ----
         TreasuryTimelineChart(
             rows = yearTotals.rows,
-            balances = chartBalances,
+            monthlyNet = monthlyNet,
+            cumulative = cumulativeBalances,
             splitIndex = splitIndex,
             formatChartAmount = formatChartAmount
         )
 
-        // ---- 2. Cartes KPI ----
-        val netBalance = (totalCredits + yearTotals.pendingIncome) - (totalDebits + yearTotals.pendingExpenses)
-        val cumulativeBalance = initialBalance + netBalance
-        val netColor = if (netBalance >= 0) TreasuryScreenTheme.IncomeAccent else TreasuryScreenTheme.Negative
-        val cumColor = if (cumulativeBalance >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
+        // ---- 2. Cartes KPI (montant principal = réalisé ; cumul = solde bancaire de référence si corrigé) ----
+        val netBalanceRealized = totalCredits - totalDebits
+        val cumulativeFromEntries = initialBalance + netBalanceRealized
+        val hasBankReference = latestBankBalance != null
+        val cumulativeBalanceRealized = latestBankBalance ?: cumulativeFromEntries
+        val netColor = if (netBalanceRealized >= 0) TreasuryScreenTheme.IncomeAccent else TreasuryScreenTheme.Negative
+        val cumColor = if (cumulativeBalanceRealized >= 0) TreasuryScreenTheme.RealizedAccent else TreasuryScreenTheme.Negative
         val yearLabel = stringResource(R.string.treasury_kpi_year_range, displayYear)
+        val cumulativeHint = if (hasBankReference) {
+            stringResource(R.string.treasury_kpi_cumulative_bank_hint)
+        } else {
+            stringResource(R.string.treasury_kpi_cumulative_hint)
+        }
+        val (forecastIncomeTotal, forecastExpenseTotal) = remember(invoices, expenses, displayYear) {
+            EcheanceForecast.yearlyForecastTotals(invoices, expenses, displayYear)
+        }
+        val incomeForecastNote = if (forecastIncomeTotal > 0.0) {
+            stringResource(R.string.treasury_kpi_forecast_part, formatWhole(forecastIncomeTotal))
+        } else {
+            null
+        }
+        val expenseForecastNote = if (forecastExpenseTotal > 0.0) {
+            stringResource(R.string.treasury_kpi_forecast_part, formatWhole(forecastExpenseTotal))
+        } else {
+            null
+        }
         Row(
-            modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
+            modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             TreasuryKpiCard(
                 title = stringResource(R.string.treasury_kpi_total_income),
-                amount = formatWhole(totalCredits + yearTotals.pendingIncome),
-                subtitle = if (yearTotals.pendingIncome > 0)
-                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingIncome))
-                else yearLabel,
+                amount = formatWhole(totalCredits),
+                subtitle = yearLabel,
+                subtitleColor = TreasuryScreenTheme.Muted,
+                forecastNote = incomeForecastNote,
                 amountColor = TreasuryScreenTheme.IncomeAccent,
                 accent = TreasuryScreenTheme.IncomeAccent,
-                modifier = Modifier.weight(1f).fillMaxHeight()
+                modifier = Modifier.weight(1f)
             )
             TreasuryKpiCard(
                 title = stringResource(R.string.treasury_kpi_total_expenses),
-                amount = formatWhole(totalDebits + yearTotals.pendingExpenses),
-                subtitle = if (yearTotals.pendingExpenses > 0)
-                    stringResource(R.string.treasury_upcoming_part, formatWhole(yearTotals.pendingExpenses))
-                else yearLabel,
+                amount = formatWhole(totalDebits),
+                subtitle = yearLabel,
+                subtitleColor = TreasuryScreenTheme.Muted,
+                forecastNote = expenseForecastNote,
                 amountColor = TreasuryScreenTheme.ExpenseAccent,
                 accent = TreasuryScreenTheme.ExpenseAccent,
-                modifier = Modifier.weight(1f).fillMaxHeight()
+                modifier = Modifier.weight(1f)
             )
         }
         Row(
@@ -328,7 +425,7 @@ fun TreasuryBalanceScreen(
         ) {
             TreasuryKpiCard(
                 title = stringResource(R.string.treasury_kpi_net),
-                amount = formatWhole(netBalance),
+                amount = formatWhole(netBalanceRealized),
                 subtitle = stringResource(R.string.treasury_kpi_net_hint),
                 amountColor = netColor,
                 accent = netColor,
@@ -336,8 +433,8 @@ fun TreasuryBalanceScreen(
             )
             TreasuryKpiCard(
                 title = stringResource(R.string.treasury_kpi_cumulative),
-                amount = formatWhole(cumulativeBalance),
-                subtitle = stringResource(R.string.treasury_kpi_cumulative_hint),
+                amount = formatWhole(cumulativeBalanceRealized),
+                subtitle = cumulativeHint,
                 amountColor = cumColor,
                 accent = cumColor,
                 modifier = Modifier.weight(1f).fillMaxHeight()
@@ -348,13 +445,14 @@ fun TreasuryBalanceScreen(
         if (isTreasuryInitialized) {
             TreasuryBalanceSummaryCard(
                 initialBalance = initialBalance,
-                totalCredits = totalCredits + yearTotals.pendingIncome,
-                totalDebits = totalDebits + yearTotals.pendingExpenses,
+                totalCredits = totalCredits,
+                totalDebits = totalDebits,
                 calculatedBalance = calculatedBalance,
                 realBankBalance = realBankBalance,
                 ecart = ecart,
                 formatAmount = formatMoney,
                 canManageBank = canManageBank,
+                onOpeningBalanceClick = { showOpeningBalanceDialog = true },
                 onCorrectionClick = { showCorrectionDialog = true },
                 onHistoryClick = onNavigateToCorrectionHistory
             )
@@ -408,6 +506,7 @@ private fun TreasuryBalanceSummaryCard(
     ecart: Double,
     formatAmount: (Double) -> String,
     canManageBank: Boolean,
+    onOpeningBalanceClick: () -> Unit,
     onCorrectionClick: () -> Unit,
     onHistoryClick: (() -> Unit)?
 ) {
@@ -464,6 +563,13 @@ private fun TreasuryBalanceSummaryCard(
 
             if (canManageBank) {
                 Spacer(modifier = Modifier.height(4.dp))
+                OutlinedButton(
+                    onClick = onOpeningBalanceClick,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp)
+                ) {
+                    Text(stringResource(R.string.treasury_modify_opening_balance))
+                }
                 Button(
                     onClick = onCorrectionClick,
                     modifier = Modifier.fillMaxWidth(),
@@ -646,6 +752,8 @@ private fun TreasuryKpiCard(
     title: String,
     amount: String,
     subtitle: String? = null,
+    subtitleColor: Color = Color(0xFFFF9800),
+    forecastNote: String? = null,
     amountColor: Color,
     accent: Color = amountColor,
     modifier: Modifier = Modifier
@@ -682,9 +790,19 @@ private fun TreasuryKpiCard(
                 Text(
                     text = it,
                     fontSize = 11.sp,
-                    color = Color(0xFFFF9800),
+                    color = subtitleColor,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
+                )
+            }
+            forecastNote?.let {
+                Text(
+                    text = it,
+                    fontSize = 10.sp,
+                    color = Color(0xFFFF9800),
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    lineHeight = 12.sp
                 )
             }
         }
@@ -694,7 +812,8 @@ private fun TreasuryKpiCard(
 @Composable
 private fun TreasuryTimelineChart(
     rows: List<TreasuryCalculations.MonthlyTreasuryRow>,
-    balances: List<Double>,
+    monthlyNet: List<Double>,
+    cumulative: List<Double>,
     splitIndex: Int,
     formatChartAmount: (Double) -> String
 ) {
@@ -721,18 +840,20 @@ private fun TreasuryTimelineChart(
             )
 
             val now = YearMonth.now()
-            val minY = min(balances.minOrNull() ?: 0.0, 0.0)
-            val maxY = max(balances.maxOrNull() ?: 0.0, 0.0)
+            val allValues = monthlyNet + cumulative
+            val minY = min(allValues.minOrNull() ?: 0.0, 0.0)
+            val maxY = max(allValues.maxOrNull() ?: 0.0, 0.0)
             val range = max(maxY - minY, 1.0)
             val yAxisWidth = 34.dp
-            val chartHeight = 140.dp
+            val chartHeight = 150.dp
 
+            // Valeurs affichées : le solde cumulé (ligne principale)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.Bottom
             ) {
                 Spacer(modifier = Modifier.width(yAxisWidth))
-                balances.forEachIndexed { i, balance ->
+                cumulative.forEachIndexed { i, balance ->
                     val isForecast = i > splitIndex
                     Text(
                         text = formatChartAmount(balance),
@@ -741,8 +862,8 @@ private fun TreasuryTimelineChart(
                         fontWeight = FontWeight.Bold,
                         color = when {
                             balance < 0 -> TreasuryScreenTheme.Negative
-                            isForecast -> TreasuryScreenTheme.ForecastAccent
-                            else -> AppColors.BrandBlue
+                            isForecast -> TreasuryScreenTheme.CumulativeLine.copy(alpha = 0.7f)
+                            else -> TreasuryScreenTheme.CumulativeLine
                         },
                         textAlign = TextAlign.Center,
                         maxLines = 1,
@@ -773,8 +894,9 @@ private fun TreasuryTimelineChart(
                         )
                     }
                 }
-                TreasuryDualLineChart(
-                    balances = balances,
+                TreasuryMultiLineChart(
+                    monthlyNet = monthlyNet,
+                    cumulative = cumulative,
                     splitIndex = splitIndex,
                     minY = minY,
                     maxY = maxY,
@@ -784,6 +906,7 @@ private fun TreasuryTimelineChart(
                 )
             }
 
+            // Légende : Solde du mois (bleu) / Solde cumulé (teal)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -796,14 +919,14 @@ private fun TreasuryTimelineChart(
                 ) {
                     Canvas(modifier = Modifier.size(width = 14.dp, height = 2.dp)) {
                         drawLine(
-                            color = AppColors.BrandBlue,
+                            color = TreasuryScreenTheme.MonthlyLine,
                             start = Offset(0f, size.height / 2),
                             end = Offset(size.width, size.height / 2),
                             strokeWidth = 2.dp.toPx()
                         )
                     }
                     Text(
-                        text = stringResource(R.string.treasury_chart_realized),
+                        text = stringResource(R.string.treasury_chart_monthly),
                         fontSize = 8.sp,
                         color = TreasuryScreenTheme.Muted
                     )
@@ -815,15 +938,14 @@ private fun TreasuryTimelineChart(
                 ) {
                     Canvas(modifier = Modifier.size(width = 14.dp, height = 2.dp)) {
                         drawLine(
-                            color = TreasuryScreenTheme.ForecastAccent,
+                            color = TreasuryScreenTheme.CumulativeLine,
                             start = Offset(0f, size.height / 2),
                             end = Offset(size.width, size.height / 2),
-                            strokeWidth = 2.dp.toPx(),
-                            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))
+                            strokeWidth = 2.5.dp.toPx()
                         )
                     }
                     Text(
-                        text = stringResource(R.string.treasury_chart_forecast),
+                        text = stringResource(R.string.treasury_chart_cumulative),
                         fontSize = 8.sp,
                         color = TreasuryScreenTheme.Muted
                     )
@@ -863,17 +985,18 @@ private data class TreasuryYearTotals(
 )
 
 @Composable
-private fun TreasuryDualLineChart(
-    balances: List<Double>,
+private fun TreasuryMultiLineChart(
+    monthlyNet: List<Double>,
+    cumulative: List<Double>,
     splitIndex: Int,
     minY: Double,
     maxY: Double,
     modifier: Modifier = Modifier
 ) {
     val range = max(maxY - minY, 1.0)
-    val count = balances.size.coerceAtLeast(1)
-    val realizedColor = AppColors.BrandBlue
-    val forecastColor = TreasuryScreenTheme.ForecastAccent
+    val count = cumulative.size.coerceAtLeast(1)
+    val monthlyColor = TreasuryScreenTheme.MonthlyLine
+    val cumulativeColor = TreasuryScreenTheme.CumulativeLine
 
     Canvas(modifier = modifier) {
         val padH = 4.dp.toPx()
@@ -913,8 +1036,7 @@ private fun TreasuryDualLineChart(
             )
         }
 
-        // Zone forecast grisée (après le point de jonction)
-        val fStart = (splitIndex + 1).coerceAtMost(count - 1)
+        // Zone prévisionnelle grisée (après le point de jonction)
         if (splitIndex in 0 until count - 1) {
             val zoneLeft = xAt(splitIndex)
             val zoneRight = xAt(count - 1)
@@ -937,48 +1059,67 @@ private fun TreasuryDualLineChart(
             )
         }
 
-        // Segment réalisé : indices 0..splitIndex (ligne pleine bleue)
-        if (splitIndex >= 1) {
+        // --- Série 1 : Solde du mois (bleu, ligne fine continue) ---
+        if (monthlyNet.size >= 2) {
             val path = Path().apply {
-                for (i in 0..splitIndex) {
-                    val x = xAt(i); val y = yAt(balances[i])
+                monthlyNet.forEachIndexed { i, value ->
+                    val x = xAt(i); val y = yAt(value)
                     if (i == 0) moveTo(x, y) else lineTo(x, y)
                 }
             }
-            drawPath(path, color = realizedColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+            drawPath(
+                path,
+                color = monthlyColor.copy(alpha = 0.75f),
+                style = Stroke(width = 1.5.dp.toPx(), cap = StrokeCap.Round)
+            )
+        }
+        monthlyNet.forEachIndexed { i, value ->
+            drawCircle(color = monthlyColor.copy(alpha = 0.75f), radius = 2.dp.toPx(), center = Offset(xAt(i), yAt(value)))
         }
 
-        // Segment forecast : indices splitIndex..count-1 (pointillés verts, enchaîné depuis le même point)
+        // --- Série 2 : Solde cumulé (teal épais) ---
+        // Segment réalisé : indices 0..splitIndex (ligne pleine)
+        if (splitIndex >= 1) {
+            val path = Path().apply {
+                for (i in 0..splitIndex) {
+                    val x = xAt(i); val y = yAt(cumulative[i])
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+            }
+            drawPath(path, color = cumulativeColor, style = Stroke(width = 2.8.dp.toPx(), cap = StrokeCap.Round))
+        }
+
+        // Segment prévisionnel : indices splitIndex..count-1 (pointillés orange, enchaîné depuis le même point)
         if (splitIndex < count - 1) {
             val path = Path().apply {
                 for (i in splitIndex until count) {
-                    val x = xAt(i); val y = yAt(balances[i])
+                    val x = xAt(i); val y = yAt(cumulative[i])
                     if (i == splitIndex) moveTo(x, y) else lineTo(x, y)
                 }
             }
             drawPath(
                 path,
-                color = forecastColor.copy(alpha = 0.85f),
+                color = cumulativeColor.copy(alpha = 0.85f),
                 style = Stroke(
-                    width = 2.dp.toPx(),
+                    width = 2.4.dp.toPx(),
                     cap = StrokeCap.Round,
                     pathEffect = PathEffect.dashPathEffect(floatArrayOf(6.dp.toPx(), 4.dp.toPx()))
                 )
             )
         }
 
-        // Points réalisés
+        // Points cumulés réalisés
         for (i in 0..splitIndex.coerceAtMost(count - 1)) {
-            val pt = Offset(xAt(i), yAt(balances[i]))
+            val pt = Offset(xAt(i), yAt(cumulative[i]))
             drawCircle(color = TreasuryScreenTheme.Card, radius = 4.dp.toPx(), center = pt)
-            drawCircle(color = realizedColor, radius = 3.dp.toPx(), center = pt)
+            drawCircle(color = cumulativeColor, radius = 3.dp.toPx(), center = pt)
         }
 
-        // Points forecast (sans le point de jonction déjà dessiné en bleu)
+        // Points cumulés prévisionnels (sans le point de jonction déjà dessiné)
         for (i in (splitIndex + 1) until count) {
-            val pt = Offset(xAt(i), yAt(balances[i]))
+            val pt = Offset(xAt(i), yAt(cumulative[i]))
             drawCircle(color = TreasuryScreenTheme.Card, radius = 3.5.dp.toPx(), center = pt)
-            drawCircle(color = forecastColor.copy(alpha = 0.85f), radius = 2.5.dp.toPx(), center = pt)
+            drawCircle(color = cumulativeColor.copy(alpha = 0.85f), radius = 2.5.dp.toPx(), center = pt)
         }
     }
 }

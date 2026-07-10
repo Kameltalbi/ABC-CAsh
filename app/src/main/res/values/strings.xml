@@ -544,6 +544,16 @@
     <string name="forecasts">Forecasts</string>
     <string name="no_forecasts">No upcoming forecasts</string>
     <string name="forecasts_filter_overdue">Overdue</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d unvalidated forecast expense(s). Auto-deleted on %3$s if not handled.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d unpaid invoice(s) remain visible in Transactions.</string>
+    <string name="forecasts_grace_days_remaining">%d day(s) left before automatic cleanup</string>
+    <string name="forecasts_go_to_transactions">View Transactions</string>
+    <string name="forecasts_policy_title">How forecasts work</string>
+    <string name="forecasts_policy_months">Only the current month and future months are shown here.</string>
+    <string name="forecasts_policy_validation">At month-end, validate your forecasts (mark as paid or collected). You have %1$d days: after that, unvalidated one-off forecast expenses are deleted automatically.</string>
+    <string name="forecasts_policy_invoices">Unpaid invoices are never deleted — they remain in Transactions.</string>
+    <string name="forecasts_policy_got_it">Got it</string>
+    <string name="forecasts_policy_help">How it works</string>
     <string name="delete_forecast">Delete forecast</string>
     <string name="delete_forecast_confirm">Delete forecast %1$s?</string>
 
@@ -719,6 +729,8 @@
     <string name="treasury_next_90_days">Next 90 days</string>
     <string name="treasury_chart_realized">Realized</string>
     <string name="treasury_chart_forecast">Forecast (incl. pending)</string>
+    <string name="treasury_chart_monthly">Monthly balance</string>
+    <string name="treasury_chart_cumulative">Cumulative balance</string>
     <string name="treasury_chart_balance">Month-end balance</string>
     <string name="treasury_chart_net_flow">Net flow (income − expenses)</string>
     <string name="treasury_opening_balance_accounts">Opening balance (accounts)</string>
@@ -777,7 +789,7 @@
     <string name="onboarding_tour_entry_title">Income &amp; expenses</string>
     <string name="onboarding_tour_entry_desc">Add money in or out in seconds. Choose a category and date — past or today goes to Transactions, future dates go to Forecasts. Attach a receipt photo for expenses.</string>
     <string name="onboarding_tour_forecasts_title">Forecasts</string>
-    <string name="onboarding_tour_forecasts_desc">The Forecasts tab lists upcoming income and expenses not yet settled. This is your cash outlook for the coming months.</string>
+    <string name="onboarding_tour_forecasts_desc">This tab shows unsettled income and expenses for the current month and upcoming months only. Validate them before month-end: after %1$d days, unvalidated forecast expenses are removed automatically. Unpaid invoices stay in Transactions.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
     <string name="onboarding_tour_transactions_desc">Settled income and paid expenses appear in Transactions — your real cash movements, month by month.</string>
     <string name="onboarding_tour_treasury_title">Treasury</string>
@@ -812,8 +824,8 @@
     <string name="payment_channel_cash">Cash</string>
     <string name="attach_receipt">Attach receipt</string>
     <string name="receipt_attached">Receipt attached</string>
-    <string name="transaction_date_forecast_hint">Future date — saved as a forecast (Due dates)</string>
-    <string name="transaction_date_real_hint">Past or today — saved in Transactions</string>
+    <string name="transaction_date_forecast_hint">Saved as unpaid forecast (Due dates)</string>
+    <string name="transaction_date_real_hint">Recorded as paid/collected in Transactions (bank or cash)</string>
     <string name="form_income_service">Services</string>
     <string name="form_income_goods">Product sales</string>
     <string name="form_income_grants">Grants / Other</string>
@@ -969,6 +981,7 @@
     <string name="import_statement_none">No valid operation found. Check the amount and date columns.</string>
     <string name="import_statement_credits">Credits (%1$d)</string>
     <string name="import_statement_debits">Debits (%1$d)</string>
+    <string name="import_statement_skipped_summary">%1$d balance/total row(s) skipped — not real transactions</string>
     <string name="import_statement_confirm">Import %1$d operations</string>
     <string name="import_statement_result">%1$d operations imported, %2$d skipped (duplicates).</string>
     <string name="cannot_read_file">Unable to read the file.</string>
@@ -1047,7 +1060,7 @@
     <string name="treasury_init_opening_balance">Opening balance</string>
     <string name="treasury_init_balance_date">Balance date</string>
     <string name="treasury_init_zero_hint">0 is a valid amount</string>
-    <string name="treasury_init_locked_hint">This amount can only be changed via "Balance Correction"</string>
+    <string name="treasury_init_locked_hint">You can change it later from the Treasury screen</string>
     <string name="treasury_init_validate">Validate and Start</string>
     <string name="treasury_init_empty_error">Balance cannot be empty — enter 0 if needed</string>
     <string name="treasury_init_date_required">Balance date is required</string>
@@ -1060,6 +1073,7 @@
     <string name="treasury_real_bank_balance">Real bank balance</string>
     <string name="treasury_gap">Gap</string>
     <string name="treasury_modify_bank_balance">Modify bank balance</string>
+    <string name="treasury_modify_opening_balance">Modify opening balance</string>
     <string name="treasury_view_history">View History</string>
     <string name="treasury_gap_warning">Gap detected between treasury and bank balance: %1$s</string>
     <string name="treasury_negative_warning">Warning: your balance is negative</string>
@@ -1080,6 +1094,9 @@
     <string name="treasury_kpi_net_hint">Income minus expenses</string>
     <string name="treasury_kpi_cumulative">Cumulative balance</string>
     <string name="treasury_kpi_cumulative_hint">Opening + income - expenses</string>
+    <string name="treasury_kpi_cumulative_bank_hint">Reference bank balance</string>
+    <string name="treasury_kpi_pending_note">Forecast not included in totals above: +%1$s income, −%2$s expenses pending</string>
+    <string name="treasury_kpi_forecast_part">Incl. %1$s forecasts</string>
     <string name="treasury_kpi_year_range">Jan → Dec %1$d</string>
 
     <!-- TREASURY CORRECTION -->
@@ -1103,6 +1120,14 @@
     <string name="treasury_confirm_question">Are you sure you want to continue?</string>
     <string name="treasury_confirm_yes">Yes, confirm</string>
     <string name="treasury_correction_success">Balance updated. New reference: %1$s</string>
+    <string name="treasury_opening_revision_title">Modify opening balance</string>
+    <string name="treasury_opening_revision_current">Current opening balance</string>
+    <string name="treasury_opening_revision_new_balance">New opening balance</string>
+    <string name="treasury_opening_revision_motif_hint">e.g. Setup entry mistake</string>
+    <string name="treasury_opening_revision_confirm_body">You are about to change your treasury opening balance</string>
+    <string name="treasury_opening_revision_confirm_note">All calculations (current balance, cumulative chart, KPIs) will be recalculated from this new amount.</string>
+    <string name="treasury_opening_revision_success">Opening balance updated: %1$s</string>
+    <string name="treasury_not_initialized">Treasury has not been initialized yet</string>
 
     <!-- TREASURY HISTORY -->
     <string name="treasury_history_title">Correction History</string>
@@ -1113,5 +1138,6 @@
     <string name="treasury_history_motif">Reason</string>
     <string name="treasury_history_user">User</string>
     <string name="treasury_history_initial">Initial balance</string>
+    <string name="treasury_history_opening_revision">Opening balance revision</string>
 
 </resources>

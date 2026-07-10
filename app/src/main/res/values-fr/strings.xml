@@ -544,6 +544,16 @@
     <string name="forecasts">Prévisions</string>
     <string name="no_forecasts">Aucune prévision à venir</string>
     <string name="forecasts_filter_overdue">En retard</string>
+    <string name="forecasts_closed_month_alert">%1$s : %2$d dépense(s) prévisionnelle(s) non validée(s). Suppression automatique le %3$s si non traitées.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d facture(s) impayée(s) restent visibles dans Transactions.</string>
+    <string name="forecasts_grace_days_remaining">%d jour(s) restant(s) avant suppression automatique</string>
+    <string name="forecasts_go_to_transactions">Voir Transactions</string>
+    <string name="forecasts_policy_title">Comment fonctionnent les Prévisions</string>
+    <string name="forecasts_policy_months">Seuls le mois en cours et les mois à venir sont affichés ici.</string>
+    <string name="forecasts_policy_validation">En fin de mois, validez vos prévisions (marquer payé / encaissé). Vous disposez de %1$d jours : au-delà, les dépenses prévisionnelles ponctuelles non validées sont supprimées automatiquement.</string>
+    <string name="forecasts_policy_invoices">Les factures impayées ne sont jamais supprimées : elles restent visibles dans Transactions.</string>
+    <string name="forecasts_policy_got_it">J\'ai compris</string>
+    <string name="forecasts_policy_help">Comment ça marche</string>
     <string name="delete_forecast">Supprimer la prévision</string>
     <string name="delete_forecast_confirm">Supprimer la prévision %1$s ?</string>
 
@@ -718,6 +728,8 @@
     <string name="treasury_upcoming_forecasts">Échéances à venir</string>
     <string name="treasury_next_90_days">90 prochains jours</string>
     <string name="treasury_chart_realized">Réalisé</string>
+    <string name="treasury_chart_monthly">Solde du mois</string>
+    <string name="treasury_chart_cumulative">Solde cumulé</string>
     <string name="treasury_chart_balance">Solde de fin de mois</string>
     <string name="treasury_chart_net_flow">Flux net (encaiss. − décaiss.)</string>
     <string name="treasury_chart_forecast">Prévision (dont à venir)</string>
@@ -777,7 +789,7 @@
     <string name="onboarding_tour_entry_title">Revenus &amp; dépenses</string>
     <string name="onboarding_tour_entry_desc">Saisissez un encaissement ou une dépense en quelques secondes. Choisissez la catégorie et la date — passé ou aujourd\'hui dans le Flux, dates futures dans les Prévisions. Joignez une photo de reçu pour les dépenses.</string>
     <string name="onboarding_tour_forecasts_title">Prévisions</string>
-    <string name="onboarding_tour_forecasts_desc">L\'onglet Prévisions liste les encaissements et dépenses pas encore réglés. C\'est votre vision de trésorerie pour les mois à venir.</string>
+    <string name="onboarding_tour_forecasts_desc">Cet onglet affiche les encaissements et dépenses pas encore réglés pour le mois en cours et les mois à venir. Validez-les avant la fin du mois : après %1$d jours, les dépenses prévisionnelles non traitées sont supprimées. Les factures impayées restent dans Transactions.</string>
     <string name="onboarding_tour_transactions_title">Transactions</string>
     <string name="onboarding_tour_transactions_desc">Les encaissements réalisés et dépenses payées apparaissent dans Transactions — vos mouvements réels de trésorerie.</string>
     <string name="onboarding_tour_treasury_title">Trésorerie</string>
@@ -812,8 +824,8 @@
     <string name="payment_channel_cash">Caisse</string>
     <string name="attach_receipt">Attacher le reçu</string>
     <string name="receipt_attached">Reçu attaché</string>
-    <string name="transaction_date_forecast_hint">Date future — enregistré en prévision (Échéances)</string>
-    <string name="transaction_date_real_hint">Passé ou aujourd\'hui — enregistré dans Flux</string>
+    <string name="transaction_date_forecast_hint">Enregistré en prévision non payée (Échéances)</string>
+    <string name="transaction_date_real_hint">Enregistré comme payé/encaissé dans Flux (banque ou espèces)</string>
     <string name="form_income_service">Prestations de services</string>
     <string name="form_income_goods">Ventes de produits</string>
     <string name="form_income_grants">Subventions / Autre</string>
@@ -969,6 +981,7 @@
     <string name="import_statement_none">Aucune opération valide trouvée. Vérifiez les colonnes montant et date.</string>
     <string name="import_statement_credits">Crédits (%1$d)</string>
     <string name="import_statement_debits">Débits (%1$d)</string>
+    <string name="import_statement_skipped_summary">%1$d ligne(s) solde/total ignorée(s) — pas des mouvements réels</string>
     <string name="import_statement_confirm">Importer %1$d opérations</string>
     <string name="import_statement_result">%1$d opérations importées, %2$d ignorées (doublons).</string>
     <string name="cannot_read_file">Impossible de lire le fichier.</string>
@@ -1048,7 +1061,7 @@
     <string name="treasury_init_opening_balance">Solde initial</string>
     <string name="treasury_init_balance_date">Date du solde</string>
     <string name="treasury_init_zero_hint">⚠️ Ce montant peut être 0</string>
-    <string name="treasury_init_locked_hint">⚠️ Il ne pourra être modifié que via « Correction de solde »</string>
+    <string name="treasury_init_locked_hint">⚠️ Vous pourrez le modifier ensuite depuis l\'écran Trésorerie</string>
     <string name="treasury_init_validate">Valider et commencer</string>
     <string name="treasury_init_empty_error">Le solde ne peut pas être vide, saisissez 0 si nécessaire</string>
     <string name="treasury_init_date_required">La date du solde est obligatoire</string>
@@ -1061,6 +1074,7 @@
     <string name="treasury_real_bank_balance">Solde bancaire réel</string>
     <string name="treasury_gap">Écart</string>
     <string name="treasury_modify_bank_balance">Modifier le solde bancaire</string>
+    <string name="treasury_modify_opening_balance">Modifier le solde initial</string>
     <string name="treasury_view_history">Voir l\'historique</string>
     <string name="treasury_gap_warning">Écart détecté entre trésorerie et solde bancaire : %1$s</string>
     <string name="treasury_negative_warning">Attention : votre solde est négatif</string>
@@ -1082,6 +1096,9 @@
     <string name="treasury_kpi_net_hint">Encaissements moins dépenses</string>
     <string name="treasury_kpi_cumulative">Trésorerie cumulée</string>
     <string name="treasury_kpi_cumulative_hint">Solde initial + enc. - dép.</string>
+    <string name="treasury_kpi_cumulative_bank_hint">Solde bancaire de référence</string>
+    <string name="treasury_kpi_pending_note">Prévisionnel non inclus dans les totaux : +%1$s encaissements, −%2$s dépenses à venir</string>
+    <string name="treasury_kpi_forecast_part">Dont %1$s prévisions</string>
     <string name="treasury_kpi_year_range">Janv. → Déc. %1$d</string>
 
     <!-- TREASURY CORRECTION -->
@@ -1105,6 +1122,14 @@
     <string name="treasury_confirm_question">Êtes-vous sûr de vouloir continuer ?</string>
     <string name="treasury_confirm_yes">Oui, confirmer</string>
     <string name="treasury_correction_success">Solde mis à jour. Nouveau solde de référence : %1$s</string>
+    <string name="treasury_opening_revision_title">Modifier le solde initial</string>
+    <string name="treasury_opening_revision_current">Solde initial actuel</string>
+    <string name="treasury_opening_revision_new_balance">Nouveau solde initial</string>
+    <string name="treasury_opening_revision_motif_hint">ex : Erreur de saisie au démarrage</string>
+    <string name="treasury_opening_revision_confirm_body">Vous allez modifier le solde initial de votre trésorerie</string>
+    <string name="treasury_opening_revision_confirm_note">Tous les calculs (solde actuel, courbe cumulée, KPI) seront recalculés à partir de ce nouveau montant.</string>
+    <string name="treasury_opening_revision_success">Solde initial mis à jour : %1$s</string>
+    <string name="treasury_not_initialized">La trésorerie n\'a pas encore été initialisée</string>
 
     <!-- TREASURY HISTORY -->
     <string name="treasury_history_title">Historique des corrections</string>
@@ -1115,5 +1140,6 @@
     <string name="treasury_history_motif">Motif</string>
     <string name="treasury_history_user">Utilisateur</string>
     <string name="treasury_history_initial">Solde initial</string>
+    <string name="treasury_history_opening_revision">Modification solde initial</string>
 
 </resources>

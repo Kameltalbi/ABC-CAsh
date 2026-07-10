@@ -21,7 +21,8 @@ import java.time.YearMonth
 fun Modifier.monthSwipeNavigation(
     selectedMonth: YearMonth,
     onMonthChange: (YearMonth) -> Unit,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    minMonth: YearMonth? = null
 ): Modifier = if (!enabled) {
     this
 } else {
@@ -30,7 +31,7 @@ fun Modifier.monthSwipeNavigation(
         var totalDrag by remember(selectedMonth) { mutableFloatStateOf(0f) }
         val layoutDirection = LocalLayoutDirection.current
 
-        pointerInput(selectedMonth, layoutDirection) {
+        pointerInput(selectedMonth, layoutDirection, minMonth) {
             detectHorizontalDragGestures(
                 onDragEnd = {
                     val swipeLeft = when (layoutDirection) {
@@ -43,7 +44,12 @@ fun Modifier.monthSwipeNavigation(
                     }
                     when {
                         swipeLeft -> onMonthChange(selectedMonth.plusMonths(1))
-                        swipeRight -> onMonthChange(selectedMonth.minusMonths(1))
+                        swipeRight -> {
+                            val previous = selectedMonth.minusMonths(1)
+                            if (minMonth == null || !previous.isBefore(minMonth)) {
+                                onMonthChange(previous)
+                            }
+                        }
                     }
                     totalDrag = 0f
                 },

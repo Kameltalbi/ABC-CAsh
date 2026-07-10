@@ -163,6 +163,43 @@ class EcheanceForecastTest {
     }
 
     @Test
+    fun `yearlyForecastTotals sums unpaid items across the year`() {
+        val invoices = listOf(
+            Invoice(
+                invoiceNumber = "F1",
+                clientName = "Client A",
+                totalAmount = 500.0,
+                dueDate = LocalDate.of(2026, 6, 15)
+            ),
+            Invoice(
+                invoiceNumber = "F2",
+                clientName = "Client B",
+                totalAmount = 300.0,
+                dueDate = LocalDate.of(2026, 7, 1)
+            )
+        )
+        val expenses = listOf(
+            Expense(
+                label = "Loyer juin",
+                amount = 200.0,
+                date = LocalDate.of(2026, 6, 5),
+                isPaid = false
+            ),
+            Expense(
+                label = "Loyer juillet",
+                amount = 220.0,
+                date = LocalDate.of(2026, 7, 5),
+                isPaid = false
+            )
+        )
+
+        val (income, expenseTotal) = EcheanceForecast.yearlyForecastTotals(invoices, expenses, 2026)
+
+        assertEquals(800.0, income, 0.01)
+        assertEquals(420.0, expenseTotal, 0.01)
+    }
+
+    @Test
     fun `countOverdue includes only unpaid items before today`() {
         val today = LocalDate.of(2026, 6, 18)
         val invoices = listOf(

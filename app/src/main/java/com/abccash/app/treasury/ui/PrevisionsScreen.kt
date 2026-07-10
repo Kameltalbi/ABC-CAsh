@@ -15,6 +15,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -29,12 +30,14 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.locale.AppLocale
+import com.abccash.app.treasury.data.ClosedMonthForecastPending
 import com.abccash.app.treasury.data.EcheanceForecast
 import com.abccash.app.treasury.data.EcheanceItem
 import com.abccash.app.treasury.data.EcheanceType
 import com.abccash.app.treasury.data.Expense
 import com.abccash.app.treasury.data.ExpenseCategory
 import com.abccash.app.treasury.data.ExpenseRecurrence
+import com.abccash.app.treasury.data.ForecastMonthPolicy
 import com.abccash.app.treasury.data.Invoice
 import com.abccash.app.treasury.data.PaymentMethod
 import com.abccash.app.treasury.data.UserPermission
@@ -85,6 +88,10 @@ fun PrevisionsScreen(
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
     onForecastValidated: (YearMonth) -> Unit,
+    onPurgeExpiredForecasts: () -> Unit = {},
+    onNavigateToTransactions: () -> Unit = {},
+    showForecastsPolicyOnOpen: Boolean = false,
+    onForecastsPolicyAcknowledged: () -> Unit = {},
     onOpenDrawer: () -> Unit = {},
     customExpenseCategories: List<String> = emptyList()
 ) {
@@ -108,6 +115,15 @@ fun PrevisionsScreen(
 
     var showTypeSheet by remember { mutableStateOf(false) }
     var listFilter by remember { mutableStateOf(PrevisionListFilter.ALL) }
+    var showPolicyDialog by remember { mutableStateOf(false) }
+    var policyFromFirstVisit by remember { mutableStateOf(false) }
+
+    LaunchedEffect(showForecastsPolicyOnOpen) {
+        if (showForecastsPolicyOnOpen) {
+            policyFromFirstVisit = true
+            showPolicyDialog = true
+        }
+    }
 
     var invoiceToEdit by remember { mutableStateOf<Invoice?>(null) }
     var expenseToEdit by remember { mutableStateOf<Expense?>(null) }
@@ -119,6 +135,21 @@ fun PrevisionsScreen(
     val formatAmount = rememberFormatMoney()
     val dateFormatter = remember { AppLocale.shortDayMonthYearFormatter() }
     val today = remember { LocalDate.now() }
+    val currentMonth = remember(today) { YearMonth.from(today) }
+    val minMonth = currentMonth
+
+    LaunchedEffect(currentMonth, selectedMonth) {
+        val clamped = ForecastMonthPolicy.clampMonth(selectedMonth, today)
+        if (clamped != selectedMonth) onMonthChange(clamped)
+    }
+
+    LaunchedEffect(Unit) {
+        onPurgeExpiredForecasts()
+    }
+
+    val pendingClosedMonths = remember(invoices, expenses, today) {
+        ForecastMonthPolicy.pendingClosedMonths(invoices, expenses, today)
+    }
 
     val allItems = remember(invoices, expenses, selectedMonth, canViewIncome, canViewExpenses) {
         val filteredInvoices = if (canViewIncome) invoices else emptyList()
@@ -262,6 +293,18 @@ fun PrevisionsScreen(
         )
     }
 
+    if (showPolicyDialog) {
+        ForecastsPolicyDialog(
+            onDismiss = {
+                showPolicyDialog = false
+                if (policyFromFirstVisit) {
+                    policyFromFirstVisit = false
+                    onForecastsPolicyAcknowledged()
+                }
+            }
+        )
+    }
+
     if (showTypeSheet) {
         TransactionTypeChoiceSheet(
             canAddIncome = canAddIncome,
@@ -310,12 +353,24 @@ fun PrevisionsScreen(
                     fontWeight = FontWeight.Bold,
                     color = PrevisionsTheme.TextPrimary
                 )
-                IconButton(onClick = onNavigateToSettings) {
-                    Icon(
-                        Icons.Default.Settings,
-                        contentDescription = stringResource(R.string.settings),
-                        tint = PrevisionsTheme.ChipInactive
-                    )
+                Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) {
+                    IconButton(onClick = {
+                        policyFromFirstVisit = false
+                        showPolicyDialog = true
+                    }) {
+                        Icon(
+                            Icons.Default.Info,
+                            contentDescription = stringResource(R.string.forecasts_policy_help),
+                            tint = PrevisionsTheme.ChipInactive
+                        )
+                    }
+                    IconButton(onClick = onNavigateToSettings) {
+                        Icon(
+                            Icons.Default.Settings,
+                            contentDescription = stringResource(R.string.settings),
+                            tint = PrevisionsTheme.ChipInactive
+                        )
+                    }
                 }
             }
 
@@ -325,10 +380,19 @@ fun PrevisionsScreen(
                 onSelect = { listFilter = it }
             )
 
+            pendingClosedMonths.forEach { pending ->
+                ClosedMonthForecastBanner(
+                    pending = pending,
+                    dateFormatter = dateFormatter,
+                    onGoToTransactions = onNavigateToTransactions
+                )
+            }
+
             MonthSelectorRow(
                 selectedMonth = selectedMonth,
                 onMonthChange = onMonthChange,
-                compact = true
+                compact = true,
+                minMonth = minMonth
             )
 
             PrevisionSummaryRow(
@@ -347,7 +411,7 @@ fun PrevisionsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth()
-                    .monthSwipeNavigation(selectedMonth, onMonthChange)
+                    .monthSwipeNavigation(selectedMonth, onMonthChange, minMonth = minMonth)
             ) {
             if (filteredItems.isEmpty()) {
                 Box(
@@ -432,6 +496,111 @@ fun PrevisionsScreen(
                     }
                 }
             }
+            }
+        }
+    }
+}
+
+@Composable
+fun ForecastsPolicyDialog(onDismiss: () -> Unit) {
+    val graceDays = ForecastMonthPolicy.GRACE_DAYS
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        icon = {
+            Icon(
+                Icons.Default.Info,
+                contentDescription = null,
+                tint = PrevisionsTheme.Accent
+            )
+        },
+        title = {
+            Text(
+                text = stringResource(R.string.forecasts_policy_title),
+                fontWeight = FontWeight.Bold
+            )
+        },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                PolicyBullet(stringResource(R.string.forecasts_policy_months))
+                PolicyBullet(stringResource(R.string.forecasts_policy_validation, graceDays))
+                PolicyBullet(stringResource(R.string.forecasts_policy_invoices))
+            }
+        },
+        confirmButton = {
+            Button(onClick = onDismiss) {
+                Text(stringResource(R.string.forecasts_policy_got_it))
+            }
+        }
+    )
+}
+
+@Composable
+private fun PolicyBullet(text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalAlignment = Alignment.Top
+    ) {
+        Text("•", fontSize = 14.sp, color = PrevisionsTheme.Accent)
+        Text(text, fontSize = 14.sp, color = PrevisionsTheme.TextPrimary, lineHeight = 20.sp)
+    }
+}
+
+@Composable
+private fun ClosedMonthForecastBanner(
+    pending: ClosedMonthForecastPending,
+    dateFormatter: java.time.format.DateTimeFormatter,
+    onGoToTransactions: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp, vertical = 6.dp),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7ED)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier.padding(14.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Text(
+                text = stringResource(
+                    R.string.forecasts_closed_month_alert,
+                    pending.monthLabel,
+                    pending.expenseCount,
+                    pending.purgeDate.format(dateFormatter)
+                ),
+                fontSize = 13.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color(0xFFB45309)
+            )
+            if (pending.invoiceCount > 0) {
+                Text(
+                    text = stringResource(
+                        R.string.forecasts_closed_month_invoices_note,
+                        pending.invoiceCount
+                    ),
+                    fontSize = 12.sp,
+                    color = PrevisionsTheme.Muted
+                )
+            }
+            if (pending.daysUntilPurge > 0) {
+                Text(
+                    text = stringResource(
+                        R.string.forecasts_grace_days_remaining,
+                        pending.daysUntilPurge
+                    ),
+                    fontSize = 12.sp,
+                    color = PrevisionsTheme.Muted
+                )
+            }
+            OutlinedButton(
+                onClick = onGoToTransactions,
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(10.dp)
+            ) {
+                Text(stringResource(R.string.forecasts_go_to_transactions))
             }
         }
     }

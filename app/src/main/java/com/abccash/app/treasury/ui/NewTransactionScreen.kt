@@ -155,15 +155,9 @@ fun NewTransactionScreen(
         }
     }
 
-    val isForecastEntry = remember(forecastMode, isRecurring, date, today) {
-        forecastMode || isRecurring || date.isAfter(today)
-    }
-    val expenseSavesAsPaid = remember(forecastMode, isRecurring, date, today) {
-        !forecastMode && !isRecurring && !date.isAfter(today)
-    }
-    val incomeMarkAsCollected = remember(forecastMode, date, today) {
-        !forecastMode && !date.isAfter(today)
-    }
+    val isForecastEntry = forecastMode
+    val expenseSavesAsPaid = !forecastMode
+    val incomeMarkAsCollected = !forecastMode
 
     val (scanState, scanActions) = rememberReceiptScan(
         snackbarHostState = snackbarHostState,

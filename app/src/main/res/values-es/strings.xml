@@ -163,6 +163,17 @@
     <string name="no_forecasts">Sin previsiones próximas</string>
     <string name="delete_forecast">Eliminar previsión</string>
     <string name="delete_forecast_confirm">¿Eliminar previsión %1$s?</string>
+    <string name="forecasts_filter_overdue">Vencido</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d gasto(s) previsto(s) sin validar. Eliminación automática el %3$s si no se gestionan.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d factura(s) impagada(s) siguen visibles en Transacciones.</string>
+    <string name="forecasts_grace_days_remaining">%d día(s) restante(s) antes de la limpieza automática</string>
+    <string name="forecasts_go_to_transactions">Ver Transacciones</string>
+    <string name="forecasts_policy_title">Cómo funcionan las Previsiones</string>
+    <string name="forecasts_policy_months">Aquí solo se muestran el mes actual y los meses futuros.</string>
+    <string name="forecasts_policy_validation">Al final del mes, valida tus previsiones (marcar como pagado/cobrado). Tienes %1$d días: después, los gastos previstos puntuales no validados se eliminan automáticamente.</string>
+    <string name="forecasts_policy_invoices">Las facturas impagadas nunca se eliminan: permanecen en Transacciones.</string>
+    <string name="forecasts_policy_got_it">Entendido</string>
+    <string name="forecasts_policy_help">Cómo funciona</string>
 
     <!-- PLUS -->
     <string name="plus">Más</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Vea el saldo mensual, los cobros y las previsiones financieras.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Previsiones</string>
+    <string name="onboarding_tour_forecasts_desc">Esta pestaña muestra ingresos y gastos pendientes del mes actual y futuros. Valídalos antes de fin de mes: tras %1$d días, los gastos previstos no tratados se eliminan. Las facturas impagadas permanecen en Transacciones.</string>
 </resources>

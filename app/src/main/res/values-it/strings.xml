@@ -163,6 +163,17 @@
     <string name="no_forecasts">Nessuna previsione imminente</string>
     <string name="delete_forecast">Elimina previsione</string>
     <string name="delete_forecast_confirm">Eliminare previsione %1$s?</string>
+    <string name="forecasts_filter_overdue">Scaduto</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d spesa/e previsionale/i non convalidata/e. Eliminazione automatica il %3$s se non gestita/e.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d fattura/e non pagata/e restano visibili in Transazioni.</string>
+    <string name="forecasts_grace_days_remaining">%d giorno/i rimanente/i prima della pulizia automatica</string>
+    <string name="forecasts_go_to_transactions">Vedi Transazioni</string>
+    <string name="forecasts_policy_title">Come funzionano le Previsioni</string>
+    <string name="forecasts_policy_months">Qui vengono mostrati solo il mese corrente e i mesi futuri.</string>
+    <string name="forecasts_policy_validation">A fine mese, convalida le previsioni (segna come pagato/incassato). Hai %1$d giorni: oltre questo termine, le spese previsionali una tantum non convalidate vengono eliminate automaticamente.</string>
+    <string name="forecasts_policy_invoices">Le fatture non pagate non vengono mai eliminate: restano in Transazioni.</string>
+    <string name="forecasts_policy_got_it">Ho capito</string>
+    <string name="forecasts_policy_help">Come funziona</string>
 
     <!-- PLUS -->
     <string name="plus">Altro</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Visualizza saldo mensile, incassi e previsioni finanziarie.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Previsioni</string>
+    <string name="onboarding_tour_forecasts_desc">Questa scheda mostra entrate e uscite non saldate per il mese corrente e i mesi futuri. Convalidale prima di fine mese: dopo %1$d giorni, le spese previsionali non gestite vengono eliminate. Le fatture non pagate restano in Transazioni.</string>
 </resources>

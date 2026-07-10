@@ -20,7 +20,7 @@ import java.io.File
         ExpenseEntity::class,
         BalanceCorrectionEntity::class
     ],
-    version = 22,
+    version = 23,
     exportSchema = false
 )
 @TypeConverters(TreasuryConverters::class)
@@ -88,7 +88,8 @@ abstract class TreasuryDatabase : RoomDatabase() {
                     MIGRATION_18_19,
                     MIGRATION_19_20,
                     MIGRATION_20_21,
-                    MIGRATION_21_22
+                    MIGRATION_21_22,
+                    MIGRATION_22_23
                 )
                 .build()
     }

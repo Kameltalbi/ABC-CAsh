@@ -80,6 +80,7 @@ private fun CorrectionHistoryCard(
     dateFormatter: DateTimeFormatter
 ) {
     val isInitial = correction.type == BalanceCorrectionType.INITIAL
+    val isOpeningRevision = correction.type == BalanceCorrectionType.OPENING_REVISION
     val ecart = correction.ecart
     val ecartColor = when {
         ecart > 0 -> Color(0xFF16A34A)
@@ -91,10 +92,11 @@ private fun CorrectionHistoryCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (isInitial)
-                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-            else
-                MaterialTheme.colorScheme.surface
+            containerColor = when {
+                isInitial -> MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
+                isOpeningRevision -> MaterialTheme.colorScheme.tertiaryContainer.copy(alpha = 0.35f)
+                else -> MaterialTheme.colorScheme.surface
+            }
         ),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
@@ -114,22 +116,25 @@ private fun CorrectionHistoryCard(
                 )
                 Surface(
                     shape = RoundedCornerShape(8.dp),
-                    color = if (isInitial)
-                        MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
-                    else
-                        MaterialTheme.colorScheme.secondaryContainer
+                    color = when {
+                        isInitial -> MaterialTheme.colorScheme.primary.copy(alpha = 0.15f)
+                        isOpeningRevision -> MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f)
+                        else -> MaterialTheme.colorScheme.secondaryContainer
+                    }
                 ) {
                     Text(
-                        text = if (isInitial)
-                            stringResource(R.string.treasury_history_initial)
-                        else
-                            stringResource(R.string.treasury_correction_title),
+                        text = when {
+                            isInitial -> stringResource(R.string.treasury_history_initial)
+                            isOpeningRevision -> stringResource(R.string.treasury_history_opening_revision)
+                            else -> stringResource(R.string.treasury_correction_title)
+                        },
                         fontSize = 11.sp,
                         modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp),
-                        color = if (isInitial)
-                            MaterialTheme.colorScheme.primary
-                        else
-                            MaterialTheme.colorScheme.onSecondaryContainer
+                        color = when {
+                            isInitial -> MaterialTheme.colorScheme.primary
+                            isOpeningRevision -> MaterialTheme.colorScheme.tertiary
+                            else -> MaterialTheme.colorScheme.onSecondaryContainer
+                        }
                     )
                 }
             }

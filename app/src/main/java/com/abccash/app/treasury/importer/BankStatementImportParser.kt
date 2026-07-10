@@ -21,7 +21,9 @@ data class BankStatementEntry(
 data class BankStatementImportResult(
     val entries: List<BankStatementEntry> = emptyList(),
     val errorMessage: String? = null,
-    val detectedHeaders: List<String> = emptyList()
+    val detectedHeaders: List<String> = emptyList(),
+    /** Lignes solde / total / report ignorées (pas des mouvements réels). */
+    val skippedSummaryRows: Int = 0
 ) {
     val creditCount: Int get() = entries.count { it.isCredit }
     val debitCount: Int get() = entries.count { !it.isCredit }
@@ -67,14 +69,27 @@ object BankStatementImportParser {
                 detectedHeaders = rawHeader
             )
 
-        val entries = rows.drop(1).mapNotNull { entryFromCells(it, indexes) }
+        val entries = mutableListOf<BankStatementEntry>()
+        var skippedSummaryRows = 0
+        for (row in rows.drop(1)) {
+            if (isSummaryRow(row, indexes)) {
+                skippedSummaryRows++
+                continue
+            }
+            entryFromCells(row, indexes)?.let { entries.add(it) }
+        }
         if (entries.isEmpty()) {
             return BankStatementImportResult(
                 errorMessage = "Aucune opération valide. Vérifiez les colonnes montant et date.",
-                detectedHeaders = rawHeader
+                detectedHeaders = rawHeader,
+                skippedSummaryRows = skippedSummaryRows
             )
         }
-        return BankStatementImportResult(entries = entries)
+        return BankStatementImportResult(
+            entries = entries,
+            detectedHeaders = rawHeader,
+            skippedSummaryRows = skippedSummaryRows
+        )
     }
 
     private data class ColumnIndexes(
@@ -104,7 +119,8 @@ object BankStatementImportParser {
             "description", "libelle", "libelleoperation", "libelleecriture",
             "intitule", "designation", "nature", "motif", "detail", "details"
         )
-        val amount = find("montant", "montantoperation", "amount", "valeur", "value")
+        val amountIndex = find("montant", "montantoperation", "amount", "valeur", "value")
+        val amount = if (amountIndex >= 0 && isBalanceColumn(header[amountIndex])) -1 else amountIndex
         val debit = find("debit", "debitamount", "montantdebit")
         val credit = find("credit", "creditamount", "montantcredit")
         val sens = find("debitcredit", "creditdebit", "sens", "sensoperation")
@@ -127,6 +143,66 @@ object BankStatementImportParser {
         )
     }
 
+    private fun isBalanceColumn(normalizedHeader: String): Boolean =
+        normalizedHeader in BALANCE_COLUMN_HEADERS
+
+    private val BALANCE_COLUMN_HEADERS = setOf(
+        "solde", "soldecompte", "soldedispo", "soldfinal", "nouveausolde",
+        "balance", "soldedebut", "soldefin", "soldemoyen"
+    )
+
+    private fun isSummaryRow(cells: List<String>, indexes: ColumnIndexes): Boolean {
+        val reference = cells.getOrNull(indexes.reference)?.trim().orEmpty()
+        val label = listOfNotNull(
+            cells.getOrNull(indexes.label)?.trim()?.takeIf { it.isNotBlank() },
+            reference.takeIf { it.isNotBlank() }
+        ).joinToString(" ")
+        return isNonTransactionalLabel(label)
+    }
+
+    /**
+     * Lignes de relevé qui ne sont pas des mouvements (solde d'ouverture, report, total…).
+     * Public pour filtrage défensif à l'import.
+     */
+    fun isNonTransactionalLabel(label: String): Boolean {
+        val text = normalizeRowLabel(label)
+        if (text.isBlank()) return false
+        return NON_TRANSACTIONAL_PATTERNS.any { it.containsMatchIn(text) }
+    }
+
+    private val NON_TRANSACTIONAL_PATTERNS = listOf(
+        Regex("""\bsolde debiteur\b"""),
+        Regex("""\bsolde crediteur\b"""),
+        Regex("""\bsolde intermediaire\b"""),
+        Regex("""\binterets debiteurs\b"""),
+        Regex("""^solde\b"""),
+        Regex("""\bsolde au\b"""),
+        Regex("""\bsolde initial\b"""),
+        Regex("""\bsolde anterieur\b"""),
+        Regex("""\bsolde precedent\b"""),
+        Regex("""\bsolde de debut\b"""),
+        Regex("""\bsolde de fin\b"""),
+        Regex("""\bancien solde\b"""),
+        Regex("""\bnouveau solde\b"""),
+        Regex("""\breport\b"""),
+        Regex("""^total\b"""),
+        Regex("""\bsous.?total\b"""),
+        Regex("""\brecapitulatif\b"""),
+        Regex("""\bcumul\b"""),
+        Regex("""^balance\b""")
+    )
+
+    private fun normalizeRowLabel(label: String): String =
+        label.lowercase(Locale.ROOT)
+            .replace("é", "e").replace("è", "e").replace("ê", "e").replace("ë", "e")
+            .replace("à", "a").replace("â", "a")
+            .replace("ù", "u").replace("û", "u")
+            .replace("ô", "o")
+            .replace("î", "i").replace("ï", "i")
+            .replace("ç", "c")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
     private fun entryFromCells(cells: List<String>, indexes: ColumnIndexes): BankStatementEntry? {
         val date = cells.getOrNull(indexes.date)?.toLocalDate() ?: return null
 
@@ -136,6 +212,8 @@ object BankStatementImportParser {
         if (indexes.debit >= 0 && indexes.credit >= 0) {
             val debitValue = cells.getOrNull(indexes.debit)?.toAmount() ?: 0.0
             val creditValue = cells.getOrNull(indexes.credit)?.toAmount() ?: 0.0
+            // Ligne ambiguë (débit et crédit remplis) = souvent solde/report, pas un mouvement.
+            if (kotlin.math.abs(debitValue) > 0.0 && kotlin.math.abs(creditValue) > 0.0) return null
             when {
                 kotlin.math.abs(creditValue) > 0.0 -> {
                     amount = kotlin.math.abs(creditValue)
@@ -149,10 +227,10 @@ object BankStatementImportParser {
             }
         } else {
             val raw = cells.getOrNull(indexes.amount)?.toAmount() ?: return null
+            if (raw == 0.0) return null
             amount = kotlin.math.abs(raw)
-            if (amount == 0.0) return null
             isCredit = when {
-                indexes.sens >= 0 -> isCreditSens(cells.getOrNull(indexes.sens))
+                indexes.sens >= 0 -> parseCreditSens(cells.getOrNull(indexes.sens)) ?: (raw > 0.0)
                 else -> raw > 0.0
             }
         }
@@ -165,6 +243,8 @@ object BankStatementImportParser {
             reference.takeIf { it.isNotBlank() }
         ).firstOrNull() ?: "Opération"
 
+        if (isNonTransactionalLabel(label)) return null
+
         return BankStatementEntry(
             date = date,
             label = label,
@@ -174,15 +254,21 @@ object BankStatementImportParser {
         )
     }
 
-    private fun isCreditSens(value: String?): Boolean {
+    /** null = colonne sens vide ou illisible → se fier au signe du montant. */
+    private fun parseCreditSens(value: String?): Boolean? {
         val normalized = value?.lowercase(Locale.ROOT)?.trim().orEmpty()
+        if (normalized.isBlank()) return null
         return when {
             normalized.startsWith("c") -> true
             normalized.startsWith("d") -> false
-            normalized.contains("cred") -> true
-            else -> false
+            normalized.contains("cred") || normalized == "+" -> true
+            normalized.contains("deb") || normalized == "-" -> false
+            else -> null
         }
     }
+
+    private fun isCreditSens(value: String?): Boolean =
+        parseCreditSens(value) ?: false
 
     private fun buildHeaderError(rawHeader: List<String>): String {
         val found = rawHeader.filter { it.isNotBlank() }.joinToString(", ")

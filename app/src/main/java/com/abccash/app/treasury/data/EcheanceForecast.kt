@@ -68,6 +68,22 @@ object EcheanceForecast {
         return (income + expenseItems).sortedBy { it.dueDate }
     }
 
+    /** Totaux prévisionnels annuels (toutes échéances non réglées de l'année, comme l'onglet Prévisions). */
+    fun yearlyForecastTotals(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        year: Int
+    ): Pair<Double, Double> {
+        var income = 0.0
+        var expenseTotal = 0.0
+        for (month in 1..12) {
+            val items = buildItemsForMonth(YearMonth.of(year, month), invoices, expenses)
+            income += items.filter { it.type == EcheanceType.INCOME }.sumOf { it.amount }
+            expenseTotal += items.filter { it.type == EcheanceType.EXPENSE }.sumOf { it.amount }
+        }
+        return income to expenseTotal
+    }
+
     fun buildItems(
         invoices: List<Invoice>,
         expenses: List<Expense>,

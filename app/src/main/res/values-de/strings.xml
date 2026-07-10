@@ -163,6 +163,17 @@
     <string name="no_forecasts">Keine anstehenden Prognosen</string>
     <string name="delete_forecast">Prognose löschen</string>
     <string name="delete_forecast_confirm">Prognose %1$s löschen?</string>
+    <string name="forecasts_filter_overdue">Überfällig</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d nicht validierte Prognoseausgabe(n). Automatisch gelöscht am %3$s, wenn nicht bearbeitet.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d unbezahlte Rechnung(en) bleiben in Transaktionen sichtbar.</string>
+    <string name="forecasts_grace_days_remaining">%d Tag(e) bis zur automatischen Bereinigung</string>
+    <string name="forecasts_go_to_transactions">Transaktionen anzeigen</string>
+    <string name="forecasts_policy_title">So funktionieren Prognosen</string>
+    <string name="forecasts_policy_months">Hier werden nur der aktuelle Monat und künftige Monate angezeigt.</string>
+    <string name="forecasts_policy_validation">Validieren Sie Ihre Prognosen am Monatsende (als bezahlt/eingegangen markieren). Sie haben %1$d Tage: danach werden nicht validierte einmalige Prognoseausgaben automatisch gelöscht.</string>
+    <string name="forecasts_policy_invoices">Unbezahlte Rechnungen werden nie gelöscht — sie bleiben in Transaktionen.</string>
+    <string name="forecasts_policy_got_it">Verstanden</string>
+    <string name="forecasts_policy_help">So funktioniert es</string>
 
     <!-- PLUS -->
     <string name="plus">Mehr</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Monatssaldo, Einnahmen und Finanzprognosen einsehen.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Prognosen</string>
+    <string name="onboarding_tour_forecasts_desc">Dieser Tab zeigt offene Einnahmen und Ausgaben für den aktuellen und kommende Monate. Validieren Sie sie vor Monatsende: nach %1$d Tagen werden nicht bearbeitete Prognoseausgaben gelöscht. Unbezahlte Rechnungen bleiben in Transaktionen.</string>
 </resources>

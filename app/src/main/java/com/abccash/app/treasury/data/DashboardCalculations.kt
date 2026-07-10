@@ -140,6 +140,7 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankBalance: Double?,
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         viewMode: DashboardViewMode = DashboardViewMode.MONTH,
         today: LocalDate = LocalDate.now()
@@ -148,6 +149,7 @@ object DashboardCalculations {
             invoices = invoices,
             expenses = expenses,
             bankBalance = bankBalance,
+            openingBalance = openingBalance,
             focusMonth = focusMonth,
             viewMode = viewMode,
             today = today
@@ -183,10 +185,10 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankAccounts: List<BankAccount>,
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         today: LocalDate = LocalDate.now()
     ): List<TreasuryRecommendation> {
-        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
         val currentMonthNet = TreasuryCalculations.monthlyTreasuryNet(invoices, expenses, focusMonth)
         val currentMonthExpenses = TreasuryCalculations.monthlyDepenses(expenses, focusMonth)
         val deficit = -currentMonthNet.coerceAtMost(0.0)
@@ -332,10 +334,10 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankAccounts: List<BankAccount>,
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         today: LocalDate = LocalDate.now()
     ): BreakEvenSummary {
-        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
         val previousMonth = focusMonth.minusMonths(1)
         val previousMonthBalance = TreasuryCalculations.calendarYearChartRows(
             invoices = invoices,
@@ -378,10 +380,11 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankAccounts: List<BankAccount>,
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         today: LocalDate = LocalDate.now()
     ): FinancialHealthSummary {
-        val opening = TreasuryCalculations.manualOpeningBalance(bankAccounts)
+        val opening = openingBalance
         val currentBalance = opening + TreasuryCalculations.currentRealizedBalance(invoices, expenses)
 
         val monthIncome = TreasuryCalculations.monthlyCollections(invoices, focusMonth)
@@ -455,10 +458,10 @@ object DashboardCalculations {
         invoices: List<Invoice>,
         expenses: List<Expense>,
         bankAccounts: List<BankAccount>,
+        openingBalance: Double = 0.0,
         focusYear: Int = YearMonth.now().year,
         today: LocalDate = LocalDate.now()
     ): List<AnnualTreasuryPoint> {
-        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
         val todayMonth = YearMonth.from(today)
         val year = if (focusYear == todayMonth.year) todayMonth.year else focusYear
         val rows = TreasuryCalculations.yearlyRows(
@@ -518,6 +521,7 @@ object DashboardCalculations {
         expenses: List<Expense>,
         bankBalance: Double?,
         bankAccounts: List<BankAccount> = emptyList(),
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         viewMode: DashboardViewMode = DashboardViewMode.YEAR,
         today: LocalDate = LocalDate.now()
@@ -526,6 +530,7 @@ object DashboardCalculations {
         expenses = expenses,
         bankBalance = bankBalance,
         bankAccounts = bankAccounts,
+        openingBalance = openingBalance,
         focusMonth = focusMonth,
         viewMode = viewMode,
         today = today
@@ -536,12 +541,12 @@ object DashboardCalculations {
         expenses: List<Expense>,
         bankBalance: Double?,
         bankAccounts: List<BankAccount> = emptyList(),
+        openingBalance: Double = 0.0,
         focusMonth: YearMonth = YearMonth.now(),
         viewMode: DashboardViewMode = DashboardViewMode.YEAR,
         today: LocalDate = LocalDate.now()
     ): DashboardData {
         val referenceDate = resolveReferenceDate(focusMonth, viewMode, today)
-        val openingBalance = TreasuryCalculations.manualOpeningBalance(bankAccounts)
 
         val calculatedBank = when (viewMode) {
             DashboardViewMode.YEAR -> {
@@ -970,7 +975,7 @@ object DashboardCalculations {
         }
     }
 
-    private fun buildBalanceCurve(
+    fun buildBalanceCurve(
         invoices: List<Invoice>,
         expenses: List<Expense>,
         anchorBalance: Double,

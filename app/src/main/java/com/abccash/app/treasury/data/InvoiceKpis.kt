@@ -18,7 +18,8 @@ object InvoiceKpisCalculations {
     fun compute(invoices: List<Invoice>, month: YearMonth, today: LocalDate = LocalDate.now()): InvoiceKpis {
         val monthInvoices = invoices.filter { YearMonth.from(it.dueDate) == month }
         val totalBilled = monthInvoices.sumOf { it.totalAmount }
-        val totalCollected = monthInvoices.sumOf { it.paidAmount }
+        // Encaissements réalisés = paiements reçus ce mois (date du paiement), sans doublons d'import.
+        val totalCollected = TreasuryCalculations.monthlyCollections(invoices, month)
         val totalPending = monthInvoices.sumOf { it.remainingAmount }
         val paidCount = monthInvoices.count { it.status == InvoiceStatus.PAID }
         val dueCount = monthInvoices.count { it.status != InvoiceStatus.PAID }

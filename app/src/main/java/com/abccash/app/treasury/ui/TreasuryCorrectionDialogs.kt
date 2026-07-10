@@ -192,7 +192,11 @@ fun TreasuryCorrectionConfirmDialog(
     correctionDate: LocalDate,
     formatAmount: (Double) -> String,
     onDismiss: () -> Unit,
-    onConfirm: () -> Unit
+    onConfirm: () -> Unit,
+    titleRes: Int = R.string.treasury_confirm_title,
+    bodyRes: Int = R.string.treasury_confirm_body,
+    referenceNoteRes: Int = R.string.treasury_confirm_reference_note,
+    referenceNoteText: String? = null
 ) {
     val ecart = newBalance - oldBalance
     val dateFormatter = remember { DateTimeFormatter.ofPattern("dd/MM/yyyy") }
@@ -201,14 +205,14 @@ fun TreasuryCorrectionConfirmDialog(
         onDismissRequest = onDismiss,
         title = {
             Text(
-                text = stringResource(R.string.treasury_confirm_title),
+                text = stringResource(titleRes),
                 fontWeight = FontWeight.Bold
             )
         },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(
-                    text = stringResource(R.string.treasury_confirm_body),
+                    text = stringResource(bodyRes),
                     fontWeight = FontWeight.SemiBold
                 )
                 HorizontalDivider()
@@ -231,8 +235,8 @@ fun TreasuryCorrectionConfirmDialog(
                 )
                 HorizontalDivider()
                 Text(
-                    text = stringResource(
-                        R.string.treasury_confirm_reference_note,
+                    text = referenceNoteText ?: stringResource(
+                        referenceNoteRes,
                         correctionDate.format(dateFormatter)
                     ),
                     fontSize = 12.sp,
@@ -255,6 +259,139 @@ fun TreasuryCorrectionConfirmDialog(
             }
         }
     )
+}
+
+@Composable
+fun TreasuryOpeningBalanceDialog(
+    currentBalance: Double,
+    currentDate: LocalDate,
+    formatAmount: (Double) -> String,
+    onDismiss: () -> Unit,
+    onValidate: (newBalance: Double, date: LocalDate, motif: String) -> Unit
+) {
+    var newBalanceText by remember {
+        mutableStateOf(currentBalance.toString().replace('.', ','))
+    }
+    var selectedDate by remember { mutableStateOf(currentDate) }
+    var motif by remember { mutableStateOf("") }
+    var balanceError by remember { mutableStateOf<String?>(null) }
+    var motifError by remember { mutableStateOf<String?>(null) }
+
+    val motifRequired = stringResource(R.string.treasury_correction_motif_required)
+    val balanceEmptyError = stringResource(R.string.treasury_init_empty_error)
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            shape = RoundedCornerShape(16.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .verticalScroll(rememberScrollState())
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.treasury_opening_revision_title),
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+
+                HorizontalDivider()
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.treasury_opening_revision_current),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        fontSize = 13.sp
+                    )
+                    Text(
+                        text = formatAmount(currentBalance),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 13.sp
+                    )
+                }
+
+                HorizontalDivider()
+
+                OutlinedTextField(
+                    value = newBalanceText,
+                    onValueChange = {
+                        newBalanceText = it
+                        balanceError = null
+                    },
+                    label = { Text(stringResource(R.string.treasury_opening_revision_new_balance)) },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    isError = balanceError != null,
+                    supportingText = balanceError?.let { { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+
+                TreasuryDateField(
+                    label = stringResource(R.string.treasury_init_balance_date),
+                    date = selectedDate,
+                    onDateChange = { selectedDate = it }
+                )
+
+                OutlinedTextField(
+                    value = motif,
+                    onValueChange = {
+                        motif = it
+                        motifError = null
+                    },
+                    label = { Text(stringResource(R.string.treasury_correction_motif)) },
+                    placeholder = { Text(stringResource(R.string.treasury_opening_revision_motif_hint)) },
+                    isError = motifError != null,
+                    supportingText = motifError?.let { { Text(it) } },
+                    modifier = Modifier.fillMaxWidth(),
+                    maxLines = 2
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(
+                        onClick = {
+                            val rawAmount = newBalanceText.trim().replace(",", ".").replace(" ", "")
+                            val parsedAmount = rawAmount.toDoubleOrNull()
+
+                            var hasError = false
+                            if (rawAmount.isEmpty() || parsedAmount == null) {
+                                balanceError = balanceEmptyError
+                                hasError = true
+                            }
+                            if (motif.isBlank()) {
+                                motifError = motifRequired
+                                hasError = true
+                            }
+                            if (!hasError && parsedAmount != null) {
+                                onValidate(parsedAmount, selectedDate, motif.trim())
+                            }
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(stringResource(R.string.action_validate))
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

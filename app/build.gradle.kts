@@ -55,10 +55,17 @@ android {
             )
             setProperty("archivesBaseName", "AbcCash-V${defaultConfig.versionName}")
         }
-        // APK bureau : même clé release, sans minify (évite crash ProGuard/Room au démarrage).
+        // APK bureau : sans minify (évite crash ProGuard/Room au démarrage).
+        // Signé avec la clé release si elle est configurée, sinon avec la clé debug
+        // afin de pouvoir mettre à jour l'app installée SANS effacer les données.
         create("sideload") {
             initWith(getByName("release"))
-            signingConfig = signingConfigs.getByName("release")
+            val hasReleaseKey = secret("ABC_CASH_RELEASE_STORE_FILE") != null
+            signingConfig = if (hasReleaseKey) {
+                signingConfigs.getByName("release")
+            } else {
+                signingConfigs.getByName("debug")
+            }
             matchingFallbacks += listOf("release", "debug")
             isMinifyEnabled = false
             isShrinkResources = false

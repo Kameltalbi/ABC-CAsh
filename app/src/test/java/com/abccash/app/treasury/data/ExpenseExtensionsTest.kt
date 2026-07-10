@@ -77,7 +77,7 @@ class ExpenseExtensionsTest {
     }
 
     @Test
-    fun savesAsForecast_whenRecurringOrFutureOrForecastMode() {
+    fun savesAsForecast_followsForecastModeOnly() {
         val today = LocalDate.of(2026, 6, 24)
         val recurring = Expense(
             label = "Loyer",
@@ -87,9 +87,11 @@ class ExpenseExtensionsTest {
             recurrence = ExpenseRecurrence.MONTHLY
         )
         val oneOffToday = Expense(label = "Achat", amount = 10.0, date = today)
+        val futureOneOff = Expense(label = "Future", amount = 20.0, date = today.plusMonths(1))
 
-        assertTrue(recurring.savesAsForecast(forecastMode = false, today = today))
+        assertFalse(recurring.savesAsForecast(forecastMode = false, today = today))
         assertTrue(oneOffToday.savesAsForecast(forecastMode = true, today = today))
         assertFalse(oneOffToday.savesAsForecast(forecastMode = false, today = today))
+        assertFalse(futureOneOff.savesAsForecast(forecastMode = false, today = today))
     }
 }

@@ -163,6 +163,17 @@
     <string name="no_forecasts">Inga kommande prognoser</string>
     <string name="delete_forecast">Ta bort prognos</string>
     <string name="delete_forecast_confirm">Ta bort prognos %1$s?</string>
+    <string name="forecasts_filter_overdue">Förfallen</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d ovaliderad prognosutgift(er). Raderas automatiskt den %3$s om de inte hanteras.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d obetalda fakturor förblir synliga i Transaktioner.</string>
+    <string name="forecasts_grace_days_remaining">%d dag(ar) kvar innan automatisk rensning</string>
+    <string name="forecasts_go_to_transactions">Visa transaktioner</string>
+    <string name="forecasts_policy_title">Så fungerar prognoser</string>
+    <string name="forecasts_policy_months">Endast innevarande månad och framtida månader visas här.</string>
+    <string name="forecasts_policy_validation">Vid månadens slut, validera dina prognoser (markera som betald/inkasserad). Du har %1$d dagar: därefter raderas ovaliderade engångsprognosutgifter automatiskt.</string>
+    <string name="forecasts_policy_invoices">Obetalda fakturor raderas aldrig — de finns kvar i Transaktioner.</string>
+    <string name="forecasts_policy_got_it">Jag förstår</string>
+    <string name="forecasts_policy_help">Så fungerar det</string>
 
     <!-- PLUS -->
     <string name="plus">Mer</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Se månadssaldo, inbetalningar och finansiella prognoser.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Prognoser</string>
+    <string name="onboarding_tour_forecasts_desc">Den här fliken visar oreglerade intäkter och utgifter för innevarande och kommande månader. Validera dem före månadsslut: efter %1$d dagar tas ohanterade prognosutgifter bort. Obetalda fakturor finns kvar i Transaktioner.</string>
 </resources>

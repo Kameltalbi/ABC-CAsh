@@ -28,6 +28,7 @@ object UserPreferencesKeys {
     val USER_PERMISSIONS = stringPreferencesKey("user_permissions")
     val IS_LOGGED_IN = booleanPreferencesKey("is_logged_in")
     val ONBOARDING_ADMIN_VU = booleanPreferencesKey("onboarding_admin_vu")
+    val FORECASTS_POLICY_EXPLAINED = booleanPreferencesKey("forecasts_policy_explained")
     val GOOGLE_ACCOUNT_EMAIL = stringPreferencesKey("google_account_email")
     val GOOGLE_LAST_BACKUP_AT = stringPreferencesKey("google_last_backup_at")
     val SUBSCRIPTION_PLAN = stringPreferencesKey("subscription_plan")
@@ -50,6 +51,11 @@ class UserPreferences(private val context: Context) {
     val onboardingAdminVu: Flow<Boolean> = context.userDataStore.data
         .map { preferences ->
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] ?: false
+        }
+
+    val forecastsPolicyExplained: Flow<Boolean> = context.userDataStore.data
+        .map { preferences ->
+            preferences[UserPreferencesKeys.FORECASTS_POLICY_EXPLAINED] ?: false
         }
 
     val currentUserId: Flow<String?> = context.userDataStore.data
@@ -129,6 +135,12 @@ class UserPreferences(private val context: Context) {
         }
     }
 
+    suspend fun setForecastsPolicyExplained(explained: Boolean = true) {
+        context.userDataStore.edit { preferences ->
+            preferences[UserPreferencesKeys.FORECASTS_POLICY_EXPLAINED] = explained
+        }
+    }
+
     suspend fun updateProfileSession(nom: String, email: String) {
         context.userDataStore.edit { preferences ->
             preferences[UserPreferencesKeys.USER_NOM] = nom
@@ -139,6 +151,7 @@ class UserPreferences(private val context: Context) {
     suspend fun clearUserSession() {
         context.userDataStore.edit { preferences ->
             val onboardingVu = preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] ?: false
+            val forecastsPolicyExplained = preferences[UserPreferencesKeys.FORECASTS_POLICY_EXPLAINED] ?: false
             preferences.remove(UserPreferencesKeys.USER_ID)
             preferences.remove(UserPreferencesKeys.USER_EMAIL)
             preferences.remove(UserPreferencesKeys.USER_NOM)
@@ -147,6 +160,7 @@ class UserPreferences(private val context: Context) {
             preferences.remove(UserPreferencesKeys.USER_PERMISSIONS)
             preferences[UserPreferencesKeys.IS_LOGGED_IN] = false
             preferences[UserPreferencesKeys.ONBOARDING_ADMIN_VU] = onboardingVu
+            preferences[UserPreferencesKeys.FORECASTS_POLICY_EXPLAINED] = forecastsPolicyExplained
         }
     }
 

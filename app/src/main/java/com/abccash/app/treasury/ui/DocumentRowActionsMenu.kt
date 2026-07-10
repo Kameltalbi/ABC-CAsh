@@ -93,7 +93,7 @@ fun InvoiceRowActionsMenu(
                 onClick = { onDismiss(); onMarkPaid() }
             )
         }
-        if (isAdmin && invoice.canDelete) {
+        if (isAdmin) {
             HorizontalDivider()
             DropdownMenuItem(
                 text = { Text(stringResource(R.string.delete), color = Color(0xFFF44336)) },

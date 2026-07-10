@@ -2,7 +2,9 @@ package com.abccash.app.treasury
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -43,6 +45,7 @@ import com.abccash.app.treasury.ui.settings.*
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
+import com.abccash.app.ui.theme.AppColors
 import com.abccash.app.treasury.viewmodel.InscriptionViewModelFactory
 import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
@@ -812,29 +815,32 @@ private fun MainAppScaffold(
                         .find { it.id == uiState.currentUserId }
                         ?.nom
                         .orEmpty()
-                    ModernDashboardScreen(
-                        userRole = userRole,
-                        permissions = permissions,
-                        userName = userName,
+                    val dashboardCorrections by viewModel
+                        .observeBalanceCorrections(uiState.entrepriseId.orEmpty())
+                        .collectAsStateWithLifecycle(initialValue = emptyList())
+                    val dashboardOpeningBalance = remember(dashboardCorrections) {
+                        dashboardCorrections.firstOrNull {
+                            it.type == com.abccash.app.treasury.data.BalanceCorrectionType.INITIAL
+                        }?.newBalance ?: 0.0
+                    }
+                    val dashboardBankBalance by userPreferences
+                        .observeBankBalance(uiState.entrepriseId.orEmpty(), java.time.YearMonth.now().year)
+                        .collectAsStateWithLifecycle(initialValue = null)
+                    CockpitDashboardScreen(
+                        userName = userName.ifBlank { "Kamel" },
                         companyName = uiState.entreprise?.nom.orEmpty(),
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
                         bankAccounts = uiState.bankAccounts,
-                        entrepriseId = uiState.entrepriseId,
-                        userPreferences = userPreferences,
+                        openingBalance = dashboardOpeningBalance,
+                        bankBalanceOverride = dashboardBankBalance,
+                        onOpenDrawer = { openDrawer() },
                         onNavigateToAddIncome = {
                             navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
                         },
                         onNavigateToAddExpense = {
                             navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
-                        },
-                        onNavigateToSubscription = {
-                            navigateToMainTab(Screen.Subscription.route)
-                        },
-                        onNavigateToBankAccounts = {
-                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
-                        },
-                        onOpenDrawer = { openDrawer() }
+                        }
                     )
                 }
                 Screen.Subscription.route -> {
@@ -891,19 +897,36 @@ private fun MainAppScaffold(
                     val corrections by viewModel
                         .observeBalanceCorrections(entrepriseId)
                         .collectAsStateWithLifecycle(initialValue = emptyList())
-                    val initialBalance = remember(corrections) {
+                    val initialCorrection = remember(corrections) {
                         corrections.firstOrNull {
                             it.type == com.abccash.app.treasury.data.BalanceCorrectionType.INITIAL
-                        }?.newBalance ?: 0.0
+                        }
                     }
-                    val latestBankBalance = remember(corrections) {
+                    val initialBalance = initialCorrection?.newBalance ?: 0.0
+                    val initialBalanceDate = initialCorrection?.correctionDate ?: java.time.LocalDate.now()
+                    val latestCorrectionBalance = remember(corrections) {
                         corrections
                             .filter { it.type == com.abccash.app.treasury.data.BalanceCorrectionType.CORRECTION }
-                            .maxByOrNull { it.correctionDate }?.newBalance
+                            .maxWithOrNull(
+                                compareBy<com.abccash.app.treasury.data.BalanceCorrection> { it.correctionDate }
+                                    .thenBy { it.createdAt }
+                            )
+                            ?.newBalance
                     }
+                    val prefsBankBalance by userPreferences
+                        .observeBankBalance(entrepriseId, java.time.YearMonth.now().year)
+                        .collectAsStateWithLifecycle(initialValue = null)
+                    val latestBankBalance = latestCorrectionBalance ?: prefsBankBalance
                     val defaultBankAccountId = remember(uiState.bankAccounts) {
-                        uiState.bankAccounts.firstOrNull { it.isDefault } ?.id
+                        uiState.bankAccounts.firstOrNull { it.isDefault }?.id
                             ?: uiState.bankAccounts.firstOrNull()?.id ?: ""
+                    }
+                    val calculatedTreasuryBalance = remember(
+                        uiState.invoices, uiState.expenses, initialBalance
+                    ) {
+                        com.abccash.app.treasury.data.TreasuryCalculations.realizedBalance(
+                            uiState.invoices, uiState.expenses, initialBalance
+                        )
                     }
                     TreasuryBalanceScreen(
                         userRole = userRole,
@@ -918,6 +941,7 @@ private fun MainAppScaffold(
                         onOpenDrawer = { openDrawer() },
                         isTreasuryInitialized = isTreasuryInitialized,
                         initialBalance = initialBalance,
+                        initialBalanceDate = initialBalanceDate,
                         latestBankBalance = latestBankBalance,
                         onInitTreasury = { balance, date ->
                             viewModel.initTreasury(
@@ -928,15 +952,24 @@ private fun MainAppScaffold(
                                 onResult = {}
                             )
                         },
-                        onSaveCorrection = { newBalance, date, motif ->
+                        onSaveCorrection = { newBalance, date, motif, onResult ->
                             viewModel.saveBalanceCorrection(
                                 entrepriseId = entrepriseId,
                                 bankAccountId = defaultBankAccountId,
-                                oldBalance = latestBankBalance ?: 0.0,
+                                oldBalance = latestBankBalance ?: calculatedTreasuryBalance,
                                 newBalance = newBalance,
                                 correctionDate = date,
                                 motif = motif,
-                                onResult = {}
+                                onResult = onResult
+                            )
+                        },
+                        onUpdateOpeningBalance = { newBalance, date, motif, onResult ->
+                            viewModel.updateOpeningBalance(
+                                entrepriseId = entrepriseId,
+                                newBalance = newBalance,
+                                balanceDate = date,
+                                motif = motif,
+                                onResult = onResult
                             )
                         },
                         onNavigateToCorrectionHistory = {
@@ -945,6 +978,8 @@ private fun MainAppScaffold(
                     )
                 }
                 Screen.Previsions.route -> {
+                    val forecastsPolicyExplained by userPreferences.forecastsPolicyExplained
+                        .collectAsStateWithLifecycle(initialValue = null)
                     PrevisionsScreen(
                         userRole = userRole,
                         permissions = permissions,
@@ -980,6 +1015,12 @@ private fun MainAppScaffold(
                                 }
                                 launchSingleTop = true
                             }
+                        },
+                        onPurgeExpiredForecasts = viewModel::purgeExpiredForecastExpenses,
+                        onNavigateToTransactions = { navigateToMainTab(Screen.Transactions.route) },
+                        showForecastsPolicyOnOpen = forecastsPolicyExplained == false,
+                        onForecastsPolicyAcknowledged = {
+                            scope.launch { userPreferences.setForecastsPolicyExplained(true) }
                         },
                         onOpenDrawer = { openDrawer() },
                         customExpenseCategories = customExpense
@@ -1051,56 +1092,66 @@ fun TreasuryBottomNavigation(
 
     val itemCount = mainTabs.size + 1
 
-    NavigationBar(
-        containerColor = Color.White,
-        contentColor = MaterialTheme.colorScheme.primary
+    val navItemColors = NavigationBarItemDefaults.colors(
+        selectedIconColor = MaterialTheme.colorScheme.primary,
+        selectedTextColor = MaterialTheme.colorScheme.primary,
+        indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.16f),
+        unselectedIconColor = AppColors.TextSecondary,
+        unselectedTextColor = AppColors.TextSecondary
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = AppColors.InfoCardBackground,
+        shadowElevation = 10.dp,
+        tonalElevation = 2.dp
     ) {
-        mainTabs.forEach { screen ->
-            NavigationBarItem(
-                icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
-                label = {
-                    NavBarLabel(screen.adaptiveNavLabel(itemCount))
-                },
-                selected = !isMenuOpen && currentRoute?.startsWith(screen.route.split("/")[0]) == true,
-                onClick = {
-                    if (currentRoute != screen.route) {
-                        navController.navigate(screen.route) {
-                            popUpTo(navController.graph.startDestinationId) {
-                                saveState = true
+        Column {
+            HorizontalDivider(
+                color = AppColors.Border,
+                thickness = 1.dp
+            )
+            NavigationBar(
+                containerColor = Color.Transparent,
+                contentColor = MaterialTheme.colorScheme.primary,
+                tonalElevation = 0.dp
+            ) {
+                mainTabs.forEach { screen ->
+                    NavigationBarItem(
+                        icon = { Icon(screen.icon, contentDescription = stringResource(screen.titleRes)) },
+                        label = {
+                            NavBarLabel(screen.adaptiveNavLabel(itemCount))
+                        },
+                        selected = !isMenuOpen && currentRoute?.startsWith(screen.route.split("/")[0]) == true,
+                        onClick = {
+                            if (currentRoute != screen.route) {
+                                navController.navigate(screen.route) {
+                                    popUpTo(navController.graph.startDestinationId) {
+                                        saveState = true
+                                    }
+                                    launchSingleTop = true
+                                    restoreState = true
+                                }
                             }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    }
-                },
-                colors = NavigationBarItemDefaults.colors(
-                    selectedIconColor = MaterialTheme.colorScheme.primary,
-                    selectedTextColor = MaterialTheme.colorScheme.primary,
-                    indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                    unselectedIconColor = Color.Gray,
-                    unselectedTextColor = Color.Gray
+                        },
+                        colors = navItemColors
+                    )
+                }
+                NavigationBarItem(
+                    icon = {
+                        Icon(
+                            Icons.Default.Menu,
+                            contentDescription = stringResource(R.string.nav_menu)
+                        )
+                    },
+                    label = {
+                        NavBarLabel(stringResource(R.string.nav_menu))
+                    },
+                    selected = isMenuOpen,
+                    onClick = onOpenMenu,
+                    colors = navItemColors
                 )
-            )
+            }
         }
-        NavigationBarItem(
-            icon = {
-                Icon(
-                    Icons.Default.Menu,
-                    contentDescription = stringResource(R.string.nav_menu)
-                )
-            },
-            label = {
-                NavBarLabel(stringResource(R.string.nav_menu))
-            },
-            selected = isMenuOpen,
-            onClick = onOpenMenu,
-            colors = NavigationBarItemDefaults.colors(
-                selectedIconColor = MaterialTheme.colorScheme.primary,
-                selectedTextColor = MaterialTheme.colorScheme.primary,
-                indicatorColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f),
-                unselectedIconColor = Color.Gray,
-                unselectedTextColor = Color.Gray
-            )
-        )
     }
 }

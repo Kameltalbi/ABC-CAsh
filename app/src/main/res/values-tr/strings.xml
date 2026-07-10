@@ -163,6 +163,17 @@
     <string name="no_forecasts">Yaklaşan tahmin yok</string>
     <string name="delete_forecast">Tahmini sil</string>
     <string name="delete_forecast_confirm">%1$s tahmini silinsin mi?</string>
+    <string name="forecasts_filter_overdue">Gecikmiş</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d doğrulanmamış tahmin gideri. İşlenmezse %3$s tarihinde otomatik silinir.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d ödenmemiş fatura İşlemler ekranında görünür kalır.</string>
+    <string name="forecasts_grace_days_remaining">Otomatik temizlikten önce %d gün kaldı</string>
+    <string name="forecasts_go_to_transactions">İşlemleri görüntüle</string>
+    <string name="forecasts_policy_title">Tahminler nasıl çalışır</string>
+    <string name="forecasts_policy_months">Burada yalnızca içinde bulunulan ay ve gelecek aylar gösterilir.</string>
+    <string name="forecasts_policy_validation">Ay sonunda tahminlerinizi doğrulayın (ödendi/tahsil edildi olarak işaretleyin). %1$d gününüz var: sonrasında doğrulanmamış tek seferlik tahmin giderleri otomatik silinir.</string>
+    <string name="forecasts_policy_invoices">Ödenmemiş faturalar asla silinmez — İşlemler ekranında kalır.</string>
+    <string name="forecasts_policy_got_it">Anladım</string>
+    <string name="forecasts_policy_help">Nasıl çalışır</string>
 
     <!-- PLUS -->
     <string name="plus">Daha fazla</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Aylık bakiye, tahsilatlar ve finansal öngörüleri görüntüleyin.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Tahminler</string>
+    <string name="onboarding_tour_forecasts_desc">Bu sekme, içinde bulunulan ve gelecek aylar için ödenmemiş gelir ve giderleri gösterir. Ay sonundan önce doğrulayın: %1$d gün sonra işlenmeyen tahmin giderleri silinir. Ödenmemiş faturalar İşlemler ekranında kalır.</string>
 </resources>

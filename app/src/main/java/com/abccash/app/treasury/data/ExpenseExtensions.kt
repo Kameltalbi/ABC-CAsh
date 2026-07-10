@@ -56,7 +56,7 @@ fun Expense.nextOccurrenceAfter(settledDate: LocalDate): LocalDate? {
 }
 
 fun Expense.savesAsForecast(forecastMode: Boolean, today: LocalDate = LocalDate.now()): Boolean =
-    forecastMode || isRecurring || date.isAfter(today)
+    forecastMode
 
 fun List<Expense>.forMonth(month: YearMonth): List<Expense> {
     return filter { it.appliesToMonth(month) }

@@ -1,5 +1,6 @@
 package com.abccash.app.treasury.data
 
+import java.time.LocalDate
 import java.time.YearMonth
 
 object TreasuryCalculations {
@@ -7,24 +8,136 @@ object TreasuryCalculations {
     // --- Activité (tous modes) — listes, graphiques encaissements/dépenses ---
 
     fun monthlyCollections(invoices: List<Invoice>, month: YearMonth): Double =
-        invoices.flatMap { it.payments }
-            .filter { YearMonth.from(it.date) == month }
+        distinctPaymentsInMonth(invoices, month).sumOf { it.amount }
+
+    private data class RealizedPayment(val date: LocalDate, val amount: Double)
+
+    /** Paiements uniques du mois (ignore les doublons d'import : même date, montant, libellé). */
+    private fun distinctPaymentsInMonth(invoices: List<Invoice>, month: YearMonth): List<RealizedPayment> {
+        val seen = mutableSetOf<String>()
+        return invoices
+            .flatMap { invoice ->
+                invoice.payments.map { payment -> payment to invoice }
+            }
+            .filter { (payment, _) -> YearMonth.from(payment.date) == month }
+            .sortedBy { (payment, _) -> payment.date }
+            .mapNotNull { (payment, invoice) ->
+                val signature = TransactionSignature.payment(invoice, payment)
+                if (!seen.add(signature)) return@mapNotNull null
+                RealizedPayment(payment.date, payment.amount)
+            }
+    }
+
+    fun distinctPaidExpensesInMonth(
+        expenses: List<Expense>,
+        month: YearMonth,
+        today: LocalDate = LocalDate.now()
+    ): List<Expense> {
+        val seen = mutableSetOf<String>()
+        return expenses
+            .filter { expensePaidInMonth(it, month, today) }
+            .sortedBy { it.date }
+            .filter { seen.add(TransactionSignature.expense(it)) }
+    }
+
+    /**
+     * Dépenses payées réalisées dans un mois.
+     * - Opérations ponctuelles (relevés bancaires) : date exacte du mouvement.
+     * - Récurrentes payées : une occurrence par mois, uniquement si la date est passée.
+     * Évite de compter 12 fois une charge récurrente sur toute l'année d'un coup.
+     */
+    fun monthlyPaidExpenses(
+        expenses: List<Expense>,
+        month: YearMonth,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        distinctPaidExpensesInMonth(expenses, month, today)
             .sumOf { it.amount }
 
-    fun monthlyPaidExpenses(expenses: List<Expense>, month: YearMonth): Double =
-        expenses.filter { it.isPaid && it.appliesToMonth(month) }
-            .sumOf { it.amount }
+    private fun expensePaidInMonth(expense: Expense, month: YearMonth, today: LocalDate): Boolean {
+        if (!expense.isPaid) return false
+        if (!expense.isRecurring) return YearMonth.from(expense.date) == month
+        val occurrence = expense.occurrenceDateIn(month) ?: return false
+        return !occurrence.isAfter(today)
+    }
 
-    fun monthlyUnpaidExpenses(expenses: List<Expense>, month: YearMonth): Double =
-        expenses.filter { !it.isPaid && it.appliesToMonth(month) }
-            .sumOf { it.amount }
+    /** Somme des encaissements réalisés de janvier jusqu'au mois inclus. */
+    fun ytdCollections(
+        invoices: List<Invoice>,
+        throughMonth: YearMonth = YearMonth.now()
+    ): Double = monthsThroughYear(throughMonth).sumOf { monthlyCollections(invoices, it) }
+
+    /** Somme des dépenses payées réalisées de janvier jusqu'au mois inclus. */
+    fun ytdPaidExpenses(
+        expenses: List<Expense>,
+        throughMonth: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
+    ): Double = monthsThroughYear(throughMonth).sumOf { monthlyPaidExpenses(expenses, it, today) }
+
+    /** Solde réalisé cumulé = ouverture + encaissements YTD − dépenses YTD. */
+    fun ytdRealizedBalance(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        openingBalance: Double,
+        throughMonth: YearMonth = YearMonth.now(),
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        openingBalance +
+            ytdCollections(invoices, throughMonth) -
+            ytdPaidExpenses(expenses, throughMonth, today)
+
+    private fun monthsThroughYear(throughMonth: YearMonth): List<YearMonth> =
+        (1..throughMonth.monthValue).map { YearMonth.of(throughMonth.year, it) }
+
+    /** Dépenses non payées avec échéance strictement future (vraies prévisions). */
+    fun monthlyUnpaidExpenses(
+        expenses: List<Expense>,
+        month: YearMonth,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        expenses.filter { expense ->
+            if (expense.isPaid) return@filter false
+            val due = expenseForecastDate(expense, month) ?: return@filter false
+            due.isAfter(today)
+        }.sumOf { it.amount }
 
     fun monthlyBalance(collections: Double, paidExpenses: Double): Double =
         collections - paidExpenses
 
-    fun pendingInvoiceAmount(invoices: List<Invoice>, month: YearMonth): Double =
-        invoices.filter { it.status != InvoiceStatus.PAID && YearMonth.from(it.dueDate) == month }
-            .sumOf { it.remainingAmount }
+    /** Encaissements prévisionnels : factures impayées dont l'échéance est strictement future. */
+    fun pendingInvoiceAmount(
+        invoices: List<Invoice>,
+        month: YearMonth,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        invoices.filter {
+            it.status != InvoiceStatus.PAID &&
+                YearMonth.from(it.dueDate) == month &&
+                it.dueDate.isAfter(today)
+        }.sumOf { it.remainingAmount }
+
+    /** Total des prévisions futures sur l'année (encaissements). Zéro si tout est réalisé. */
+    fun yearlyFuturePendingIncome(
+        invoices: List<Invoice>,
+        year: Int,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        (1..12).sumOf { month ->
+            pendingInvoiceAmount(invoices, YearMonth.of(year, month), today)
+        }
+
+    /** Total des prévisions futures sur l'année (dépenses). Zéro si tout est réalisé. */
+    fun yearlyFuturePendingExpenses(
+        expenses: List<Expense>,
+        year: Int,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        (1..12).sumOf { month ->
+            monthlyUnpaidExpenses(expenses, YearMonth.of(year, month), today)
+        }
+
+    private fun expenseForecastDate(expense: Expense, month: YearMonth): LocalDate? =
+        if (expense.isRecurring) expense.occurrenceDateIn(month) else expense.date
 
     fun forecastedBalance(
         invoices: List<Invoice>,
@@ -46,13 +159,26 @@ object TreasuryCalculations {
 
     // --- Banque (hors espèces) — solde trésorerie bancaire ---
 
-    fun monthlyBankCollections(invoices: List<Invoice>, month: YearMonth): Double =
-        invoices.flatMap { it.payments }
-            .filter { YearMonth.from(it.date) == month && it.affectsBankTreasury() }
-            .sumOf { it.amount }
+    fun monthlyBankCollections(invoices: List<Invoice>, month: YearMonth): Double {
+        val seen = mutableSetOf<String>()
+        return invoices
+            .flatMap { invoice -> invoice.payments.map { it to invoice } }
+            .filter { (payment, _) ->
+                YearMonth.from(payment.date) == month && payment.affectsBankTreasury()
+            }
+            .sumOf { (payment, invoice) ->
+                val signature = TransactionSignature.payment(invoice, payment)
+                if (seen.add(signature)) payment.amount else 0.0
+            }
+    }
 
-    fun monthlyBankPaidExpenses(expenses: List<Expense>, month: YearMonth): Double =
-        expenses.filter { it.affectsBankTreasury() && it.appliesToMonth(month) }
+    fun monthlyBankPaidExpenses(
+        expenses: List<Expense>,
+        month: YearMonth,
+        today: LocalDate = LocalDate.now()
+    ): Double =
+        distinctPaidExpensesInMonth(expenses, month, today)
+            .filter { it.affectsBankTreasury() }
             .sumOf { it.amount }
 
     fun monthlyBankUnpaidExpenses(expenses: List<Expense>, month: YearMonth): Double =
@@ -60,9 +186,9 @@ object TreasuryCalculations {
             .sumOf { it.amount }
 
     fun yearlyBankCollections(invoices: List<Invoice>, year: Int): Double =
-        invoices.flatMap { it.payments }
-            .filter { it.date.year == year && it.affectsBankTreasury() }
-            .sumOf { it.amount }
+        (1..12).sumOf { month ->
+            monthlyBankCollections(invoices, YearMonth.of(year, month))
+        }
 
     fun yearlyBankPaidExpenses(expenses: List<Expense>, year: Int): Double =
         (1..12).sumOf { month ->
@@ -127,9 +253,9 @@ object TreasuryCalculations {
     }
 
     fun yearlyCollections(invoices: List<Invoice>, year: Int): Double =
-        invoices.flatMap { it.payments }
-            .filter { it.date.year == year }
-            .sumOf { it.amount }
+        (1..12).sumOf { month ->
+            monthlyCollections(invoices, YearMonth.of(year, month))
+        }
 
     fun yearlyPaidExpenses(expenses: List<Expense>, year: Int): Double =
         (1..12).sumOf { month ->
@@ -219,10 +345,33 @@ object TreasuryCalculations {
     }
 
     fun currentRealizedBalance(invoices: List<Invoice>, expenses: List<Expense>): Double {
-        val collected = invoices.flatMap { it.payments }.sumOf { it.amount }
-        val paid = expenses.filter { it.isPaid }.sumOf { it.amount }
+        val seenPayments = mutableSetOf<String>()
+        val collected = invoices
+            .flatMap { invoice -> invoice.payments.map { it to invoice } }
+            .sumOf { (payment, invoice) ->
+                val signature = TransactionSignature.payment(invoice, payment)
+                if (seenPayments.add(signature)) payment.amount else 0.0
+            }
+        val seenExpenses = mutableSetOf<String>()
+        val paid = expenses
+            .filter { it.isPaid }
+            .sumOf { expense ->
+                val signature = TransactionSignature.expense(expense)
+                if (seenExpenses.add(signature)) expense.amount else 0.0
+            }
         return collected - paid
     }
+
+    /**
+     * Solde de trésorerie actuel = solde d'ouverture + encaissements réalisés (espèces + banque)
+     * − dépenses payées, sur tout l'historique. Source unique partagée par la page Trésorerie
+     * et le Dashboard pour garantir un chiffre identique.
+     */
+    fun realizedBalance(
+        invoices: List<Invoice>,
+        expenses: List<Expense>,
+        opening: Double
+    ): Double = opening + currentRealizedBalance(invoices, expenses)
 
     data class RollingTreasuryRow(
         val month: YearMonth,

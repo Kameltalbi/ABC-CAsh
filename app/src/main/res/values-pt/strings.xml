@@ -163,6 +163,17 @@
     <string name="no_forecasts">Sem previsões próximas</string>
     <string name="delete_forecast">Eliminar previsão</string>
     <string name="delete_forecast_confirm">Eliminar previsão %1$s?</string>
+    <string name="forecasts_filter_overdue">Em atraso</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d despesa(s) prevista(s) não validada(s). Eliminação automática em %3$s se não forem tratadas.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d fatura(s) por pagar permanecem visíveis em Transações.</string>
+    <string name="forecasts_grace_days_remaining">%d dia(s) restante(s) antes da limpeza automática</string>
+    <string name="forecasts_go_to_transactions">Ver Transações</string>
+    <string name="forecasts_policy_title">Como funcionam as Previsões</string>
+    <string name="forecasts_policy_months">Aqui são mostrados apenas o mês atual e os meses futuros.</string>
+    <string name="forecasts_policy_validation">No fim do mês, valide as suas previsões (marcar como pago/recebido). Tem %1$d dias: depois disso, as despesas previstas pontuais não validadas são eliminadas automaticamente.</string>
+    <string name="forecasts_policy_invoices">As faturas por pagar nunca são eliminadas — permanecem em Transações.</string>
+    <string name="forecasts_policy_got_it">Entendi</string>
+    <string name="forecasts_policy_help">Como funciona</string>
 
     <!-- PLUS -->
     <string name="plus">Mais</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Veja o saldo mensal, recebimentos e previsões financeiras.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Previsões</string>
+    <string name="onboarding_tour_forecasts_desc">Este separador mostra receitas e despesas por liquidar do mês atual e futuros. Valide-as antes do fim do mês: após %1$d dias, as despesas previstas não tratadas são eliminadas. As faturas por pagar permanecem em Transações.</string>
 </resources>

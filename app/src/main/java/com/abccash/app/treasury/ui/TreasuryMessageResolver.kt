@@ -71,6 +71,9 @@ private fun treasuryMessageStringRes(code: String): Int? = when (code) {
     TreasuryMessage.RESTORE_IMPOSSIBLE -> R.string.google_restore_failed
     TreasuryMessage.BACKUP_RESTORED_SUCCESS -> R.string.backup_restored_success
     TreasuryMessage.ADMIN_ONLY_COLLECTION_ADJUSTMENT -> R.string.admin_only_collection_adjustment
+    TreasuryMessage.MOTIF_REQUIRED -> R.string.treasury_correction_motif_required
+    TreasuryMessage.TREASURY_NOT_INITIALIZED -> R.string.treasury_not_initialized
+    TreasuryMessage.BALANCE_DATE_REQUIRED -> R.string.treasury_init_date_required
     TreasuryRepository.SUBSCRIPTION_LIMIT_REACHED -> R.string.subscription_limit_reached
     TreasuryRepository.ACCOUNT_LIMIT_REACHED -> R.string.treasury_accounts_limit_reached
     else -> null

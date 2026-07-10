@@ -163,6 +163,17 @@
     <string name="no_forecasts">Ingen kommende prognoser</string>
     <string name="delete_forecast">Slet prognose</string>
     <string name="delete_forecast_confirm">Slet prognose %1$s?</string>
+    <string name="forecasts_filter_overdue">Forfalden</string>
+    <string name="forecasts_closed_month_alert">%1$s: %2$d ikke-valideret prognoseudgift(er). Slettes automatisk den %3$s, hvis ikke behandlet.</string>
+    <string name="forecasts_closed_month_invoices_note">%1$d ubetalt(e) faktura(er) forbliver synlige i Transaktioner.</string>
+    <string name="forecasts_grace_days_remaining">%d dag(e) tilbage før automatisk oprydning</string>
+    <string name="forecasts_go_to_transactions">Se transaktioner</string>
+    <string name="forecasts_policy_title">Sådan fungerer prognoser</string>
+    <string name="forecasts_policy_months">Kun den aktuelle måned og fremtidige måneder vises her.</string>
+    <string name="forecasts_policy_validation">Ved månedens udgang skal du validere dine prognoser (marker som betalt/indkasseret). Du har %1$d dage: derefter slettes ikke-validerede engangsprognoseudgifter automatisk.</string>
+    <string name="forecasts_policy_invoices">Ubetalte fakturaer slettes aldrig — de forbliver i Transaktioner.</string>
+    <string name="forecasts_policy_got_it">Forstået</string>
+    <string name="forecasts_policy_help">Sådan fungerer det</string>
 
     <!-- PLUS -->
     <string name="plus">Mere</string>
@@ -439,4 +450,6 @@
     <string name="onboarding_privilege_treasury_desc">Se månedlig saldo, indbetalinger og finansielle prognoser.</string>
     <string name="onboarding_privilege_collection_title">Income tracking</string>
     <string name="onboarding_privilege_collection_desc">Record your revenue and follow what is collected or still expected.</string>
+    <string name="onboarding_tour_forecasts_title">Prognoser</string>
+    <string name="onboarding_tour_forecasts_desc">Denne fane viser uafgjorte indtægter og udgifter for den aktuelle og kommende måneder. Valider dem før månedens udgang: efter %1$d dage fjernes ubehandlede prognoseudgifter. Ubetalte fakturaer forbliver i Transaktioner.</string>
 </resources>

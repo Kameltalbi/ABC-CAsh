@@ -78,6 +78,7 @@ fun ModernDashboardScreen(
     bankAccounts: List<BankAccount>,
     entrepriseId: String?,
     userPreferences: UserPreferences,
+    openingBalance: Double = 0.0,
     onNavigateToAddIncome: () -> Unit,
     onNavigateToAddExpense: () -> Unit,
     onNavigateToSubscription: () -> Unit = {},
@@ -112,28 +113,22 @@ fun ModernDashboardScreen(
             monthCount = 6
         )
     }
-    val annualTreasury = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth) {
-        DashboardCalculations.buildAnnualTreasuryForecast(
-            invoices = visibleInvoices,
-            expenses = visibleExpenses,
-            bankAccounts = bankAccounts,
-            focusYear = focusMonth.year
-        )
-    }
-    val recommendations = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
+    val recommendations = remember(visibleInvoices, visibleExpenses, bankAccounts, openingBalance, focusMonth, today) {
         DashboardCalculations.buildTreasuryRecommendations(
             invoices = visibleInvoices,
             expenses = visibleExpenses,
             bankAccounts = bankAccounts,
+            openingBalance = openingBalance,
             focusMonth = focusMonth,
             today = today
         )
     }
-    val financialHealth = remember(visibleInvoices, visibleExpenses, bankAccounts, focusMonth, today) {
+    val financialHealth = remember(visibleInvoices, visibleExpenses, bankAccounts, openingBalance, focusMonth, today) {
         DashboardCalculations.buildFinancialHealth(
             invoices = visibleInvoices,
             expenses = visibleExpenses,
             bankAccounts = bankAccounts,
+            openingBalance = openingBalance,
             focusMonth = focusMonth,
             today = today
         )
@@ -144,6 +139,7 @@ fun ModernDashboardScreen(
             expenses = visibleExpenses,
             bankBalance = bankBalance,
             bankAccounts = bankAccounts,
+            openingBalance = openingBalance,
             focusMonth = focusMonth,
             viewMode = DashboardViewMode.MONTH
         ).expenseByCategory.take(4)
@@ -162,8 +158,8 @@ fun ModernDashboardScreen(
         bankAccounts.firstOrNull { it.isDefault && it.kind == TreasuryAccountKind.CASH }?.id
             ?: bankAccounts.firstOrNull { it.kind == TreasuryAccountKind.CASH }?.id
     }
-    val treasuryBalance = remember(visibleInvoices, visibleExpenses, bankBalance) {
-        bankBalance ?: DashboardCalculations.computedBankBalance(visibleInvoices, visibleExpenses)
+    val treasuryBalance = remember(visibleInvoices, visibleExpenses, bankBalance, openingBalance) {
+        bankBalance ?: TreasuryCalculations.realizedBalance(visibleInvoices, visibleExpenses, openingBalance)
     }
 
     val notificationCount = remember(visibleInvoices, visibleExpenses) {
@@ -240,13 +236,6 @@ fun ModernDashboardScreen(
                     )
                 }
                 if (canViewIncome || canManageExpense || isAdmin) {
-                    item {
-                        AnnualTreasuryHeatmap(
-                            points = annualTreasury,
-                            formatAmount = formatSummaryAmount,
-                            onMonthClick = { /* TODO: open month detail */ }
-                        )
-                    }
                     item {
                         MonthlyBarsCard(
                             monthlyBars = monthlyBars,
