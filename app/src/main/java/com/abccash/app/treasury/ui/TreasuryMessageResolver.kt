@@ -25,6 +25,7 @@ private fun treasuryMessageStringRes(code: String): Int? = when (code) {
     TreasuryMessage.COMPANY_NAME_REQUIRED -> R.string.company_name_required
     TreasuryMessage.ENTREPRISE_ID_REQUIRED -> R.string.entreprise_id_required
     TreasuryMessage.BANK_ACCOUNT_NAME_REQUIRED -> R.string.bank_account_name_required
+    TreasuryMessage.ACCOUNT_USED_BY_PILOTAGE -> R.string.bank_account_used_by_pilotage
     TreasuryMessage.CONTACT_NAME_REQUIRED -> R.string.contact_name_required
     TreasuryMessage.CLIENT_NAME_REQUIRED -> R.string.client_name_required
     TreasuryMessage.TOTAL_AMOUNT_POSITIVE -> R.string.total_amount_positive

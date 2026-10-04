@@ -18,9 +18,13 @@ import java.io.File
         BankAccountEntity::class,
         ContactEntity::class,
         ExpenseEntity::class,
-        BalanceCorrectionEntity::class
+        BalanceCorrectionEntity::class,
+        PilotCategoryEntity::class,
+        PilotEntryEntity::class,
+        PilotMonthlyTargetEntity::class,
+        PilotImportEntity::class
     ],
-    version = 23,
+    version = 27,
     exportSchema = false
 )
 @TypeConverters(TreasuryConverters::class)
@@ -89,7 +93,11 @@ abstract class TreasuryDatabase : RoomDatabase() {
                     MIGRATION_19_20,
                     MIGRATION_20_21,
                     MIGRATION_21_22,
-                    MIGRATION_22_23
+                    MIGRATION_22_23,
+                    MIGRATION_23_24,
+                    MIGRATION_24_25,
+                    MIGRATION_25_26,
+                    MIGRATION_26_27
                 )
                 .build()
     }

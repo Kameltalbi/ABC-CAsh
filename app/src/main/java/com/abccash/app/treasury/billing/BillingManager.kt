@@ -5,6 +5,7 @@ import android.content.Context
 import com.android.billingclient.api.*
 import com.abccash.app.treasury.data.SubscriptionPlan
 import com.abccash.app.treasury.datastore.UserPreferences
+import com.abccash.app.treasury.entitlement.FeatureAccess
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -35,6 +36,12 @@ class BillingManager(
     val isPurchasing: StateFlow<Boolean> = _isPurchasing.asStateFlow()
 
     fun startConnection() {
+        if (!FeatureAccess.allowsBillingPurchases()) {
+            // Phase de lancement : pas de facturation Play, accès complet sans paywall.
+            persistPlan(SubscriptionPlan.FREE)
+            _isConnected.value = true
+            return
+        }
         scope.launch {
             val savedPlan = userPreferences.readSubscriptionPlan()
             if (savedPlan != SubscriptionPlan.FREE) {
@@ -124,6 +131,7 @@ class BillingManager(
     }
 
     suspend fun launchBillingFlow(activity: Activity, plan: SubscriptionPlan): Boolean {
+        if (!FeatureAccess.allowsBillingPurchases()) return false
         if (!_isConnected.value) return false
 
         val productId = when (plan) {

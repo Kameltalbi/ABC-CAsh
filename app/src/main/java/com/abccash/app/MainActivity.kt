@@ -14,6 +14,7 @@ import com.abccash.app.treasury.TreasuryApp
 import com.abccash.app.treasury.backup.GoogleBackupManager
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.local.TreasuryDatabase
+import com.abccash.app.treasury.repository.PilotageRepository
 import com.abccash.app.treasury.repository.TreasuryRepository
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import com.abccash.app.treasury.viewmodel.TreasuryViewModelFactory
@@ -28,6 +29,7 @@ class MainActivity : FragmentActivity() {
         val userPreferences = UserPreferences(this)
         val database = TreasuryDatabase.getInstance(this)
         val repository = TreasuryRepository(database.treasuryDao(), database, userPreferences)
+        val pilotageRepository = PilotageRepository(database.treasuryDao(), database)
         val googleBackupManager = GoogleBackupManager(this)
         val factory = TreasuryViewModelFactory(repository, googleBackupManager, userPreferences)
 
@@ -42,6 +44,7 @@ class MainActivity : FragmentActivity() {
                     val vm: TreasuryViewModel = viewModel(factory = factory)
                     TreasuryApp(
                         repository = repository,
+                        pilotageRepository = pilotageRepository,
                         viewModel = vm,
                         userPreferences = userPreferences,
                         googleBackupManager = googleBackupManager

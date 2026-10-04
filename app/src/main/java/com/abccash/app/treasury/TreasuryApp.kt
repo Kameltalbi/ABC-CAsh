@@ -16,6 +16,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -46,8 +47,11 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.abccash.app.R
 import com.abccash.app.ui.theme.AppColors
+import com.abccash.app.treasury.repository.PilotageRepository
 import com.abccash.app.treasury.viewmodel.InscriptionViewModelFactory
 import com.abccash.app.treasury.viewmodel.LoginViewModelFactory
+import com.abccash.app.treasury.viewmodel.PilotageViewModel
+import com.abccash.app.treasury.viewmodel.PilotageViewModelFactory
 import com.abccash.app.treasury.viewmodel.TreasuryViewModel
 import kotlinx.coroutines.launch
 import java.time.YearMonth
@@ -58,16 +62,14 @@ sealed class Screen(val route: String, @StringRes val titleRes: Int, val icon: I
     object Login : Screen("login", R.string.login, Icons.Default.Login)
     object AccountSetup : Screen("account_setup", R.string.account_setup_title, Icons.Default.PersonAdd)
     object Inscription : Screen("inscription", R.string.create_account, Icons.Default.PersonAdd)
-    object Dashboard : Screen("dashboard", R.string.nav_home, Icons.Default.SpaceDashboard)
-    object Transactions : Screen("transactions", R.string.nav_transactions, Icons.Default.SwapVert)
+    object Dashboard : Screen("dashboard", R.string.nav_home, Icons.Default.Home)
     object Treasury : Screen("treasury", R.string.nav_treasury, Icons.Default.TrendingUp)
+    object Pilotage : Screen("pilotage", R.string.nav_pilotage, Icons.Default.BarChart)
     object Settings : Screen("settings", R.string.nav_settings, Icons.Default.Settings)
     object AddTransaction : Screen("add_transaction/{type}", R.string.transactions, Icons.Default.Add)
     object BankReconciliation : Screen("bank_reconciliation", R.string.bank_account, Icons.Default.AccountBalance)
-    object BankStatementImport : Screen("bank_statement_import", R.string.import_statement_title, Icons.Default.FileUpload)
     object BankAccounts : Screen("bank_accounts", R.string.bank_accounts_title, Icons.Default.AccountBalance)
     object BankAccountDetail : Screen("bank_account/{accountId}", R.string.bank_account_detail, Icons.Default.AccountBalance)
-    object Previsions : Screen("previsions", R.string.nav_forecasts, Icons.Default.Event)
     object Subscription : Screen("subscription", R.string.plan_free, Icons.Default.Payments)
     object TreasuryCorrectionHistory : Screen("treasury_correction_history", R.string.treasury_history_title, Icons.Default.AccountBalance)
 }
@@ -96,20 +98,15 @@ private fun Screen.adaptiveNavLabel(itemCount: Int): String {
         } else {
             stringResource(R.string.nav_home)
         }
-        Screen.Transactions -> if (useShort) {
-            stringResource(R.string.nav_transactions_short)
-        } else {
-            stringResource(R.string.nav_transactions)
-        }
         Screen.Treasury -> if (useShort) {
             stringResource(R.string.nav_treasury_short)
         } else {
             stringResource(R.string.nav_treasury)
         }
-        Screen.Previsions -> if (useShort) {
-            stringResource(R.string.nav_forecasts_short)
+        Screen.Pilotage -> if (useShort) {
+            stringResource(R.string.nav_pilotage_short)
         } else {
-            stringResource(R.string.nav_forecasts)
+            stringResource(R.string.nav_pilotage)
         }
         Screen.Settings -> if (useShort) {
             stringResource(R.string.nav_settings_short)
@@ -123,11 +120,13 @@ private fun Screen.adaptiveNavLabel(itemCount: Int): String {
 @Composable
 fun TreasuryApp(
     repository: TreasuryRepository,
+    pilotageRepository: PilotageRepository,
     viewModel: TreasuryViewModel,
     userPreferences: UserPreferences,
     googleBackupManager: GoogleBackupManager
 ) {
     val navController = rememberNavController()
+    val pilotageViewModel: PilotageViewModel = viewModel(factory = PilotageViewModelFactory(pilotageRepository))
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val googleAccountEmail by userPreferences.googleAccountEmail.collectAsStateWithLifecycle(initialValue = null)
     val context = LocalContext.current
@@ -175,6 +174,19 @@ fun TreasuryApp(
                 launchSingleTop = true
             }
         }
+    }
+
+    LaunchedEffect(uiState.entrepriseId) {
+        val entrepriseId = uiState.entrepriseId ?: return@LaunchedEffect
+        // Aucune donnée d'exemple / fichier embarqué : le nouvel utilisateur démarre vide.
+        pilotageViewModel.bind(entrepriseId)
+    }
+
+    // Si les comptes arrivent après l'import des ventes, rattacher date d'encaissement + compte.
+    LaunchedEffect(uiState.entrepriseId, uiState.bankAccounts.map { it.id }) {
+        if (uiState.entrepriseId.isNullOrBlank()) return@LaunchedEffect
+        if (uiState.bankAccounts.none { it.entrepriseId == uiState.entrepriseId }) return@LaunchedEffect
+        pilotageViewModel.applyCashDefaultsIfNeeded()
     }
 
     AppCurrencyProvider(appSettings = appSettings) {
@@ -266,6 +278,7 @@ fun TreasuryApp(
             MainAppScaffold(
                 navController = navController,
                 viewModel = viewModel,
+                pilotageViewModel = pilotageViewModel,
                 userRole = currentUserRole ?: uiState.currentUserRole,
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
@@ -277,25 +290,11 @@ fun TreasuryApp(
             )
         }
 
-        composable(Screen.Transactions.route) {
-            MainAppScaffold(
-                navController = navController,
-                viewModel = viewModel,
-                userRole = currentUserRole ?: uiState.currentUserRole,
-                permissions = currentPermissions.ifEmpty { uiState.permissions },
-                appSettings = appSettings,
-                userPreferences = userPreferences,
-                googleBackupManager = googleBackupManager,
-                googleAccountEmail = googleAccountEmail,
-                startDestination = Screen.Transactions.route,
-                onLogout = { logout() }
-            )
-        }
-
         composable(Screen.Treasury.route) {
             MainAppScaffold(
                 navController = navController,
                 viewModel = viewModel,
+                pilotageViewModel = pilotageViewModel,
                 userRole = currentUserRole ?: uiState.currentUserRole,
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
@@ -307,10 +306,27 @@ fun TreasuryApp(
             )
         }
 
+        composable(Screen.Pilotage.route) {
+            MainAppScaffold(
+                navController = navController,
+                viewModel = viewModel,
+                pilotageViewModel = pilotageViewModel,
+                userRole = currentUserRole ?: uiState.currentUserRole,
+                permissions = currentPermissions.ifEmpty { uiState.permissions },
+                appSettings = appSettings,
+                userPreferences = userPreferences,
+                googleBackupManager = googleBackupManager,
+                googleAccountEmail = googleAccountEmail,
+                startDestination = Screen.Pilotage.route,
+                onLogout = { logout() }
+            )
+        }
+
         composable(Screen.Settings.route) {
             MainAppScaffold(
                 navController = navController,
                 viewModel = viewModel,
+                pilotageViewModel = pilotageViewModel,
                 userRole = currentUserRole ?: uiState.currentUserRole,
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
@@ -326,6 +342,7 @@ fun TreasuryApp(
             MainAppScaffold(
                 navController = navController,
                 viewModel = viewModel,
+                pilotageViewModel = pilotageViewModel,
                 userRole = currentUserRole ?: uiState.currentUserRole,
                 permissions = currentPermissions.ifEmpty { uiState.permissions },
                 appSettings = appSettings,
@@ -464,7 +481,15 @@ fun TreasuryApp(
                     editingAccount = account
                 },
                 onDeleteAccount = { account ->
-                    viewModel.deleteBankAccount(account.id) {}
+                    viewModel.deleteBankAccount(account.id) { error ->
+                        if (error != null) {
+                            Toast.makeText(
+                                context,
+                                context.resolveTreasuryMessage(error) ?: error,
+                                Toast.LENGTH_LONG
+                            ).show()
+                        }
+                    }
                 },
                 onOpenManualReconciliation = {
                     navController.navigate(Screen.BankReconciliation.route)
@@ -500,6 +525,7 @@ fun TreasuryApp(
             arguments = listOf(navArgument("accountId") { type = NavType.StringType })
         ) { backStackEntry ->
             val accountId = backStackEntry.arguments?.getString("accountId").orEmpty()
+            val context = LocalContext.current
             val account = viewModel.getBankAccount(accountId)
             var showEditSheet by remember { mutableStateOf(false) }
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -520,8 +546,16 @@ fun TreasuryApp(
                     onBack = { navController.popBackStack() },
                     onEdit = { showEditSheet = true },
                     onDelete = {
-                        viewModel.deleteBankAccount(accountId) {
-                            navController.popBackStack()
+                        viewModel.deleteBankAccount(accountId) { error ->
+                            if (error == null) {
+                                navController.popBackStack()
+                            } else {
+                                Toast.makeText(
+                                    context,
+                                    context.resolveTreasuryMessage(error) ?: error,
+                                    Toast.LENGTH_LONG
+                                ).show()
+                            }
                         }
                     }
                 )
@@ -643,41 +677,6 @@ fun TreasuryApp(
             }
         }
 
-        composable(Screen.Previsions.route) {
-            MainAppScaffold(
-                navController = navController,
-                viewModel = viewModel,
-                userRole = currentUserRole ?: uiState.currentUserRole,
-                permissions = currentPermissions.ifEmpty { uiState.permissions },
-                appSettings = appSettings,
-                userPreferences = userPreferences,
-                googleBackupManager = googleBackupManager,
-                googleAccountEmail = googleAccountEmail,
-                startDestination = Screen.Previsions.route,
-                onLogout = { logout() }
-            )
-        }
-
-        composable(Screen.BankStatementImport.route) {
-            val role = currentUserRole ?: uiState.currentUserRole
-            val permissions = currentPermissions.ifEmpty { uiState.permissions }
-            val canImport = role == UserRole.ADMIN ||
-                hasPermission(role, permissions, UserPermission.MANAGE_EXPENSES)
-            if (canImport) {
-                BankStatementImportScreen(
-                    onBack = { navController.popBackStack() },
-                    onConfirm = { entries, onResult ->
-                        viewModel.importBankStatement(entries, onResult)
-                    }
-                )
-            } else {
-                AccessDeniedScreen(
-                    message = stringResource(R.string.access_denied),
-                    onBack = { navController.popBackStack() }
-                )
-            }
-        }
-
         composable(Screen.TreasuryCorrectionHistory.route) {
             val entrepriseId = uiState.entrepriseId.orEmpty()
             val corrections by viewModel
@@ -703,6 +702,7 @@ fun TreasuryApp(
 private fun MainAppScaffold(
     navController: NavHostController,
     viewModel: TreasuryViewModel,
+    pilotageViewModel: PilotageViewModel,
     userRole: UserRole,
     permissions: Set<UserPermission>,
     appSettings: AppSettings,
@@ -713,8 +713,6 @@ private fun MainAppScaffold(
     onLogout: () -> Unit
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val billingManager = remember { BillingManager.getInstance(context) }
     val billingPlan by billingManager.subscriptionPlan.collectAsStateWithLifecycle()
@@ -726,24 +724,7 @@ private fun MainAppScaffold(
         viewModel.syncSubscriptionPlan(billingPlan)
     }
 
-    val canViewTreasury = hasPermission(userRole, permissions, UserPermission.VIEW_TREASURY)
-    val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
-    val canManageExpenses = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
-    val isAdmin = userRole == UserRole.ADMIN
-    val entrepriseId = uiState.entrepriseId.orEmpty()
-    val customExpense by appSettings.customExpenseCategories(entrepriseId)
-        .collectAsStateWithLifecycle(initialValue = emptyList())
-
-    fun closeDrawer() {
-        scope.launch { drawerState.close() }
-    }
-
-    fun openDrawer() {
-        scope.launch { drawerState.open() }
-    }
-
     fun navigateToMainTab(route: String) {
-        closeDrawer()
         if (navController.currentDestination?.route != route) {
             navController.navigate(route) {
                 popUpTo(navController.graph.startDestinationId) {
@@ -755,51 +736,17 @@ private fun MainAppScaffold(
         }
     }
 
-    val drawerItems = buildList {
-        add(
-            DrawerMenuEntry(
-                titleRes = R.string.plus_subscription,
-                subtitleRes = R.string.plus_subscription_sub,
-                icon = Icons.Default.Payments,
-                onClick = { navigateToMainTab(Screen.Subscription.route) }
-            )
-        )
-        add(
-            DrawerMenuEntry(
-                titleRes = R.string.plus_settings,
-                subtitleRes = R.string.plus_settings_sub_full,
-                icon = Icons.Default.Settings,
-                onClick = { navigateToMainTab(Screen.Settings.route) }
-            )
-        )
-    }
-
     val companyName = uiState.entreprise?.nom.orEmpty()
     val userName = uiState.users.find { it.id == uiState.currentUserId }?.nom.orEmpty()
 
     AppLockGate(appSettings = appSettings) {
-        ModalNavigationDrawer(
-            drawerState = drawerState,
-            drawerContent = {
-                TreasuryNavigationDrawerContent(
-                    companyName = companyName,
-                    userName = userName,
-                    items = drawerItems,
-                    onClose = { closeDrawer() }
-                )
-            }
-        ) {
         Scaffold(
             containerColor = Color.White,
             bottomBar = {
                 TreasuryBottomNavigation(
                     navController = navController,
                     userRole = userRole,
-                    permissions = permissions,
-                    isMenuOpen = drawerState.isOpen,
-                    onOpenMenu = {
-                        if (drawerState.isOpen) closeDrawer() else openDrawer()
-                    }
+                    permissions = permissions
                 )
             }
         ) { paddingValues ->
@@ -811,219 +758,50 @@ private fun MainAppScaffold(
             ) {
                 when (startDestination) {
                 Screen.Dashboard.route -> {
-                    val userName = uiState.users
-                        .find { it.id == uiState.currentUserId }
-                        ?.nom
-                        .orEmpty()
-                    val dashboardCorrections by viewModel
-                        .observeBalanceCorrections(uiState.entrepriseId.orEmpty())
+                    val entrepriseId = uiState.entrepriseId.orEmpty()
+                    val pilotState by pilotageViewModel.state.collectAsStateWithLifecycle()
+                    val corrections by viewModel
+                        .observeBalanceCorrections(entrepriseId)
                         .collectAsStateWithLifecycle(initialValue = emptyList())
-                    val dashboardOpeningBalance = remember(dashboardCorrections) {
-                        dashboardCorrections.firstOrNull {
-                            it.type == com.abccash.app.treasury.data.BalanceCorrectionType.INITIAL
-                        }?.newBalance ?: 0.0
-                    }
-                    val dashboardBankBalance by userPreferences
-                        .observeBankBalance(uiState.entrepriseId.orEmpty(), java.time.YearMonth.now().year)
-                        .collectAsStateWithLifecycle(initialValue = null)
-                    CockpitDashboardScreen(
-                        userName = userName.ifBlank { "Kamel" },
-                        companyName = uiState.entreprise?.nom.orEmpty(),
+                    DashboardYearScreen(
+                        entrepriseId = entrepriseId,
+                        accounts = uiState.bankAccounts,
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
-                        bankAccounts = uiState.bankAccounts,
-                        openingBalance = dashboardOpeningBalance,
-                        bankBalanceOverride = dashboardBankBalance,
-                        onOpenDrawer = { openDrawer() },
-                        onNavigateToAddIncome = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
-                        },
-                        onNavigateToAddExpense = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
-                        }
+                        pilotEntries = pilotState.entries,
+                        corrections = corrections
                     )
                 }
                 Screen.Subscription.route -> {
                     SubscriptionScreen(
                         currentPlan = uiState.subscription.plan,
-                        onBack = { navigateToMainTab(Screen.Dashboard.route) },
+                        onBack = { navigateToMainTab(Screen.Settings.route) },
                         onSelectPlan = { plan -> viewModel.syncSubscriptionPlan(plan) }
-                    )
-                }
-                Screen.Transactions.route -> {
-                    TransactionsScreen(
-                        userRole = userRole,
-                        permissions = permissions,
-                        invoices = uiState.invoices,
-                        expenses = uiState.expenses,
-                        selectedMonth = uiState.selectedMonth,
-                        onMonthChange = viewModel::setSelectedMonth,
-                        onNavigateToAddIncome = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME))
-                        },
-                        onNavigateToAddExpense = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE))
-                        },
-                        onUpdateInvoice = { invoiceId, invoiceNumber, clientName, totalAmount, dueDate, onResult ->
-                            viewModel.updateInvoice(invoiceId, invoiceNumber, clientName, totalAmount, dueDate, onResult)
-                        },
-                        onRecordPayment = { invoiceId, amount, date, method, onResult ->
-                            viewModel.recordPayment(invoiceId, amount, date, method, onResult)
-                        },
-                        onDeleteInvoice = { id, onResult -> viewModel.deleteInvoice(id, onResult) },
-                        onDeleteInvoices = viewModel::deleteInvoices,
-                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, category, categoryLabel ->
-                            viewModel.updateExpense(
-                                expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid,
-                                paymentMethod, category, categoryLabel
-                            )
-                        },
-                        onStopRecurrence = viewModel::stopExpenseRecurrence,
-                        onDeleteExpense = viewModel::deleteExpense,
-                        onDeleteExpenses = viewModel::deleteExpenses,
-                        onValidateExpense = viewModel::validateForecastExpense,
-                        onNavigateToImportStatement = {
-                            navController.navigate(Screen.BankStatementImport.route)
-                        },
-                        onOpenDrawer = { openDrawer() },
-                        customExpenseCategories = customExpense
                     )
                 }
                 Screen.Treasury.route -> {
                     val entrepriseId = uiState.entrepriseId.orEmpty()
-                    val isTreasuryInitialized by viewModel
-                        .observeTreasuryInitialized(entrepriseId)
-                        .collectAsStateWithLifecycle(initialValue = true)
+                    val pilotState by pilotageViewModel.state.collectAsStateWithLifecycle()
                     val corrections by viewModel
                         .observeBalanceCorrections(entrepriseId)
                         .collectAsStateWithLifecycle(initialValue = emptyList())
-                    val initialCorrection = remember(corrections) {
-                        corrections.firstOrNull {
-                            it.type == com.abccash.app.treasury.data.BalanceCorrectionType.INITIAL
-                        }
-                    }
-                    val initialBalance = initialCorrection?.newBalance ?: 0.0
-                    val initialBalanceDate = initialCorrection?.correctionDate ?: java.time.LocalDate.now()
-                    val latestCorrectionBalance = remember(corrections) {
-                        corrections
-                            .filter { it.type == com.abccash.app.treasury.data.BalanceCorrectionType.CORRECTION }
-                            .maxWithOrNull(
-                                compareBy<com.abccash.app.treasury.data.BalanceCorrection> { it.correctionDate }
-                                    .thenBy { it.createdAt }
-                            )
-                            ?.newBalance
-                    }
-                    val prefsBankBalance by userPreferences
-                        .observeBankBalance(entrepriseId, java.time.YearMonth.now().year)
-                        .collectAsStateWithLifecycle(initialValue = null)
-                    val latestBankBalance = latestCorrectionBalance ?: prefsBankBalance
-                    val defaultBankAccountId = remember(uiState.bankAccounts) {
-                        uiState.bankAccounts.firstOrNull { it.isDefault }?.id
-                            ?: uiState.bankAccounts.firstOrNull()?.id ?: ""
-                    }
-                    val calculatedTreasuryBalance = remember(
-                        uiState.invoices, uiState.expenses, initialBalance
-                    ) {
-                        com.abccash.app.treasury.data.TreasuryCalculations.realizedBalance(
-                            uiState.invoices, uiState.expenses, initialBalance
-                        )
-                    }
-                    TreasuryBalanceScreen(
-                        userRole = userRole,
-                        permissions = permissions,
+                    TreasuryMonthScreen(
+                        entrepriseId = entrepriseId,
+                        accounts = uiState.bankAccounts,
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
-                        bankAccounts = uiState.bankAccounts,
-                        onExportCsv = viewModel::buildCsvExport,
-                        onNavigateToBankReconciliation = {
-                            navController.navigate(Screen.BankReconciliation.route)
-                        },
-                        onOpenDrawer = { openDrawer() },
-                        isTreasuryInitialized = isTreasuryInitialized,
-                        initialBalance = initialBalance,
-                        initialBalanceDate = initialBalanceDate,
-                        latestBankBalance = latestBankBalance,
-                        onInitTreasury = { balance, date ->
-                            viewModel.initTreasury(
-                                entrepriseId = entrepriseId,
-                                bankAccountId = defaultBankAccountId,
-                                initialBalance = balance,
-                                balanceDate = date,
-                                onResult = {}
-                            )
-                        },
-                        onSaveCorrection = { newBalance, date, motif, onResult ->
-                            viewModel.saveBalanceCorrection(
-                                entrepriseId = entrepriseId,
-                                bankAccountId = defaultBankAccountId,
-                                oldBalance = latestBankBalance ?: calculatedTreasuryBalance,
-                                newBalance = newBalance,
-                                correctionDate = date,
-                                motif = motif,
-                                onResult = onResult
-                            )
-                        },
-                        onUpdateOpeningBalance = { newBalance, date, motif, onResult ->
-                            viewModel.updateOpeningBalance(
-                                entrepriseId = entrepriseId,
-                                newBalance = newBalance,
-                                balanceDate = date,
-                                motif = motif,
-                                onResult = onResult
-                            )
-                        },
-                        onNavigateToCorrectionHistory = {
-                            navController.navigate(Screen.TreasuryCorrectionHistory.route)
+                        pilotEntries = pilotState.entries,
+                        corrections = corrections,
+                        onOpenPilot = { entryId ->
+                            pilotageViewModel.openEntry(entryId)
+                            navigateToMainTab(Screen.Pilotage.route)
                         }
                     )
                 }
-                Screen.Previsions.route -> {
-                    val forecastsPolicyExplained by userPreferences.forecastsPolicyExplained
-                        .collectAsStateWithLifecycle(initialValue = null)
-                    PrevisionsScreen(
-                        userRole = userRole,
-                        permissions = permissions,
-                        invoices = uiState.invoices,
-                        expenses = uiState.expenses,
-                        selectedMonth = uiState.selectedMonth,
-                        onMonthChange = viewModel::setSelectedMonth,
-                        onNavigateToSettings = {
-                            navController.navigate(Screen.Settings.route)
-                        },
-                        onUpdateInvoice = viewModel::updateInvoice,
-                        onRecordPayment = viewModel::recordPayment,
-                        onDeleteInvoice = viewModel::deleteInvoice,
-                        onUpdateExpense = { expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid, paymentMethod, category, categoryLabel ->
-                            viewModel.updateExpense(
-                                expenseId, label, amount, date, isRecurring, recurrence, recurrenceEndDate, isPaid,
-                                paymentMethod, category, categoryLabel
-                            )
-                        },
-                        onValidateForecastExpense = viewModel::validateForecastExpense,
-                        onDeleteExpense = viewModel::deleteExpense,
-                        onNavigateToAddIncome = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.INCOME, forecast = true))
-                        },
-                        onNavigateToAddExpense = {
-                            navController.navigate(TransactionType.addRoute(TransactionType.EXPENSE, forecast = true))
-                        },
-                        onForecastValidated = { month ->
-                            viewModel.setSelectedMonth(month)
-                            navController.navigate(Screen.Transactions.route) {
-                                popUpTo(navController.graph.startDestinationId) {
-                                    saveState = true
-                                }
-                                launchSingleTop = true
-                            }
-                        },
-                        onPurgeExpiredForecasts = viewModel::purgeExpiredForecastExpenses,
-                        onNavigateToTransactions = { navigateToMainTab(Screen.Transactions.route) },
-                        showForecastsPolicyOnOpen = forecastsPolicyExplained == false,
-                        onForecastsPolicyAcknowledged = {
-                            scope.launch { userPreferences.setForecastsPolicyExplained(true) }
-                        },
-                        onOpenDrawer = { openDrawer() },
-                        customExpenseCategories = customExpense
+                Screen.Pilotage.route -> {
+                    PilotageScreen(
+                        viewModel = pilotageViewModel,
+                        accounts = uiState.bankAccounts
                     )
                 }
                 Screen.Settings.route -> {
@@ -1034,9 +812,8 @@ private fun MainAppScaffold(
                     ) {
                         viewModel.refreshSubscription()
                     }
-                    val displayFirstName = userName.trim().substringBefore(" ").ifBlank { userName }
                     SettingsScreen(
-                        userFirstName = displayFirstName,
+                        userFirstName = userName.ifBlank { companyName },
                         companyName = companyName,
                         subscription = uiState.subscription,
                         appSettings = appSettings,
@@ -1050,12 +827,10 @@ private fun MainAppScaffold(
                         onDeleteAllTransactions = viewModel::deleteAllTransactions,
                         onDeleteTransactionsForMonth = viewModel::deleteTransactionsForMonth,
                         onNavigate = { route -> navController.navigate(route) },
-                        onOpenDrawer = { openDrawer() },
                         onAccountDeleted = onLogout
                     )
                 }
             }
-        }
         }
         }
     }
@@ -1065,9 +840,7 @@ private fun MainAppScaffold(
 fun TreasuryBottomNavigation(
     navController: NavHostController,
     userRole: UserRole,
-    permissions: Set<UserPermission>,
-    isMenuOpen: Boolean,
-    onOpenMenu: () -> Unit
+    permissions: Set<UserPermission>
 ) {
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route
@@ -1075,21 +848,26 @@ fun TreasuryBottomNavigation(
     val canViewInvoices = hasPermission(userRole, permissions, UserPermission.VIEW_INVOICES)
     val canManageExpenses = hasPermission(userRole, permissions, UserPermission.MANAGE_EXPENSES)
     val isAdmin = userRole == UserRole.ADMIN
-    val canViewPrevisions = canViewTreasury || canViewInvoices || canManageExpenses || isAdmin
-
+    val canViewPilotage = isAdmin || canViewTreasury || canManageExpenses || canViewInvoices
     val mainTabs = buildList {
         add(Screen.Dashboard)
-        if (canViewInvoices || canManageExpenses) {
-            add(Screen.Transactions)
-        }
-        if (canViewPrevisions) {
-            add(Screen.Previsions)
+        if (canViewPilotage) {
+            add(Screen.Pilotage)
         }
         if (canViewTreasury) {
             add(Screen.Treasury)
         }
     }
-
+    val plusDestinations = setOf(
+        Screen.Settings.route,
+        Screen.Subscription.route,
+        Screen.BankAccounts.route,
+        Screen.BankReconciliation.route,
+        Screen.TreasuryCorrectionHistory.route
+    )
+    val plusSelected = currentRoute in plusDestinations ||
+        currentRoute?.startsWith("settings/") == true ||
+        currentRoute?.startsWith("bank_account/") == true
     val itemCount = mainTabs.size + 1
 
     val navItemColors = NavigationBarItemDefaults.colors(
@@ -1122,7 +900,7 @@ fun TreasuryBottomNavigation(
                         label = {
                             NavBarLabel(screen.adaptiveNavLabel(itemCount))
                         },
-                        selected = !isMenuOpen && currentRoute?.startsWith(screen.route.split("/")[0]) == true,
+                        selected = !plusSelected && currentRoute?.startsWith(screen.route.split("/")[0]) == true,
                         onClick = {
                             if (currentRoute != screen.route) {
                                 navController.navigate(screen.route) {
@@ -1140,15 +918,23 @@ fun TreasuryBottomNavigation(
                 NavigationBarItem(
                     icon = {
                         Icon(
-                            Icons.Default.Menu,
-                            contentDescription = stringResource(R.string.nav_menu)
+                            Icons.Default.MoreHoriz,
+                            contentDescription = stringResource(R.string.nav_plus)
                         )
                     },
-                    label = {
-                        NavBarLabel(stringResource(R.string.nav_menu))
+                    label = { NavBarLabel(stringResource(R.string.nav_plus)) },
+                    selected = plusSelected,
+                    onClick = {
+                        if (currentRoute != Screen.Settings.route) {
+                            navController.navigate(Screen.Settings.route) {
+                                popUpTo(navController.graph.startDestinationId) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        }
                     },
-                    selected = isMenuOpen,
-                    onClick = onOpenMenu,
                     colors = navItemColors
                 )
             }

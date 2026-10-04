@@ -15,8 +15,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.EventNote
-import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -31,7 +29,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
-import com.abccash.app.treasury.data.ForecastMonthPolicy
 import com.abccash.app.ui.theme.AppColors
 
 private data class OnboardingPage(
@@ -56,19 +53,6 @@ fun OnboardingScreen(onFinish: () -> Unit) {
             iconBg = AppColors.BrandBlue,
             titleRes = R.string.onboarding_tour_entry_title,
             descriptionRes = R.string.onboarding_tour_entry_desc
-        ),
-        OnboardingPage(
-            icon = Icons.Default.EventNote,
-            iconBg = AppColors.Warning,
-            titleRes = R.string.onboarding_tour_forecasts_title,
-            descriptionRes = R.string.onboarding_tour_forecasts_desc,
-            descriptionArgs = arrayOf(ForecastMonthPolicy.GRACE_DAYS)
-        ),
-        OnboardingPage(
-            icon = Icons.Default.SwapVert,
-            iconBg = AppColors.Success,
-            titleRes = R.string.onboarding_tour_transactions_title,
-            descriptionRes = R.string.onboarding_tour_transactions_desc
         ),
         OnboardingPage(
             icon = Icons.Default.AccountBalance,

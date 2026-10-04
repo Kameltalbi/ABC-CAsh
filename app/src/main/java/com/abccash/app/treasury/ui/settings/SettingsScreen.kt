@@ -1,68 +1,98 @@
 package com.abccash.app.treasury.ui.settings
 
-import android.net.Uri
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalance
-import androidx.compose.material.icons.filled.Business
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.KeyboardArrowUp
+import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PersonOff
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.Storefront
 import androidx.compose.material.icons.filled.TrendingUp
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.VerifiedUser
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
 import com.abccash.app.locale.AppLanguage
 import com.abccash.app.locale.AppLocale
 import com.abccash.app.treasury.backup.GoogleBackupManager
-import com.abccash.app.ui.theme.AppColors
-import com.abccash.app.treasury.data.SubscriptionPlan
 import com.abccash.app.treasury.data.UserSubscription
 import com.abccash.app.treasury.datastore.AppSettings
 import com.abccash.app.treasury.datastore.AppSettingsState
-import com.abccash.app.treasury.ui.googleSignInErrorMessage
 import com.abccash.app.treasury.ui.resolveTreasuryMessage
-import kotlinx.coroutines.launch
+import com.abccash.app.ui.theme.AppColors
+import java.util.Locale
 
-// Palette alignée ABC Cash — bleu principal, pas de violet.
-private val SettingsBackground = Color.White
-private val SettingsTextPrimary = AppColors.TextPrimary
-private val SettingsMuted = AppColors.TextSecondary
+private val PageBg = Color(0xFFF4F6FA)
+private val Ink = Color(0xFF0F2744)
+private val Muted = Color(0xFF6B7A90)
+private val Line = Color(0xFFE6EBF2)
+private val Blue = Color(0xFF2563EB)
+private val BlueSoft = Color(0xFFE8F0FE)
+private val Green = Color(0xFF15803D)
+private val GreenSoft = Color(0xFFE7F7ED)
+private val Orange = Color(0xFFC2410C)
+private val OrangeSoft = Color(0xFFFFF1E8)
+private val Purple = Color(0xFF7C3AED)
+private val PurpleSoft = Color(0xFFF3E8FF)
+private val Amber = Color(0xFFD97706)
+private val AmberSoft = Color(0xFFFFF7E8)
 private val SettingsDanger = AppColors.ExpenseRed
-private val SettingsProgressTrack = AppColors.Border
+private val DangerSoft = Color(0xFFFFF1F0)
+private val CardShape = RoundedCornerShape(18.dp)
 
-/**
- * Architecture UX — Note de frais :
- * Aucun module « Note de frais » séparé. Les frais pro (repas, déplacements…) sont des
- * dépenses standard avec pièce jointe photo, stockée sur le Google Drive connecté.
- *
- * Architecture données — Onboarding :
- * Le prénom et le nom de société affichés ici proviennent de l'inscription initiale
- * (écran AccountSetup / Inscription, 2 étapes au premier lancement).
- */
-@OptIn(ExperimentalMaterial3Api::class)
+@Suppress("UNUSED_PARAMETER")
 @Composable
 fun SettingsScreen(
     userFirstName: String,
@@ -73,27 +103,21 @@ fun SettingsScreen(
     googleAccountEmail: String?,
     onGoogleSignedIn: (String?) -> Unit,
     onGoogleSignedOut: () -> Unit,
-    onUpgradeSubscription: () -> Unit,
+    onUpgradeSubscription: () -> Unit = {},
     onExportCsv: (Int) -> String?,
     onDeleteAccount: (deleteDriveBackup: Boolean, onResult: (String?) -> Unit) -> Unit,
     onDeleteAllTransactions: (onResult: (String?) -> Unit) -> Unit = { it(null) },
     onDeleteTransactionsForMonth: (month: java.time.YearMonth, onResult: (String?) -> Unit) -> Unit = { _, cb -> cb(null) },
     onNavigate: (String) -> Unit,
-    onOpenDrawer: () -> Unit = {},
     onAccountDeleted: () -> Unit = {}
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     val settings by appSettings.settingsFlow.collectAsState(initial = AppSettingsState())
     val currentLanguage = remember(settings.appLanguageTag) {
         AppLanguage.fromTag(settings.appLanguageTag)
     }
+    val signedInEmail = googleAccountEmail ?: googleBackupManager.getSignedInEmail()
 
-    var signedInEmail by remember(googleAccountEmail) {
-        mutableStateOf(googleAccountEmail ?: googleBackupManager.getSignedInEmail())
-    }
-    var isGoogleLoading by remember { mutableStateOf(false) }
-    var googleError by remember { mutableStateOf<String?>(null) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var deleteDriveBackup by remember { mutableStateOf(false) }
     var isDeleting by remember { mutableStateOf(false) }
@@ -103,50 +127,6 @@ fun SettingsScreen(
     var deleteAllTxError by remember { mutableStateOf<String?>(null) }
     var deleteTxWholeScope by remember { mutableStateOf(true) }
     var deleteTxMonth by remember { mutableStateOf(java.time.YearMonth.now()) }
-    var pendingCsv by remember { mutableStateOf<String?>(null) }
-    val expandedSections = remember {
-        mutableStateMapOf(
-            "categories" to true,
-            "app" to true
-        )
-    }
-
-    fun toggleSection(key: String) {
-        expandedSections[key] = !(expandedSections[key] ?: false)
-    }
-
-    val googleSignInLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        isGoogleLoading = false
-        if (result.resultCode != android.app.Activity.RESULT_OK) {
-            if (result.resultCode != android.app.Activity.RESULT_CANCELED) {
-                googleError = context.getString(R.string.google_sign_in_failed)
-            }
-            return@rememberLauncherForActivityResult
-        }
-        googleBackupManager.handleSignInResult(result.data)
-            .onSuccess { account ->
-                signedInEmail = account.email
-                onGoogleSignedIn(account.email)
-                googleError = null
-            }
-            .onFailure { error ->
-                googleError = googleSignInErrorMessage(context, error)
-            }
-    }
-
-    val csvExportLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.CreateDocument("text/csv")
-    ) { uri: Uri? ->
-        val csv = pendingCsv
-        if (uri != null && csv != null) {
-            context.contentResolver.openOutputStream(uri)?.use { stream ->
-                stream.write(csv.toByteArray(Charsets.UTF_8))
-            }
-        }
-        pendingCsv = null
-    }
 
     if (showDeleteConfirm) {
         AlertDialog(
@@ -173,7 +153,7 @@ fun SettingsScreen(
                             Text(
                                 text = stringResource(R.string.settings_delete_drive_backup),
                                 fontSize = 14.sp,
-                                color = SettingsTextPrimary
+                                color = Ink
                             )
                         }
                     }
@@ -244,7 +224,7 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_delete_scope_all),
                             fontSize = 14.sp,
-                            color = SettingsTextPrimary
+                            color = Ink
                         )
                     }
                     Row(
@@ -261,7 +241,7 @@ fun SettingsScreen(
                         Text(
                             text = stringResource(R.string.settings_delete_scope_month),
                             fontSize = 14.sp,
-                            color = SettingsTextPrimary
+                            color = Ink
                         )
                     }
                     if (!deleteTxWholeScope) {
@@ -277,7 +257,7 @@ fun SettingsScreen(
                                 enabled = !isDeletingAllTx
                             ) {
                                 Icon(
-                                    Icons.Default.KeyboardArrowLeft,
+                                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                                     contentDescription = stringResource(R.string.previous_month)
                                 )
                             }
@@ -285,14 +265,14 @@ fun SettingsScreen(
                                 text = AppLocale.monthYear(deleteTxMonth),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.SemiBold,
-                                color = SettingsTextPrimary
+                                color = Ink
                             )
                             IconButton(
                                 onClick = { deleteTxMonth = deleteTxMonth.plusMonths(1) },
                                 enabled = !isDeletingAllTx
                             ) {
                                 Icon(
-                                    Icons.Default.KeyboardArrowRight,
+                                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
                                     contentDescription = stringResource(R.string.next_month)
                                 )
                             }
@@ -301,7 +281,7 @@ fun SettingsScreen(
                     Text(
                         text = stringResource(R.string.settings_delete_transactions_warning),
                         fontSize = 12.sp,
-                        color = AppColors.TextSecondary
+                        color = Muted
                     )
                     deleteAllTxError?.let { Text(it, color = SettingsDanger, fontSize = 13.sp) }
                 }
@@ -345,315 +325,272 @@ fun SettingsScreen(
         )
     }
 
+    val languageLabel = when {
+        currentLanguage == AppLanguage.FRENCH -> stringResource(R.string.language_fr_default)
+        currentLanguage == AppLanguage.SYSTEM &&
+            Locale.getDefault().language.equals("fr", ignoreCase = true) ->
+            stringResource(R.string.language_fr_default)
+        else -> stringResource(currentLanguage.labelRes)
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(SettingsBackground)
+            .background(PageBg)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Color.White)
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = stringResource(R.string.settings),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = SettingsTextPrimary
-            )
-        }
+        Text(
+            text = stringResource(R.string.nav_plus),
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 14.dp, bottom = 8.dp),
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = Ink
+        )
 
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             item {
-                CollapsibleSettingsSection(
-                    title = stringResource(R.string.settings_screen_section_profile),
-                    expanded = expandedSections["profile"] ?: false,
-                    onToggle = { toggleSection("profile") }
-                ) {
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_user_first_name),
-                        supporting = userFirstName.ifBlank { "—" },
-                        leadingIcon = { Icon(Icons.Default.Person, contentDescription = null, tint = AppColors.BrandBlue) },
-                        onClick = { onNavigate(SettingsRoutes.PROFILE_USER) }
-                    )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_company_name),
-                        supporting = companyName.ifBlank { "—" },
-                        leadingIcon = { Icon(Icons.Default.Business, contentDescription = null, tint = AppColors.BrandBlue) },
-                        onClick = { onNavigate(SettingsRoutes.PROFILE_COMPANY) }
-                    )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.settings_default_currency_fixed),
-                                color = SettingsMuted,
-                                fontSize = 14.sp
-                            )
-                        }
-                    )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                }
+                CompanyCard(
+                    userName = userFirstName,
+                    companyName = companyName,
+                    onClick = { onNavigate(SettingsRoutes.PROFILE_USER) }
+                )
             }
-
             item {
-                CollapsibleSettingsSection(
-                    title = stringResource(R.string.settings_section_categories),
-                    expanded = expandedSections["categories"] ?: true,
-                    onToggle = { toggleSection("categories") }
+                SettingsGroupCard(
+                    title = stringResource(R.string.pilot_categories),
+                    titleIcon = Icons.Default.LocalOffer,
+                    titleTint = Green,
+                    titleBg = GreenSoft
                 ) {
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_income_categories),
-                        supporting = stringResource(R.string.settings_manage_categories),
-                        leadingIcon = {
-                            Icon(Icons.Default.TrendingUp, contentDescription = null, tint = AppColors.BrandBlue)
-                        },
+                    SettingsRow(
+                        title = stringResource(R.string.settings_sales_categories),
+                        subtitle = stringResource(R.string.settings_sales_categories_sub),
+                        icon = Icons.Default.TrendingUp,
+                        iconTint = Green,
+                        iconBg = GreenSoft,
                         onClick = { onNavigate(SettingsRoutes.CATEGORIES_INCOME) }
                     )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_expense_categories),
-                        supporting = stringResource(R.string.settings_manage_categories),
-                        leadingIcon = {
-                            Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = AppColors.BrandBlue)
-                        },
+                    HorizontalDivider(color = Line, modifier = Modifier.padding(start = 52.dp))
+                    SettingsRow(
+                        title = stringResource(R.string.settings_expense_categories),
+                        subtitle = stringResource(R.string.settings_expense_categories_hub_sub),
+                        icon = Icons.Default.ShoppingCart,
+                        iconTint = Orange,
+                        iconBg = OrangeSoft,
                         onClick = { onNavigate(SettingsRoutes.CATEGORIES_EXPENSE) }
                     )
                 }
             }
-
             item {
-                CollapsibleSettingsSection(
-                    title = stringResource(R.string.settings_section_app),
-                    expanded = expandedSections["app"] ?: true,
-                    onToggle = { toggleSection("app") }
+                SettingsGroupCard(
+                    title = stringResource(R.string.settings_section_accounts),
+                    titleIcon = Icons.Default.AccountBalance,
+                    titleTint = Purple,
+                    titleBg = PurpleSoft
                 ) {
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_bank_accounts),
-                        supporting = stringResource(R.string.settings_bank_accounts_sub),
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.AccountBalance,
-                                contentDescription = null,
-                                tint = AppColors.BrandBlue
-                            )
-                        },
+                    SettingsRow(
+                        title = stringResource(R.string.settings_bank_accounts),
+                        subtitle = stringResource(R.string.settings_bank_accounts_hub_sub),
+                        icon = Icons.Default.AccountBalance,
+                        iconTint = Purple,
+                        iconBg = PurpleSoft,
                         onClick = { onNavigate(SettingsRoutes.OPTIONS_BANK) }
                     )
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_language),
-                        supporting = stringResource(currentLanguage.labelRes),
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Language,
-                                contentDescription = null,
-                                tint = AppColors.BrandBlue
-                            )
-                        },
+                }
+            }
+            item {
+                SettingsGroupCard(
+                    title = stringResource(R.string.settings_section_app),
+                    titleIcon = Icons.Default.Settings,
+                    titleTint = Amber,
+                    titleBg = AmberSoft
+                ) {
+                    SettingsRow(
+                        title = stringResource(R.string.settings_language),
+                        subtitle = languageLabel,
+                        icon = Icons.Default.Language,
+                        iconTint = Blue,
+                        iconBg = BlueSoft,
                         onClick = { onNavigate(SettingsRoutes.OPTIONS_LANGUAGE) }
                     )
-                    SettingsInfoListItem(
-                        headline = stringResource(R.string.settings_notifications),
-                        supporting = if (settings.notificationsEnabled) {
+                    HorizontalDivider(color = Line, modifier = Modifier.padding(start = 52.dp))
+                    SettingsRow(
+                        title = stringResource(R.string.settings_notifications),
+                        subtitle = if (settings.notificationsEnabled) {
                             stringResource(R.string.settings_notifications_on)
                         } else {
                             stringResource(R.string.settings_notifications_off)
                         },
-                        leadingIcon = {
-                            Icon(
-                                Icons.Default.Notifications,
-                                contentDescription = null,
-                                tint = AppColors.BrandBlue
-                            )
-                        },
+                        icon = Icons.Default.Notifications,
+                        iconTint = Blue,
+                        iconBg = BlueSoft,
                         onClick = { onNavigate(SettingsRoutes.OPTIONS_NOTIFICATIONS) }
                     )
+                    HorizontalDivider(color = Line, modifier = Modifier.padding(start = 52.dp))
+                    SettingsRow(
+                        title = stringResource(R.string.settings_appearance),
+                        subtitle = stringResource(R.string.settings_appearance_sub),
+                        icon = Icons.Default.PhoneAndroid,
+                        iconTint = Blue,
+                        iconBg = BlueSoft,
+                        onClick = null
+                    )
                 }
             }
-
             item {
-                SubscriptionSectionCard(
-                    subscription = subscription,
-                    onUpgrade = onUpgradeSubscription,
-                    expanded = expandedSections["subscription"] ?: false,
-                    onToggle = { toggleSection("subscription") }
+                LaunchPhaseInfoCard()
+            }
+            item {
+                SettingsLinkCard(
+                    title = stringResource(R.string.settings_section_backup),
+                    subtitle = stringResource(R.string.settings_backup_row_sub),
+                    icon = Icons.Default.CloudUpload,
+                    iconTint = Blue,
+                    iconBg = BlueSoft,
+                    onClick = { onNavigate(SettingsRoutes.OPTIONS_BACKUP) }
                 )
             }
-
             item {
-                CollapsibleSettingsSection(
-                    title = stringResource(R.string.settings_section_backup),
-                    expanded = expandedSections["backup"] ?: false,
-                    onToggle = { toggleSection("backup") }
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_backup_cloud_desc),
-                        fontSize = 13.sp,
-                        color = SettingsMuted,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
-                    )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    Column(
-                        modifier = Modifier.padding(16.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        Text(
-                            text = signedInEmail?.let {
-                                stringResource(R.string.settings_google_connected, it)
-                            } ?: stringResource(R.string.settings_google_not_connected),
-                            fontSize = 13.sp,
-                            color = if (signedInEmail != null) Color(0xFF15803D) else SettingsMuted,
-                            fontWeight = FontWeight.Medium
-                        )
-                        googleError?.let {
-                            Text(it, color = SettingsDanger, fontSize = 12.sp)
-                        }
-                        if (signedInEmail == null) {
-                            Button(
-                                onClick = {
-                                    isGoogleLoading = true
-                                    googleSignInLauncher.launch(googleBackupManager.getSignInIntent())
-                                },
-                                enabled = !isGoogleLoading,
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.buttonColors(
-                                    containerColor = MaterialTheme.colorScheme.primary,
-                                    contentColor = Color.White
-                                )
-                            ) {
-                                if (isGoogleLoading) {
-                                    CircularProgressIndicator(
-                                        modifier = Modifier.size(18.dp),
-                                        strokeWidth = 2.dp,
-                                        color = Color.White
-                                    )
-                                } else {
-                                    Text(
-                                        "G  ${stringResource(R.string.settings_connect_google_drive)}",
-                                        fontWeight = FontWeight.SemiBold
-                                    )
-                                }
-                            }
-                        } else {
-                            OutlinedButton(
-                                onClick = {
-                                    scope.launch {
-                                        googleBackupManager.signOut()
-                                        signedInEmail = null
-                                        onGoogleSignedOut()
-                                    }
-                                },
-                                modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(12.dp),
-                                colors = ButtonDefaults.outlinedButtonColors(
-                                    contentColor = MaterialTheme.colorScheme.primary
-                                ),
-                                border = androidx.compose.foundation.BorderStroke(
-                                    1.dp,
-                                    MaterialTheme.colorScheme.primary
-                                )
-                            ) {
-                                Text(stringResource(R.string.google_sign_out))
-                            }
-                        }
-                    }
-                }
-            }
-
-            item {
-                CollapsibleSettingsSection(
+                SettingsLinkCard(
                     title = stringResource(R.string.settings_section_security_export),
-                    expanded = expandedSections["security"] ?: false,
-                    onToggle = { toggleSection("security") }
+                    subtitle = stringResource(R.string.settings_security_row_sub),
+                    icon = Icons.Default.VerifiedUser,
+                    iconTint = Blue,
+                    iconBg = BlueSoft,
+                    onClick = { onNavigate(SettingsRoutes.OPTIONS_SECURITY) }
+                )
+            }
+            item {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = DangerSoft),
+                    shape = CardShape,
+                    elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
                 ) {
-                    ListItem(
-                        headlineContent = {
-                            Text(
-                                stringResource(R.string.settings_biometric_lock),
-                                color = SettingsTextPrimary,
-                                fontWeight = FontWeight.Medium
-                            )
-                        },
-                        trailingContent = {
-                            Switch(
-                                checked = settings.biometricEnabled,
-                                onCheckedChange = { enabled ->
-                                    scope.launch { appSettings.setBiometricEnabled(enabled) }
-                                },
-                                colors = SwitchDefaults.colors(
-                                    checkedThumbColor = Color.White,
-                                    checkedTrackColor = MaterialTheme.colorScheme.primary,
-                                    uncheckedThumbColor = Color.White,
-                                    uncheckedTrackColor = SettingsProgressTrack
-                                )
-                            )
-                        }
-                    )
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        Text(
-                            stringResource(R.string.settings_export_csv_hint),
-                            fontSize = 12.sp,
-                            color = SettingsMuted,
-                            modifier = Modifier.padding(bottom = 12.dp)
+                    Column(Modifier.padding(vertical = 4.dp)) {
+                        SettingsRow(
+                            title = stringResource(R.string.settings_delete_all_transactions),
+                            subtitle = stringResource(R.string.settings_delete_all_transactions_sub),
+                            icon = Icons.Default.DeleteForever,
+                            iconTint = SettingsDanger,
+                            iconBg = Color.White,
+                            titleColor = SettingsDanger,
+                            onClick = { showDeleteAllTxConfirm = true }
                         )
-                        Button(
-                            onClick = {
-                                val csv = onExportCsv(java.time.YearMonth.now().year) ?: return@Button
-                                pendingCsv = csv
-                                csvExportLauncher.launch("abc-cash-export.csv")
-                            },
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(12.dp),
-                            colors = ButtonDefaults.buttonColors(
-                                containerColor = MaterialTheme.colorScheme.primary,
-                                contentColor = Color.White
-                            )
-                        ) {
-                            Text(
-                                stringResource(R.string.settings_export_csv_excel),
-                                fontWeight = FontWeight.SemiBold
-                            )
-                        }
+                        HorizontalDivider(color = Color(0xFFFFD0C8), modifier = Modifier.padding(start = 52.dp))
+                        SettingsRow(
+                            title = stringResource(R.string.settings_delete_account),
+                            subtitle = stringResource(R.string.settings_delete_account_sub),
+                            icon = Icons.Default.PersonOff,
+                            iconTint = SettingsDanger,
+                            iconBg = Color.White,
+                            titleColor = SettingsDanger,
+                            onClick = { showDeleteConfirm = true }
+                        )
                     }
                 }
             }
+            item { Spacer(modifier = Modifier.height(12.dp)) }
+        }
+    }
+}
 
-            item {
-                TextButton(
-                    onClick = { showDeleteAllTxConfirm = true },
+@Composable
+private fun CompanyCard(
+    userName: String,
+    companyName: String,
+    onClick: () -> Unit
+) {
+    val initials = remember(userName, companyName) {
+        val source = userName.ifBlank { companyName }
+        source.trim()
+            .split(Regex("\\s+"))
+            .filter { it.isNotBlank() }
+            .take(2)
+            .joinToString("") { it.first().uppercaseChar().toString() }
+            .ifBlank { "A" }
+    }
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SoftIcon(Icons.Default.Storefront, Blue, BlueSoft)
+                Text(
+                    text = stringResource(R.string.settings_section_company),
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp)
-                ) {
-                    Text(
-                        stringResource(R.string.settings_delete_all_transactions),
-                        color = SettingsDanger,
-                        fontWeight = FontWeight.Medium
-                    )
-                }
+                        .padding(start = 8.dp)
+                        .weight(1f),
+                    color = Ink,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+                Icon(
+                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = Muted,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-
-            item {
-                TextButton(
-                    onClick = { showDeleteConfirm = true },
+            Row(
+                modifier = Modifier.padding(top = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(bottom = 8.dp)
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .background(BlueSoft),
+                    contentAlignment = Alignment.Center
                 ) {
+                    Text(initials, color = Blue, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+                }
+                Column(modifier = Modifier.padding(start = 12.dp).weight(1f)) {
+                    Text(stringResource(R.string.settings_user_first_name), color = Muted, fontSize = 11.sp)
                     Text(
-                        stringResource(R.string.settings_delete_account),
-                        color = SettingsDanger,
-                        fontWeight = FontWeight.Medium
+                        text = userName.ifBlank { "—" },
+                        color = Ink,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
+                    Text(
+                        text = stringResource(R.string.settings_company_name),
+                        color = Muted,
+                        fontSize = 11.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                    Text(
+                        text = companyName.ifBlank { "—" },
+                        color = Ink,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(
+                        modifier = Modifier.padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        SoftIcon(Icons.Default.Savings, Amber, AmberSoft, size = 26.dp, iconSize = 14.dp)
+                        Column(modifier = Modifier.padding(start = 8.dp)) {
+                            Text(stringResource(R.string.settings_main_currency), color = Muted, fontSize = 11.sp)
+                            Text(
+                                text = stringResource(R.string.settings_currency_tnd),
+                                color = Ink,
+                                fontWeight = FontWeight.SemiBold,
+                                fontSize = 14.sp
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -661,160 +598,153 @@ fun SettingsScreen(
 }
 
 @Composable
-private fun CollapsibleSettingsSection(
+private fun SettingsGroupCard(
     title: String,
-    expanded: Boolean,
-    onToggle: () -> Unit,
+    titleIcon: ImageVector,
+    titleTint: Color,
+    titleBg: Color,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle)
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                modifier = Modifier.padding(bottom = 4.dp)
             ) {
+                SoftIcon(titleIcon, titleTint, titleBg)
                 Text(
                     text = title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = SettingsTextPrimary
-                )
-                Icon(
-                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp
-                    else Icons.Default.KeyboardArrowDown,
-                    contentDescription = null,
-                    tint = AppColors.BrandBlue
+                    modifier = Modifier.padding(start = 8.dp),
+                    color = Ink,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
                 )
             }
-            AnimatedVisibility(
-                visible = expanded,
-                enter = expandVertically(),
-                exit = shrinkVertically()
-            ) {
-                Column {
-                    HorizontalDivider(color = SettingsProgressTrack)
-                    content()
-                }
-            }
+            content()
         }
     }
 }
 
 @Composable
-private fun SubscriptionSectionCard(
-    subscription: UserSubscription,
-    onUpgrade: () -> Unit,
-    expanded: Boolean,
-    onToggle: () -> Unit
-) {
-    val plan = subscription.plan
-    val limit = plan.transactionsPerMonth ?: 30
-    val used = subscription.transactionsThisMonth.coerceAtMost(limit)
-    val progress = if (limit > 0) used.toFloat() / limit else 0f
-    val isUnlimited = plan.unlimited
-
-    CollapsibleSettingsSection(
-        title = stringResource(R.string.settings_section_subscription),
-        expanded = expanded,
-        onToggle = onToggle
+private fun LaunchPhaseInfoCard() {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        modifier = Modifier.fillMaxWidth()
     ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            if (!isUnlimited) {
-                Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = AppColors.BrandBlueLight
-                ) {
-                    Text(
-                        text = stringResource(R.string.settings_free_plan_badge),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = AppColors.BrandBlueDark
-                    )
-                }
-                Text(
-                    text = stringResource(R.string.settings_monthly_usage, used, limit),
-                    fontSize = 14.sp,
-                    color = SettingsTextPrimary,
-                    fontWeight = FontWeight.Medium
-                )
-                Text(
-                    text = stringResource(R.string.subscription_monthly_reset_hint),
-                    fontSize = 12.sp,
-                    color = SettingsMuted
-                )
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(8.dp),
-                    color = MaterialTheme.colorScheme.primary,
-                    trackColor = SettingsProgressTrack,
-                    strokeCap = androidx.compose.ui.graphics.StrokeCap.Round
-                )
-            } else {
-                Text(
-                    text = stringResource(R.string.plan_unlimited),
-                    fontSize = 14.sp,
-                    color = Color(0xFF15803D),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-
-            Button(
-                onClick = onUpgrade,
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(12.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                ),
-                enabled = !isUnlimited
-            ) {
-                Text(
-                    stringResource(R.string.settings_upgrade_unlimited),
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-        }
+        SettingsRow(
+            title = stringResource(R.string.settings_launch_free_title),
+            subtitle = stringResource(R.string.settings_launch_free_message),
+            icon = Icons.Default.WorkspacePremium,
+            iconTint = Amber,
+            iconBg = AmberSoft,
+            onClick = null,
+            showChevron = false
+        )
     }
 }
 
 @Composable
-private fun SettingsInfoListItem(
-    headline: String,
-    supporting: String,
-    leadingIcon: @Composable () -> Unit,
+private fun SettingsLinkCard(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
     onClick: () -> Unit
 ) {
-    ListItem(
-        headlineContent = {
-            Text(headline, color = SettingsMuted, fontSize = 12.sp)
-        },
-        supportingContent = {
-            Text(
-                supporting,
-                color = SettingsTextPrimary,
-                fontWeight = FontWeight.Medium,
-                fontSize = 15.sp
-            )
-        },
-        leadingContent = leadingIcon,
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         modifier = Modifier
             .fillMaxWidth()
-            .then(Modifier.clickable(onClick = onClick)),
-        colors = ListItemDefaults.colors(containerColor = Color.Transparent)
-    )
+            .clickable(onClick = onClick)
+    ) {
+        SettingsRow(
+            title = title,
+            subtitle = subtitle,
+            icon = icon,
+            iconTint = iconTint,
+            iconBg = iconBg,
+            onClick = null,
+            showChevron = true
+        )
+    }
+}
+
+@Composable
+private fun SettingsRow(
+    title: String,
+    subtitle: String,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    onClick: (() -> Unit)?,
+    titleColor: Color = Ink,
+    showChevron: Boolean = true
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
+            .padding(vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SoftIcon(icon, iconTint, iconBg)
+        Column(
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .weight(1f)
+        ) {
+            Text(
+                text = title,
+                color = titleColor,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = subtitle,
+                color = Muted,
+                fontSize = 12.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 1.dp)
+            )
+        }
+        if (showChevron) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = null,
+                tint = Muted,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun SoftIcon(
+    icon: ImageVector,
+    tint: Color,
+    bg: Color,
+    size: androidx.compose.ui.unit.Dp = 32.dp,
+    iconSize: androidx.compose.ui.unit.Dp = 17.dp
+) {
+    Box(
+        modifier = Modifier
+            .size(size)
+            .clip(RoundedCornerShape(10.dp))
+            .background(bg),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(iconSize))
+    }
 }

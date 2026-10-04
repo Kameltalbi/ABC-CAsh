@@ -23,14 +23,16 @@ android {
         applicationId = "com.abccash.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 91
-        versionName = "1.20.45"
+        versionCode = 93
+        versionName = "1.20.46"
         buildConfigField(
             "String",
             "GOOGLE_WEB_CLIENT_ID",
             "\"${secret("GOOGLE_WEB_CLIENT_ID").orEmpty()}\""
         )
         buildConfigField("boolean", "SIDELOAD_PRO", "false")
+        // Phase de lancement : 100 % gratuit (~5 000 téléchargements). Passer à false pour activer le freemium.
+        buildConfigField("boolean", "LAUNCH_FREE_PHASE", "true")
     }
 
     signingConfigs {

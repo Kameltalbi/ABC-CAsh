@@ -287,7 +287,6 @@ fun InvoicesListScreen(
                         .padding(bottom = 4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    DrawerMenuIconButton(onClick = onOpenDrawer)
                     Text(
                         text = stringResource(R.string.invoices_title),
                         fontSize = 26.sp,

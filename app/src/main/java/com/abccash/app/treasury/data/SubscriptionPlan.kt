@@ -2,7 +2,14 @@ package com.abccash.app.treasury.data
 
 import androidx.annotation.StringRes
 import com.abccash.app.R
+import com.abccash.app.treasury.entitlement.FeatureAccess
 
+/**
+ * Plans commerciaux.
+ *
+ * Pendant [FeatureAccess.isLaunchFreePhase], les quotas Free historiques ne sont pas appliqués
+ * (voir [UserSubscription]). Les valeurs Free ci-dessous décrivent le futur freemium uniquement.
+ */
 enum class SubscriptionPlan(
     val id: String,
     @StringRes val nameRes: Int,
@@ -16,7 +23,9 @@ enum class SubscriptionPlan(
     val isFree: Boolean get() = this == FREE
     val hasTransactionLimit: Boolean get() = transactionsPerMonth != null
     val unlimited: Boolean get() = transactionsPerMonth == null
-    val hasOcrScan: Boolean get() = !isFree
+
+    /** OCR : libre en phase de lancement ; sinon réservé au Pro (futur). */
+    val hasOcrScan: Boolean get() = FeatureAccess.allowsOcr(this)
 
     companion object {
         fun fromId(id: String?): SubscriptionPlan =
@@ -33,19 +42,27 @@ data class UserSubscription(
     val monthResetDate: Long = System.currentTimeMillis()
 ) {
     val isActive: Boolean get() = endDate == null || endDate > System.currentTimeMillis()
+
     val remainingTransactions: Int get() =
-        if (plan.hasTransactionLimit) {
-            plan.transactionsPerMonth!! - transactionsThisMonth
-        } else {
+        if (!FeatureAccess.enforcesPaidLimits() || !plan.hasTransactionLimit) {
             Int.MAX_VALUE
+        } else {
+            plan.transactionsPerMonth!! - transactionsThisMonth
         }
 
     val remainingTreasuryAccounts: Int get() =
-        (plan.treasuryAccountsLimit - treasuryAccountsCount).coerceAtLeast(0)
+        if (!FeatureAccess.enforcesPaidLimits()) {
+            Int.MAX_VALUE
+        } else {
+            (plan.treasuryAccountsLimit - treasuryAccountsCount).coerceAtLeast(0)
+        }
 
     val isTransactionLimitReached: Boolean get() =
-        plan.hasTransactionLimit && transactionsThisMonth >= plan.transactionsPerMonth!!
+        FeatureAccess.enforcesPaidLimits() &&
+            plan.hasTransactionLimit &&
+            transactionsThisMonth >= plan.transactionsPerMonth!!
 
     val isTreasuryAccountLimitReached: Boolean get() =
-        treasuryAccountsCount >= plan.treasuryAccountsLimit
+        FeatureAccess.enforcesPaidLimits() &&
+            treasuryAccountsCount >= plan.treasuryAccountsLimit
 }

@@ -12,6 +12,7 @@ import com.abccash.app.treasury.data.TaxIdValidationStatus
 import com.abccash.app.treasury.data.TreasuryAccountKind
 import com.abccash.app.treasury.data.OtherTaxMode
 import com.abccash.app.treasury.data.PaymentMethod
+import com.abccash.app.treasury.data.PilotEntryType
 import com.abccash.app.treasury.data.RevenueCategory
 import com.abccash.app.treasury.data.UserPermission
 import com.abccash.app.treasury.data.UserRole
@@ -134,4 +135,11 @@ class TreasuryConverters {
             ?.toSet()
             ?: emptySet()
     }
+
+    @TypeConverter
+    fun fromPilotEntryType(value: PilotEntryType?): String? = value?.name
+
+    @TypeConverter
+    fun toPilotEntryType(value: String?): PilotEntryType? =
+        value?.let { runCatching { PilotEntryType.valueOf(it) }.getOrNull() }
 }

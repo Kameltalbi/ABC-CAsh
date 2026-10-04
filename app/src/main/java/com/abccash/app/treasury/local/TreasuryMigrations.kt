@@ -332,3 +332,168 @@ val MIGRATION_22_23 = object : Migration(22, 23) {
         db.execSQL("DELETE FROM payments WHERE invoiceId NOT IN (SELECT id FROM invoices)")
     }
 }
+
+/** Module Pilotage : ventes et charges économiques, indépendantes de la trésorerie. */
+val MIGRATION_23_24 = object : Migration(23, 24) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `pilot_categories` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `type` TEXT NOT NULL,
+                `name` TEXT NOT NULL,
+                `active` INTEGER NOT NULL DEFAULT 1,
+                `createdAt` TEXT NOT NULL,
+                `updatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS `index_pilot_categories_entrepriseId_type_name`
+            ON `pilot_categories` (`entrepriseId`, `type`, `name`)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `pilot_entries` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `type` TEXT NOT NULL,
+                `date` TEXT NOT NULL,
+                `categoryId` TEXT NOT NULL,
+                `amount` REAL NOT NULL,
+                `note` TEXT NOT NULL DEFAULT '',
+                `recurring` INTEGER NOT NULL DEFAULT 0,
+                `importId` TEXT DEFAULT NULL,
+                `createdAt` TEXT NOT NULL,
+                `updatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`categoryId`) REFERENCES `pilot_categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_entrepriseId` ON `pilot_entries` (`entrepriseId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_categoryId` ON `pilot_entries` (`categoryId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_importId` ON `pilot_entries` (`importId`)")
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `pilot_monthly_targets` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `year` INTEGER NOT NULL,
+                `month` INTEGER NOT NULL,
+                `salesTarget` REAL NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                `updatedAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE UNIQUE INDEX IF NOT EXISTS `index_pilot_monthly_targets_entrepriseId_year_month`
+            ON `pilot_monthly_targets` (`entrepriseId`, `year`, `month`)
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `pilot_imports` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `type` TEXT NOT NULL,
+                `filename` TEXT NOT NULL,
+                `importedRows` INTEGER NOT NULL,
+                `ignoredRows` INTEGER NOT NULL,
+                `createdAt` TEXT NOT NULL,
+                PRIMARY KEY(`id`)
+            )
+            """.trimIndent()
+        )
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_imports_entrepriseId` ON `pilot_imports` (`entrepriseId`)")
+    }
+}
+
+val MIGRATION_24_25 = object : Migration(24, 25) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `pilot_entries` ADD COLUMN `recurrenceMonths` INTEGER NOT NULL DEFAULT 0"
+        )
+        db.execSQL(
+            "UPDATE `pilot_entries` SET `recurrenceMonths` = 1 WHERE `recurring` = 1"
+        )
+    }
+}
+
+val MIGRATION_25_26 = object : Migration(25, 26) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "ALTER TABLE `pilot_categories` ADD COLUMN `colorIndex` INTEGER NOT NULL DEFAULT 0"
+        )
+        val cursor = db.query(
+            "SELECT `id`, `entrepriseId` FROM `pilot_categories` ORDER BY `entrepriseId`, `createdAt`, `id`"
+        )
+        val next = mutableMapOf<String, Int>()
+        cursor.use { rows ->
+            while (rows.moveToNext()) {
+                val id = rows.getString(0)
+                val entrepriseId = rows.getString(1)
+                val index = next.getOrDefault(entrepriseId, 0)
+                db.execSQL(
+                    "UPDATE `pilot_categories` SET `colorIndex` = ? WHERE `id` = ?",
+                    arrayOf(index, id)
+                )
+                next[entrepriseId] = index + 1
+            }
+        }
+    }
+}
+
+val MIGRATION_26_27 = object : Migration(26, 27) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            """
+            CREATE TABLE IF NOT EXISTS `pilot_entries_new` (
+                `id` TEXT NOT NULL,
+                `entrepriseId` TEXT NOT NULL,
+                `type` TEXT NOT NULL,
+                `date` TEXT NOT NULL,
+                `categoryId` TEXT,
+                `amount` REAL NOT NULL,
+                `note` TEXT NOT NULL DEFAULT '',
+                `recurring` INTEGER NOT NULL DEFAULT 0,
+                `importId` TEXT DEFAULT NULL,
+                `createdAt` TEXT NOT NULL,
+                `updatedAt` TEXT NOT NULL,
+                `recurrenceMonths` INTEGER NOT NULL DEFAULT 0,
+                `treasuryDate` TEXT,
+                `bankAccountId` TEXT,
+                `counterAccountId` TEXT,
+                PRIMARY KEY(`id`),
+                FOREIGN KEY(`categoryId`) REFERENCES `pilot_categories`(`id`) ON UPDATE NO ACTION ON DELETE RESTRICT
+            )
+            """.trimIndent()
+        )
+        db.execSQL(
+            """
+            INSERT INTO `pilot_entries_new` (
+                `id`, `entrepriseId`, `type`, `date`, `categoryId`, `amount`, `note`, `recurring`,
+                `importId`, `createdAt`, `updatedAt`, `recurrenceMonths`,
+                `treasuryDate`, `bankAccountId`, `counterAccountId`
+            )
+            SELECT
+                `id`, `entrepriseId`, `type`, `date`, `categoryId`, `amount`, `note`, `recurring`,
+                `importId`, `createdAt`, `updatedAt`, `recurrenceMonths`,
+                NULL, NULL, NULL
+            FROM `pilot_entries`
+            """.trimIndent()
+        )
+        db.execSQL("DROP TABLE `pilot_entries`")
+        db.execSQL("ALTER TABLE `pilot_entries_new` RENAME TO `pilot_entries`")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_entrepriseId` ON `pilot_entries` (`entrepriseId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_categoryId` ON `pilot_entries` (`categoryId`)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS `index_pilot_entries_importId` ON `pilot_entries` (`importId`)")
+    }
+}

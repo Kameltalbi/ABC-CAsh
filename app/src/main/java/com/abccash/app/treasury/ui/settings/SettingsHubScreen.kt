@@ -33,7 +33,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
-import com.abccash.app.treasury.ui.DrawerMenuIconButton
 
 object SettingsRoutes {
     const val HUB = "settings"
@@ -58,7 +57,6 @@ private data class SettingsHubSection(
 @Composable
 fun SettingsHubScreen(
     onNavigate: (String) -> Unit,
-    onOpenDrawer: () -> Unit = {},
     onLogout: () -> Unit = {}
 ) {
     val sections = listOf(
@@ -150,12 +148,11 @@ fun SettingsHubScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(Color.White)
-                .padding(horizontal = 8.dp, vertical = 12.dp),
+                .padding(horizontal = 16.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            DrawerMenuIconButton(onClick = onOpenDrawer)
             Text(
-                text = stringResource(R.string.settings),
+                text = stringResource(R.string.nav_plus),
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color(0xFF1A1A1A)

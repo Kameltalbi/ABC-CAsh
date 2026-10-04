@@ -39,12 +39,15 @@ import androidx.room.RoomDatabase
 import androidx.room.withTransaction
 import com.abccash.app.treasury.local.TreasuryDao
 import com.abccash.app.treasury.local.UserEntity
+import com.abccash.app.treasury.local.toDomain as pilotToDomain
+import com.abccash.app.treasury.local.toEntity as pilotToEntity
 import com.abccash.app.treasury.security.PasswordHasher
 import com.abccash.app.treasury.datastore.UserPreferences
 import com.abccash.app.treasury.export.TreasuryBackupData
 import com.abccash.app.treasury.export.TreasuryBackupJson
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -187,8 +190,12 @@ class TreasuryRepository(
         return null
     }
 
-    suspend fun deleteBankAccount(accountId: String) {
+    suspend fun deleteBankAccount(accountId: String): String? {
+        if (dao.countPilotEntriesForAccount(accountId) > 0) {
+            return TreasuryMessage.ACCOUNT_USED_BY_PILOTAGE
+        }
         dao.deleteBankAccountById(accountId)
+        return null
     }
 
     fun observeContacts(entrepriseId: String): Flow<List<Contact>> =
@@ -735,6 +742,12 @@ class TreasuryRepository(
         }
         val expenses = dao.getExpensesForBackup(entrepriseId).map { it.toDomain() }
         val users = dao.getUsersForBackup(entrepriseId).map { it.toDomain() }
+        val pilotCategories = dao.observePilotCategories(entrepriseId).first().map { it.pilotToDomain() }
+        val pilotEntries = dao.observePilotEntries(entrepriseId).first().map { it.pilotToDomain() }
+        val pilotTargets = dao.observePilotTargets(entrepriseId).first().map { it.pilotToDomain() }
+        val pilotImports = dao.getPilotImportsForBackup(entrepriseId).map { it.pilotToDomain() }
+        val bankAccounts = dao.getBankAccountsForBackup(entrepriseId).map { it.toDomain() }
+        val balanceCorrections = dao.observeBalanceCorrections(entrepriseId).first().map { it.toDomain() }
 
         val backup = TreasuryBackupData(
             version = TreasuryBackupJson.CURRENT_VERSION,
@@ -743,7 +756,13 @@ class TreasuryRepository(
             entrepriseNom = entreprise.nom,
             invoices = invoices,
             expenses = expenses,
-            users = users
+            users = users,
+            pilotCategories = pilotCategories,
+            pilotEntries = pilotEntries,
+            pilotTargets = pilotTargets,
+            pilotImports = pilotImports,
+            bankAccounts = bankAccounts,
+            balanceCorrections = balanceCorrections
         )
         return TreasuryBackupJson.toJson(backup)
     }
@@ -753,6 +772,9 @@ class TreasuryRepository(
             .getOrElse { return TreasuryMessage.backupFileInvalid(it.message.orEmpty()) }
 
         if (backup.entrepriseId != entrepriseId) {
+            return TreasuryMessage.BACKUP_WRONG_ENTREPRISE
+        }
+        if (TreasuryBackupJson.replacesPilotTables(backup.version) && !backupMatchesEntreprise(backup)) {
             return TreasuryMessage.BACKUP_WRONG_ENTREPRISE
         }
 
@@ -769,6 +791,10 @@ class TreasuryRepository(
         val owner = backup.users.firstOrNull { it.role == UserRole.ADMIN }
             ?: backup.users.firstOrNull()
             ?: return Result.failure(IllegalArgumentException("Sauvegarde sans utilisateur"))
+
+        if (TreasuryBackupJson.replacesPilotTables(backup.version) && !backupMatchesEntreprise(backup)) {
+            return Result.failure(IllegalArgumentException(TreasuryMessage.BACKUP_WRONG_ENTREPRISE))
+        }
 
         database.withTransaction {
             dao.upsertEntreprise(
@@ -791,6 +817,9 @@ class TreasuryRepository(
             backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
             backup.users.forEach { dao.upsertUser(it.toEntity()) }
             dao.deleteOrphanPayments()
+            if (TreasuryBackupJson.replacesPilotTables(backup.version)) {
+                replacePilotSnapshot(backup)
+            }
         }
         return Result.success(owner)
     }
@@ -813,8 +842,36 @@ class TreasuryRepository(
             backup.expenses.forEach { dao.upsertExpense(it.toEntity()) }
             backup.users.forEach { dao.upsertUser(it.toEntity()) }
             dao.deleteOrphanPayments()
+            if (TreasuryBackupJson.replacesPilotTables(backup.version)) {
+                replacePilotSnapshot(backup)
+            }
         }
         return null
+    }
+
+    private suspend fun replacePilotSnapshot(backup: TreasuryBackupData) {
+        dao.deletePilotEntriesForEntreprise(backup.entrepriseId)
+        dao.deletePilotCategoriesForEntreprise(backup.entrepriseId)
+        dao.deletePilotTargetsForEntreprise(backup.entrepriseId)
+        dao.deletePilotImportsForEntreprise(backup.entrepriseId)
+        dao.deleteBankAccountsForEntreprise(backup.entrepriseId)
+        dao.deleteCorrectionsForEntreprise(backup.entrepriseId)
+        backup.pilotCategories.forEach { dao.upsertPilotCategory(it.pilotToEntity()) }
+        backup.pilotEntries.forEach { dao.upsertPilotEntry(it.pilotToEntity()) }
+        backup.pilotTargets.forEach { dao.upsertPilotTarget(it.pilotToEntity()) }
+        backup.pilotImports.forEach { dao.upsertPilotImport(it.pilotToEntity()) }
+        backup.bankAccounts.forEach { dao.upsertBankAccount(it.toEntity()) }
+        backup.balanceCorrections.forEach { dao.upsertBalanceCorrection(it.toEntity()) }
+    }
+
+    private fun backupMatchesEntreprise(backup: TreasuryBackupData): Boolean {
+        val ids = backup.pilotCategories.map { it.entrepriseId } +
+            backup.pilotEntries.map { it.entrepriseId } +
+            backup.pilotTargets.map { it.entrepriseId } +
+            backup.pilotImports.map { it.entrepriseId } +
+            backup.bankAccounts.map { it.entrepriseId } +
+            backup.balanceCorrections.map { it.entrepriseId }
+        return ids.all { it == backup.entrepriseId }
     }
 
     // Subscription management
@@ -884,6 +941,10 @@ class TreasuryRepository(
                 dao.deleteBankAccountsForEntreprise(entrepriseId)
                 dao.deleteCorrectionsForEntreprise(entrepriseId)
                 dao.deleteContactsForEntreprise(entrepriseId)
+                dao.deletePilotEntriesForEntreprise(entrepriseId)
+                dao.deletePilotImportsForEntreprise(entrepriseId)
+                dao.deletePilotTargetsForEntreprise(entrepriseId)
+                dao.deletePilotCategoriesForEntreprise(entrepriseId)
                 dao.deleteUsersForEntreprise(entrepriseId)
                 dao.deleteEntrepriseById(entrepriseId)
             }

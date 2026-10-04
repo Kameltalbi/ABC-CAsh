@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -284,4 +285,86 @@ interface TreasuryDao {
 
     @Query("DELETE FROM balance_corrections WHERE entrepriseId = :entrepriseId")
     suspend fun deleteCorrectionsForEntreprise(entrepriseId: String)
+
+    @Query(
+        """
+        SELECT * FROM pilot_categories
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY type ASC, name COLLATE NOCASE ASC
+        """
+    )
+    fun observePilotCategories(entrepriseId: String): Flow<List<PilotCategoryEntity>>
+
+    @Query(
+        """
+        SELECT * FROM pilot_entries
+        WHERE entrepriseId = :entrepriseId
+        ORDER BY date DESC, createdAt DESC
+        """
+    )
+    fun observePilotEntries(entrepriseId: String): Flow<List<PilotEntryEntity>>
+
+    @Query(
+        """
+        SELECT * FROM pilot_monthly_targets
+        WHERE entrepriseId = :entrepriseId
+        """
+    )
+    fun observePilotTargets(entrepriseId: String): Flow<List<PilotMonthlyTargetEntity>>
+
+    @Upsert
+    suspend fun upsertPilotCategory(category: PilotCategoryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPilotEntry(entry: PilotEntryEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPilotEntries(entries: List<PilotEntryEntity>)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPilotTarget(target: PilotMonthlyTargetEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertPilotImport(record: PilotImportEntity)
+
+    @Query("DELETE FROM pilot_entries WHERE id = :id AND entrepriseId = :entrepriseId")
+    suspend fun deletePilotEntry(id: String, entrepriseId: String)
+
+    @Query("DELETE FROM pilot_entries WHERE entrepriseId = :entrepriseId AND id IN (:ids)")
+    suspend fun deletePilotEntries(ids: List<String>, entrepriseId: String)
+
+    @Query("DELETE FROM pilot_categories WHERE id = :id AND entrepriseId = :entrepriseId")
+    suspend fun deletePilotCategory(id: String, entrepriseId: String)
+
+    @Query("DELETE FROM pilot_monthly_targets WHERE id = :id AND entrepriseId = :entrepriseId")
+    suspend fun deletePilotTarget(id: String, entrepriseId: String)
+
+    @Query("SELECT COUNT(*) FROM pilot_entries WHERE categoryId = :categoryId AND entrepriseId = :entrepriseId")
+    suspend fun countPilotEntriesForCategory(categoryId: String, entrepriseId: String): Int
+
+    @Query(
+        """
+        SELECT COUNT(*) FROM pilot_entries
+        WHERE bankAccountId = :accountId OR counterAccountId = :accountId
+        """
+    )
+    suspend fun countPilotEntriesForAccount(accountId: String): Int
+
+    @Query("SELECT * FROM pilot_imports WHERE entrepriseId = :entrepriseId ORDER BY createdAt ASC")
+    suspend fun getPilotImportsForBackup(entrepriseId: String): List<PilotImportEntity>
+
+    @Query("SELECT COUNT(*) FROM pilot_imports WHERE entrepriseId = :entrepriseId AND filename = :filename")
+    suspend fun countPilotImportsNamed(entrepriseId: String, filename: String): Int
+
+    @Query("DELETE FROM pilot_entries WHERE entrepriseId = :entrepriseId")
+    suspend fun deletePilotEntriesForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM pilot_categories WHERE entrepriseId = :entrepriseId")
+    suspend fun deletePilotCategoriesForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM pilot_monthly_targets WHERE entrepriseId = :entrepriseId")
+    suspend fun deletePilotTargetsForEntreprise(entrepriseId: String)
+
+    @Query("DELETE FROM pilot_imports WHERE entrepriseId = :entrepriseId")
+    suspend fun deletePilotImportsForEntreprise(entrepriseId: String)
 }

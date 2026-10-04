@@ -256,9 +256,9 @@ class TreasuryViewModel(
 
     fun deleteBankAccount(accountId: String, onResult: (String?) -> Unit) {
         viewModelScope.launch {
-            repository.deleteBankAccount(accountId)
-            onResult(null)
-            scheduleGoogleBackup()
+            val error = repository.deleteBankAccount(accountId)
+            onResult(error)
+            if (error == null) scheduleGoogleBackup()
         }
     }
 
