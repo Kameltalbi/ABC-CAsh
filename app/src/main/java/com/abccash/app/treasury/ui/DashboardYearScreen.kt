@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,8 +24,11 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Savings
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.LocalOffer
+import androidx.compose.material.icons.filled.ShowChart
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -67,18 +72,22 @@ import java.time.LocalDate
 import java.util.Locale
 import kotlin.math.abs
 
-private val PageBg = Color(0xFFF4F6FA)
+private val PageBg = Color(0xFFF3F6FB)
 private val Ink = Color(0xFF0F2744)
-private val Muted = Color(0xFF6B7A90)
+private val Muted = Color(0xFF7A889C)
 private val Blue = Color(0xFF2563EB)
 private val BlueSoft = Color(0xFFE8F0FE)
-private val Green = Color(0xFF15803D)
-private val GreenSoft = Color(0xFFE7F7ED)
-private val Orange = Color(0xFFC2410C)
+private val BlueBubble = Color(0xFF3B82F6)
+private val Green = Color(0xFF16A34A)
+private val GreenSoft = Color(0xFFE8F8EE)
+private val Red = Color(0xFFDC2626)
+private val RedSoft = Color(0xFFFEECEC)
+private val Orange = Color(0xFFEA580C)
 private val OrangeSoft = Color(0xFFFFF1E8)
 private val PriorGray = Color(0xFF94A3B8)
-private val Grid = Color(0xFFE6EBF2)
-private val CardShape = RoundedCornerShape(18.dp)
+private val Grid = Color(0xFFE8EEF5)
+private val ChipBg = Color(0xFFF1F4F8)
+private val CardShape = RoundedCornerShape(20.dp)
 private val French = Locale.FRENCH
 
 @Composable
@@ -98,9 +107,6 @@ fun DashboardYearScreen(
             year, today, entrepriseId, accounts, invoices, expenses, pilotEntries, corrections
         )
     }
-    val insight = remember(snapshot) {
-        treasuryInsight(snapshot.selected, snapshot.previousYear, year - 1)
-    }
 
     Scaffold(containerColor = PageBg) { padding ->
         Column(
@@ -108,279 +114,439 @@ fun DashboardYearScreen(
                 .fillMaxSize()
                 .padding(padding)
                 .background(PageBg)
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 16.dp)
+                .padding(top = 8.dp, bottom = 20.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = stringResource(R.string.nav_home),
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = Ink
-                )
-            }
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 12.dp)
-                    .padding(bottom = 16.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                YearSwitcher(
-                    year = year,
-                    onPrevious = { year -= 1 },
-                    onNext = { year += 1 }
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        KpiCard(
-                            label = stringResource(R.string.dash_sales),
-                            kpi = snapshot.sales,
-                            year = year,
-                            formatAmount = formatAmount,
-                            icon = Icons.Filled.Savings,
-                            iconTint = Blue,
-                            iconBg = BlueSoft,
-                            invertChangeColor = false,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            label = stringResource(R.string.dash_expenses),
-                            kpi = snapshot.expenses,
-                            year = year,
-                            formatAmount = formatAmount,
-                            icon = Icons.AutoMirrored.Filled.TrendingDown,
-                            iconTint = Orange,
-                            iconBg = OrangeSoft,
-                            invertChangeColor = true,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        KpiCard(
-                            label = stringResource(R.string.dash_result),
-                            kpi = snapshot.result,
-                            year = year,
-                            formatAmount = formatAmount,
-                            icon = Icons.AutoMirrored.Filled.TrendingUp,
-                            iconTint = Green,
-                            iconBg = GreenSoft,
-                            invertChangeColor = false,
-                            modifier = Modifier.weight(1f)
-                        )
-                        KpiCard(
-                            label = stringResource(R.string.dash_treasury),
-                            kpi = snapshot.treasury,
-                            year = year,
-                            formatAmount = formatAmount,
-                            icon = Icons.Filled.AccountBalanceWallet,
-                            iconTint = Blue,
-                            iconBg = BlueSoft,
-                            invertChangeColor = false,
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-                }
-                ChartCard(
-                    selectedYear = year,
-                    selected = snapshot.selected,
-                    previous = snapshot.previousYear
-                )
-                if (insight != null) {
-                    InsightBar(insight)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun YearSwitcher(year: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
-    Card(
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        shape = CardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onPrevious) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowLeft,
-                    contentDescription = stringResource(R.string.dash_previous_year),
-                    tint = Muted
-                )
-            }
-            Text(
-                text = year.toString(),
-                modifier = Modifier.weight(1f),
-                textAlign = TextAlign.Center,
-                fontWeight = FontWeight.Bold,
-                fontSize = 20.sp,
-                color = Ink
+            DashboardHeader(
+                year = year,
+                onPrevious = { year -= 1 },
+                onNext = { year += 1 }
             )
-            IconButton(onClick = onNext) {
-                Icon(
-                    Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                    contentDescription = stringResource(R.string.dash_next_year),
-                    tint = Muted
-                )
-            }
+            TreasuryHeroCard(
+                amount = formatAmount(snapshot.treasury.amount),
+                changePercent = snapshot.treasury.changePercent,
+                previousYear = year - 1,
+                curve = snapshot.selected
+            )
+            PerformanceCard(
+                year = year,
+                sales = snapshot.sales,
+                expenses = snapshot.expenses,
+                result = snapshot.result,
+                formatAmount = formatAmount
+            )
+            ChartCard(
+                selectedYear = year,
+                selected = snapshot.selected,
+                previous = snapshot.previousYear
+            )
         }
     }
 }
 
 @Composable
-private fun KpiCard(
-    label: String,
-    kpi: DashboardKpi,
-    year: Int,
-    formatAmount: (Double) -> String,
-    icon: ImageVector,
-    iconTint: Color,
-    iconBg: Color,
-    invertChangeColor: Boolean,
-    modifier: Modifier = Modifier
+private fun DashboardHeader(year: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = stringResource(R.string.nav_home),
+                fontWeight = FontWeight.Bold,
+                fontSize = 28.sp,
+                color = Ink,
+                lineHeight = 32.sp
+            )
+            Text(
+                text = stringResource(R.string.dash_home_subtitle),
+                color = Muted,
+                fontSize = 13.sp,
+                modifier = Modifier.padding(top = 2.dp)
+            )
+        }
+        CompactYearSwitcher(year = year, onPrevious = onPrevious, onNext = onNext)
+    }
+}
+
+@Composable
+private fun CompactYearSwitcher(year: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .clip(RoundedCornerShape(12.dp))
+            .background(Color.White)
+            .padding(horizontal = 2.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrevious, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                contentDescription = stringResource(R.string.dash_previous_year),
+                tint = Muted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Text(
+            text = year.toString(),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 15.sp,
+            color = Ink
+        )
+        IconButton(onClick = onNext, modifier = Modifier.size(32.dp)) {
+            Icon(
+                Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                contentDescription = stringResource(R.string.dash_next_year),
+                tint = Muted,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+    }
+}
+
+@Composable
+private fun TreasuryHeroCard(
+    amount: String,
+    changePercent: Double?,
+    previousYear: Int,
+    curve: List<DashboardTreasuryPoint>
 ) {
-    val change = kpi.changePercent
-    val good = when {
-        change == null -> null
-        invertChangeColor -> change < 0
-        else -> change > 0
-    }
-    val changeColor = when (good) {
-        true -> Green
-        false -> Orange
-        null -> Muted
-    }
     Card(
-        modifier = modifier,
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = CardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
+        Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(32.dp)
-                        .clip(RoundedCornerShape(10.dp))
-                        .background(iconBg),
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(BlueSoft),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(17.dp))
+                    Icon(
+                        Icons.Filled.AccountBalanceWallet,
+                        contentDescription = null,
+                        tint = Blue,
+                        modifier = Modifier.size(15.dp)
+                    )
                 }
                 Text(
-                    text = label,
+                    text = stringResource(R.string.dash_treasury),
                     modifier = Modifier.padding(start = 8.dp),
-                    color = Muted,
-                    fontSize = 11.sp,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    lineHeight = 13.sp
+                    color = Ink,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Icon(
+                    Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = Muted.copy(alpha = 0.55f),
+                    modifier = Modifier
+                        .padding(start = 4.dp)
+                        .size(14.dp)
                 )
             }
-            Text(
-                text = formatAmount(kpi.amount),
-                modifier = Modifier.padding(top = 10.dp),
-                color = Ink,
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 10.dp),
+                verticalAlignment = Alignment.Bottom
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = amount,
+                        color = Ink,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 34.sp,
+                        lineHeight = 38.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    if (changePercent != null) {
+                        VariationBadge(
+                            change = changePercent,
+                            label = stringResource(R.string.dash_change_vs_year, changePercent, previousYear),
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .width(132.dp)
+                        .height(78.dp)
+                        .padding(start = 8.dp)
+                ) {
+                    HeroSparkline(
+                        points = curve,
+                        label = amount,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun VariationBadge(
+    change: Double,
+    label: String,
+    modifier: Modifier = Modifier,
+    positiveIsGood: Boolean = true
+) {
+    val positive = change > 0
+    val good = if (positiveIsGood) positive else !positive
+    val tint = when {
+        change == 0.0 -> Muted
+        good -> Green
+        else -> Red
+    }
+    val bg = when {
+        change == 0.0 -> ChipBg
+        good -> GreenSoft
+        else -> RedSoft
+    }
+    val icon = when {
+        change > 0 -> Icons.AutoMirrored.Filled.TrendingUp
+        change < 0 -> Icons.AutoMirrored.Filled.TrendingDown
+        else -> Icons.AutoMirrored.Filled.TrendingUp
+    }
+    Row(
+        modifier = modifier
+            .clip(RoundedCornerShape(999.dp))
+            .background(bg)
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp))
+        Text(
+            text = label,
+            modifier = Modifier.padding(start = 4.dp),
+            color = tint,
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 12.sp,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun HeroSparkline(
+    points: List<DashboardTreasuryPoint>,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Box(modifier = modifier) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxWidth()
+                .fillMaxHeight()
+                .padding(top = 18.dp, bottom = 4.dp)
+        ) {
+            if (points.size < 2) return@Canvas
+            val values = points.map { it.closing }
+            val minV = (values.minOrNull() ?: 0.0) - 1.0
+            val maxV = (values.maxOrNull() ?: 0.0) + 1.0
+            val span = (maxV - minV).coerceAtLeast(1.0)
+            val padH = 4.dp.toPx()
+            fun xAt(i: Int) = padH + (size.width - padH * 2f) * i / (points.lastIndex).toFloat()
+            fun yAt(v: Double) = size.height * (1f - ((v - minV) / span).toFloat().coerceIn(0.08f, 0.92f))
+            val path = Path().apply {
+                points.forEachIndexed { i, p ->
+                    val x = xAt(i)
+                    val y = yAt(p.closing)
+                    if (i == 0) moveTo(x, y) else lineTo(x, y)
+                }
+            }
+            val fill = Path().apply {
+                addPath(path)
+                lineTo(xAt(points.lastIndex), size.height)
+                lineTo(xAt(0), size.height)
+                close()
+            }
+            drawPath(
+                fill,
+                brush = Brush.verticalGradient(
+                    listOf(Blue.copy(alpha = 0.22f), Blue.copy(alpha = 0.02f))
+                )
             )
-            Text(
-                text = changeLabel(change, year - 1),
-                modifier = Modifier.padding(top = 4.dp),
-                color = changeColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+            drawPath(
+                path,
+                color = Blue,
+                style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+            )
+            val end = Offset(xAt(points.lastIndex), yAt(points.last().closing))
+            drawCircle(Color.White, radius = 5.dp.toPx(), center = end)
+            drawCircle(Blue, radius = 3.6.dp.toPx(), center = end)
+        }
+        Text(
+            text = label,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .clip(RoundedCornerShape(8.dp))
+                .background(BlueBubble)
+                .padding(horizontal = 6.dp, vertical = 3.dp),
+            color = Color.White,
+            fontSize = 9.sp,
+            fontWeight = FontWeight.SemiBold,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun PerformanceCard(
+    year: Int,
+    sales: DashboardKpi,
+    expenses: DashboardKpi,
+    result: DashboardKpi,
+    formatAmount: (Double) -> String
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(BlueSoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.BarChart, null, tint = Blue, modifier = Modifier.size(14.dp))
+                }
+                Text(
+                    text = stringResource(R.string.dash_performance),
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .weight(1f),
+                    color = Ink,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+                Text(
+                    text = stringResource(R.string.dash_year_vs_year, year, year - 1),
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(ChipBg)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    color = Muted,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+            }
+            Spacer(Modifier.height(10.dp))
+            PerformanceRow(
+                label = stringResource(R.string.dash_sales_short),
+                amount = formatAmount(sales.amount),
+                change = sales.changePercent,
+                icon = Icons.Filled.LocalOffer,
+                iconTint = Blue,
+                iconBg = BlueSoft,
+                resultStyle = false
+            )
+            PerformanceDivider()
+            PerformanceRow(
+                label = stringResource(R.string.dash_expenses_short),
+                amount = formatAmount(expenses.amount),
+                change = expenses.changePercent,
+                icon = Icons.AutoMirrored.Filled.TrendingDown,
+                iconTint = Orange,
+                iconBg = OrangeSoft,
+                resultStyle = false
+            )
+            PerformanceDivider()
+            PerformanceRow(
+                label = stringResource(R.string.dash_result_short),
+                amount = formatAmount(result.amount),
+                change = result.changePercent,
+                icon = Icons.Filled.BarChart,
+                iconTint = if (result.amount >= 0) Green else Red,
+                iconBg = if (result.amount >= 0) GreenSoft else RedSoft,
+                resultStyle = true,
+                amountColor = if (result.amount >= 0) Green else Red
             )
         }
     }
 }
 
 @Composable
-private fun changeLabel(change: Double?, previousYear: Int): String {
-    if (change == null) return stringResource(R.string.dash_no_baseline)
-    val res = when {
-        change > 0 -> R.string.dash_change_up
-        change < 0 -> R.string.dash_change_down
-        else -> R.string.dash_change_flat
-    }
-    return stringResource(res, change, previousYear)
-}
-
-private data class TreasuryInsight(val above: Boolean, val previousYear: Int, val sinceMonth: String)
-
-private fun treasuryInsight(
-    selected: List<DashboardTreasuryPoint>,
-    previous: List<DashboardTreasuryPoint>,
-    previousYear: Int
-): TreasuryInsight? {
-    if (selected.size != previous.size || selected.isEmpty()) return null
-    val pairs = selected.zip(previous)
-    val firstAbove = pairs.indexOfFirst { (now, then) -> now.closing > then.closing }
-    val firstBelow = pairs.indexOfFirst { (now, then) -> now.closing < then.closing }
-    return when {
-        firstAbove >= 0 && pairs.drop(firstAbove).all { (now, then) -> now.closing >= then.closing } ->
-            TreasuryInsight(true, previousYear, AppLocale.shortMonth(selected[firstAbove].month.atDay(1), French))
-        firstBelow >= 0 && pairs.drop(firstBelow).all { (now, then) -> now.closing <= then.closing } ->
-            TreasuryInsight(false, previousYear, AppLocale.shortMonth(selected[firstBelow].month.atDay(1), French))
-        else -> null
-    }
+private fun PerformanceDivider() {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .height(1.dp)
+            .background(Grid)
+    )
 }
 
 @Composable
-private fun InsightBar(insight: TreasuryInsight) {
-    val text = if (insight.above) {
-        stringResource(R.string.dash_insight_above, insight.previousYear, insight.sinceMonth)
-    } else {
-        stringResource(R.string.dash_insight_below, insight.previousYear, insight.sinceMonth)
-    }
-    val bg = if (insight.above) GreenSoft else OrangeSoft
-    val tint = if (insight.above) Green else Orange
-    val icon = if (insight.above) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown
-    Card(
-        colors = CardDefaults.cardColors(containerColor = bg),
-        shape = CardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+private fun PerformanceRow(
+    label: String,
+    amount: String,
+    change: Double?,
+    icon: ImageVector,
+    iconTint: Color,
+    iconBg: Color,
+    resultStyle: Boolean,
+    positiveIsGood: Boolean = true,
+    amountColor: Color = Ink
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .size(28.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .background(iconBg),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                modifier = Modifier
-                    .size(28.dp)
-                    .clip(CircleShape)
-                    .background(Color.White.copy(alpha = 0.7f)),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
+            Icon(icon, null, tint = iconTint, modifier = Modifier.size(14.dp))
+        }
+        Text(
+            text = label,
+            modifier = Modifier
+                .padding(start = 10.dp)
+                .width(78.dp),
+            color = if (resultStyle) Ink else Muted,
+            fontWeight = if (resultStyle) FontWeight.SemiBold else FontWeight.Medium,
+            fontSize = 13.sp,
+            maxLines = 1
+        )
+        Text(
+            text = amount,
+            modifier = Modifier.weight(1f),
+            color = amountColor,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
+            textAlign = TextAlign.End,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+        Box(
+            modifier = Modifier.width(78.dp),
+            contentAlignment = Alignment.CenterEnd
+        ) {
+            if (change != null) {
+                VariationBadge(
+                    change = change,
+                    label = stringResource(R.string.dash_change_short, change),
+                    positiveIsGood = positiveIsGood
+                )
             }
-            Text(
-                text = text,
-                modifier = Modifier
-                    .padding(horizontal = 10.dp)
-                    .weight(1f),
-                color = tint,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 13.sp,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis
-            )
-            Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = tint.copy(alpha = 0.7f), modifier = Modifier.size(18.dp))
         }
     }
 }
@@ -397,15 +563,54 @@ private fun ChartCard(
         shape = CardShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 12.dp)) {
-            Text(
-                text = stringResource(R.string.dash_chart),
-                color = Ink,
-                fontWeight = FontWeight.Bold,
-                fontSize = 15.sp
-            )
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
             Row(
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(BlueSoft),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Filled.ShowChart, null, tint = Blue, modifier = Modifier.size(14.dp))
+                }
+                Text(
+                    text = stringResource(R.string.dash_chart_vs, selectedYear, selectedYear - 1),
+                    modifier = Modifier
+                        .padding(start = 8.dp)
+                        .weight(1f),
+                    color = Ink,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Row(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(999.dp))
+                        .background(ChipBg)
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.dash_monthly),
+                        color = Muted,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = null,
+                        tint = Muted,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+            }
+            Row(
+                modifier = Modifier.padding(top = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(14.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -418,24 +623,24 @@ private fun ChartCard(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp)
+                    .padding(top = 12.dp)
             ) {
                 YAxisLabels(
                     values = selected.map { it.closing } + previous.map { it.closing },
                     modifier = Modifier
-                        .width(44.dp)
-                        .height(168.dp)
+                        .width(40.dp)
+                        .height(240.dp)
                         .padding(end = 4.dp)
                 )
-                Column(Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f)) {
                     TreasuryYearChart(
                         selected = selected,
                         previous = previous,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(168.dp)
+                            .height(240.dp)
                     )
-                    Row(Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                         selected.forEach { point ->
                             Text(
                                 text = AppLocale.shortMonth(point.month.atDay(1), French)
@@ -532,7 +737,6 @@ private fun TreasuryYearChart(
         }
         val rawMin = values.minOrNull() ?: 0.0
         val rawMax = values.maxOrNull() ?: 0.0
-        // Toujours laisser de la marge : une courbe plate reste au milieu, jamais collée au bord.
         val pad = maxOf(
             (rawMax - rawMin) * 0.18,
             maxOf(abs(rawMax), abs(rawMin), 1.0) * 0.15,
@@ -564,7 +768,7 @@ private fun TreasuryYearChart(
                 color = PriorGray,
                 xAt = ::xAt,
                 yAt = ::yAt,
-                stroke = 2.6.dp.toPx(),
+                stroke = 2.4.dp.toPx(),
                 fillUnder = false
             )
         }
@@ -574,7 +778,7 @@ private fun TreasuryYearChart(
                 color = Blue,
                 xAt = ::xAt,
                 yAt = ::yAt,
-                stroke = 3.4.dp.toPx(),
+                stroke = 3.2.dp.toPx(),
                 fillUnder = true
             )
         } else if (selected.size == 1) {
@@ -593,7 +797,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTreasurySeries(
 ) {
     if (points.size < 2) return
 
-    // 1) Toujours tracer toute la série en continu (évite les trous du découpage prévision).
     val fullPath = Path().apply {
         points.forEachIndexed { index, point ->
             val x = xAt(index)
@@ -622,7 +825,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTreasurySeries(
         style = Stroke(width = stroke * 0.7f, cap = StrokeCap.Round, join = StrokeJoin.Round)
     )
 
-    // 2) Segment réalisé (plein) + segment prévision (pointillé), sans jamais tout masquer.
     val firstForecast = points.indexOfFirst { it.forecast }
     val realizedEnd = when {
         firstForecast < 0 -> points.lastIndex
@@ -663,8 +865,6 @@ private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawTreasurySeries(
                 pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 7.dp.toPx()))
             )
         )
-    } else if (realizedEnd == 0 && points.size >= 2 && points[0].forecast) {
-        // Année entièrement en prévision : la ligne pleine légère + pointillés ci-dessus suffisent.
     }
 
     points.forEachIndexed { index, point ->
