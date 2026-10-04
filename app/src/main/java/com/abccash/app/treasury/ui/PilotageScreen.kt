@@ -16,26 +16,33 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -55,6 +62,8 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -106,7 +115,8 @@ private val importMimeTypes = arrayOf(
 @Composable
 fun PilotageScreen(
     viewModel: PilotageViewModel,
-    accounts: List<BankAccount>
+    accounts: List<BankAccount>,
+    onOpenAccounts: () -> Unit = {}
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val formatMoney = rememberFormatMoney()
@@ -205,9 +215,26 @@ fun PilotageScreen(
     }
     val ownAccounts = accounts.filter { it.entrepriseId == state.entrepriseId }
 
+    var showAddSheet by remember { mutableStateOf(false) }
+    val addSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
     Scaffold(
         containerColor = Color(0xFFF5F7FB),
-        snackbarHost = { SnackbarHost(snackbar) }
+        snackbarHost = { SnackbarHost(snackbar) },
+        floatingActionButton = {
+            FloatingActionButton(
+                onClick = { showAddSheet = true },
+                containerColor = Color(0xFF2563EB),
+                contentColor = Color.White,
+                shape = CircleShape,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Icon(
+                    Icons.Filled.Add,
+                    contentDescription = stringResource(R.string.pilot_fab_add)
+                )
+            }
+        }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -218,15 +245,15 @@ fun PilotageScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 8.dp, top = 4.dp),
+                    .padding(start = 16.dp, end = 4.dp, top = 2.dp, bottom = 2.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = stringResource(R.string.nav_pilotage),
                     modifier = Modifier.weight(1f),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 22.sp,
-                    color = Color(0xFF1E293B)
+                    fontSize = 24.sp,
+                    color = Color(0xFF0F172A)
                 )
                 IconButton(onClick = { showImportKind = true }) {
                     Icon(
@@ -236,30 +263,51 @@ fun PilotageScreen(
                     )
                 }
                 TextButton(onClick = { showCategories = true }) {
-                    Text(stringResource(R.string.pilot_categories), color = Color(0xFF2563EB), fontWeight = FontWeight.SemiBold)
+                    Text(
+                        stringResource(R.string.pilot_categories),
+                        color = Color(0xFF2563EB),
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 14.sp
+                    )
                 }
             }
             Column(
                 modifier = Modifier
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)
+                    .padding(horizontal = 16.dp)
+                    .padding(top = 4.dp, bottom = 72.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
+                if (ownAccounts.isEmpty()) {
+                    PilotSetupBanner(
+                        title = stringResource(R.string.pilot_setup_account_title),
+                        body = stringResource(R.string.pilot_setup_account_body),
+                        actionLabel = stringResource(R.string.dash_setup_account_cta),
+                        onAction = onOpenAccounts
+                    )
+                } else if (sales.isEmpty() && charges.isEmpty() && movements.isEmpty()) {
+                    PilotSetupBanner(
+                        title = stringResource(R.string.pilot_setup_activity_title),
+                        body = stringResource(R.string.pilot_setup_activity_body),
+                        actionLabel = stringResource(R.string.pilot_fab_add),
+                        onAction = { showAddSheet = true }
+                    )
+                }
                 if (recurring.isNotEmpty()) {
                     Card(
                         colors = CardDefaults.cardColors(containerColor = Color.White),
-                        shape = RoundedCornerShape(16.dp)
+                        shape = RoundedCornerShape(14.dp)
                     ) {
                         Row(
-                            Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                            Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
                                 stringResource(R.string.pilot_recurring_prompt, recurring.size),
                                 modifier = Modifier.weight(1f),
                                 color = Color(0xFF1E293B),
-                                fontSize = 13.sp
+                                fontSize = 12.sp
                             )
                             TextButton(onClick = { showRecurringConfirm = true }) {
                                 Text(stringResource(R.string.confirm))
@@ -296,12 +344,58 @@ fun PilotageScreen(
                     clearSelectionTick = clearExpenseSelectionTick
                 )
             }
-            PilotageActionButtons(
-                onAddSale = { editor = PilotEditorRequest(PilotEntryType.SALE, null) },
-                onAddExpense = { editor = PilotEditorRequest(PilotEntryType.EXPENSE, null) },
-                onAddOther = { otherKind = true },
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
-            )
+        }
+    }
+
+    if (showAddSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showAddSheet = false },
+            sheetState = addSheetState,
+            containerColor = Color.White
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Text(
+                    text = stringResource(R.string.pilot_fab_add),
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = Color(0xFF0F172A),
+                    modifier = Modifier.padding(bottom = 4.dp)
+                )
+                PilotAddChoiceRow(
+                    icon = Icons.Filled.BarChart,
+                    tint = Color(0xFF2563EB),
+                    label = stringResource(R.string.pilot_btn_sale),
+                    onClick = {
+                        showAddSheet = false
+                        editor = PilotEditorRequest(PilotEntryType.SALE, null)
+                    }
+                )
+                PilotAddChoiceRow(
+                    icon = Icons.Filled.AccountBalanceWallet,
+                    tint = Color(0xFFF97316),
+                    label = stringResource(R.string.pilot_btn_expense),
+                    onClick = {
+                        showAddSheet = false
+                        editor = PilotEditorRequest(PilotEntryType.EXPENSE, null)
+                    }
+                )
+                PilotAddChoiceRow(
+                    icon = Icons.Filled.SwapHoriz,
+                    tint = Color(0xFF0369A1),
+                    label = stringResource(R.string.pilot_btn_other),
+                    onClick = {
+                        showAddSheet = false
+                        otherKind = true
+                    }
+                )
+            }
         }
     }
 
@@ -1206,6 +1300,77 @@ private fun OptionalDateField(
         }
     } else {
         TreasuryDateField(label = label, date = date, onDateChange = onDateChange)
+    }
+}
+
+@Composable
+private fun PilotSetupBanner(
+    title: String,
+    body: String,
+    actionLabel: String,
+    onAction: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(14.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(
+                text = title,
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
+                color = Color(0xFF0F172A)
+            )
+            Text(
+                text = body,
+                color = Color(0xFF64748B),
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+            )
+            Button(
+                onClick = onAction,
+                shape = RoundedCornerShape(10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2563EB))
+            ) {
+                Text(actionLabel, fontWeight = FontWeight.SemiBold, fontSize = 13.sp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun PilotAddChoiceRow(
+    icon: ImageVector,
+    tint: Color,
+    label: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .background(tint.copy(alpha = 0.08f))
+            .padding(horizontal = 14.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(10.dp))
+                .background(Color.White),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
+        Text(
+            text = label,
+            modifier = Modifier.padding(start = 12.dp),
+            fontWeight = FontWeight.SemiBold,
+            fontSize = 16.sp,
+            color = Color(0xFF0F172A)
+        )
     }
 }
 

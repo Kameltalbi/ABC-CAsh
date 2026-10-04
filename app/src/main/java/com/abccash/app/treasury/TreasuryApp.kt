@@ -769,7 +769,13 @@ private fun MainAppScaffold(
                         invoices = uiState.invoices,
                         expenses = uiState.expenses,
                         pilotEntries = pilotState.entries,
-                        corrections = corrections
+                        corrections = corrections,
+                        onOpenAccounts = {
+                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
+                        },
+                        onOpenPilotage = {
+                            navigateToMainTab(Screen.Pilotage.route)
+                        }
                     )
                 }
                 Screen.Subscription.route -> {
@@ -801,7 +807,10 @@ private fun MainAppScaffold(
                 Screen.Pilotage.route -> {
                     PilotageScreen(
                         viewModel = pilotageViewModel,
-                        accounts = uiState.bankAccounts
+                        accounts = uiState.bankAccounts,
+                        onOpenAccounts = {
+                            navController.navigate(SettingsRoutes.OPTIONS_BANK)
+                        }
                     )
                 }
                 Screen.Settings.route -> {

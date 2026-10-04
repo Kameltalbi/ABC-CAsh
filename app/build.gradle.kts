@@ -10,10 +10,17 @@ plugins {
 val localProperties = Properties().apply {
     val file = rootProject.file("local.properties")
     if (file.exists()) file.inputStream().use(::load)
+    // Upload key Play : secrets hors dépôt (~/.abc-cash/keys/credentials.local)
+    val uploadCreds = file("${System.getProperty("user.home")}/.abc-cash/keys/credentials.local")
+    if (uploadCreds.exists()) uploadCreds.inputStream().use(::load)
 }
 
 fun secret(name: String): String? =
     localProperties.getProperty(name) ?: providers.gradleProperty(name).orNull ?: System.getenv(name)
+
+/** Clé d'importation Play (ABC_CASH_UPLOAD_*), sinon legacy ABC_CASH_RELEASE_*. */
+fun uploadOrReleaseSecret(uploadName: String, releaseName: String): String? =
+    secret(uploadName) ?: secret(releaseName)
 
 android {
     namespace = "com.abccash.app"
@@ -37,10 +44,23 @@ android {
 
     signingConfigs {
         create("release") {
-            storeFile = secret("ABC_CASH_RELEASE_STORE_FILE")?.let { file(it) }
-            storePassword = secret("ABC_CASH_RELEASE_STORE_PASSWORD")
-            keyAlias = secret("ABC_CASH_RELEASE_KEY_ALIAS")
-            keyPassword = secret("ABC_CASH_RELEASE_KEY_PASSWORD")
+            // Signature upload Google Play uniquement (pas la clé de signature app gérée par Play).
+            storeFile = uploadOrReleaseSecret(
+                "ABC_CASH_UPLOAD_STORE_FILE",
+                "ABC_CASH_RELEASE_STORE_FILE"
+            )?.let { file(it) }
+            storePassword = uploadOrReleaseSecret(
+                "ABC_CASH_UPLOAD_STORE_PASSWORD",
+                "ABC_CASH_RELEASE_STORE_PASSWORD"
+            )
+            keyAlias = uploadOrReleaseSecret(
+                "ABC_CASH_UPLOAD_KEY_ALIAS",
+                "ABC_CASH_RELEASE_KEY_ALIAS"
+            )
+            keyPassword = uploadOrReleaseSecret(
+                "ABC_CASH_UPLOAD_KEY_PASSWORD",
+                "ABC_CASH_RELEASE_KEY_PASSWORD"
+            )
         }
     }
 
@@ -62,7 +82,10 @@ android {
         // afin de pouvoir mettre à jour l'app installée SANS effacer les données.
         create("sideload") {
             initWith(getByName("release"))
-            val hasReleaseKey = secret("ABC_CASH_RELEASE_STORE_FILE") != null
+            val hasReleaseKey = uploadOrReleaseSecret(
+                "ABC_CASH_UPLOAD_STORE_FILE",
+                "ABC_CASH_RELEASE_STORE_FILE"
+            ) != null
             signingConfig = if (hasReleaseKey) {
                 signingConfigs.getByName("release")
             } else {

@@ -5,9 +5,9 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -23,18 +23,24 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.TrendingDown
 import androidx.compose.material.icons.automirrored.filled.TrendingUp
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.LocalOffer
 import androidx.compose.material.icons.filled.ShowChart
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import com.abccash.app.treasury.data.PilotEntryType
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -77,7 +83,6 @@ private val Ink = Color(0xFF0F2744)
 private val Muted = Color(0xFF7A889C)
 private val Blue = Color(0xFF2563EB)
 private val BlueSoft = Color(0xFFE8F0FE)
-private val BlueBubble = Color(0xFF3B82F6)
 private val Green = Color(0xFF16A34A)
 private val GreenSoft = Color(0xFFE8F8EE)
 private val Red = Color(0xFFDC2626)
@@ -97,11 +102,25 @@ fun DashboardYearScreen(
     invoices: List<Invoice>,
     expenses: List<Expense>,
     pilotEntries: List<PilotEntry>,
-    corrections: List<BalanceCorrection>
+    corrections: List<BalanceCorrection>,
+    onOpenAccounts: () -> Unit = {},
+    onOpenPilotage: () -> Unit = {}
 ) {
     val today = remember { LocalDate.now() }
     var year by remember { mutableIntStateOf(today.year) }
     val formatAmount = rememberFormatMoneyWhole()
+    val ownAccounts = remember(accounts, entrepriseId) {
+        accounts.filter { it.entrepriseId == entrepriseId }
+    }
+    val ownActivity = remember(pilotEntries, entrepriseId) {
+        pilotEntries.filter {
+            it.entrepriseId == entrepriseId &&
+                (it.type == PilotEntryType.SALE || it.type == PilotEntryType.EXPENSE)
+        }
+    }
+    val hasAccount = ownAccounts.isNotEmpty()
+    val hasActivity = ownActivity.isNotEmpty()
+    val showSetup = entrepriseId.isNotBlank() && (!hasAccount || !hasActivity)
     val snapshot = remember(year, today, entrepriseId, accounts, invoices, expenses, pilotEntries, corrections) {
         DashboardYear.snapshot(
             year, today, entrepriseId, accounts, invoices, expenses, pilotEntries, corrections
@@ -116,14 +135,22 @@ fun DashboardYearScreen(
                 .background(PageBg)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp)
-                .padding(top = 8.dp, bottom = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(top = 6.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             DashboardHeader(
                 year = year,
                 onPrevious = { year -= 1 },
                 onNext = { year += 1 }
             )
+            if (showSetup) {
+                FirstLaunchSetupCard(
+                    hasAccount = hasAccount,
+                    hasActivity = hasActivity,
+                    onOpenAccounts = onOpenAccounts,
+                    onOpenPilotage = onOpenPilotage
+                )
+            }
             TreasuryHeroCard(
                 amount = formatAmount(snapshot.treasury.amount),
                 changePercent = snapshot.treasury.changePercent,
@@ -147,6 +174,122 @@ fun DashboardYearScreen(
 }
 
 @Composable
+private fun FirstLaunchSetupCard(
+    hasAccount: Boolean,
+    hasActivity: Boolean,
+    onOpenAccounts: () -> Unit,
+    onOpenPilotage: () -> Unit
+) {
+    Card(
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CardShape,
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+    ) {
+        Column(Modifier.padding(horizontal = 14.dp, vertical = 12.dp)) {
+            Text(
+                text = stringResource(R.string.dash_setup_title),
+                color = Ink,
+                fontWeight = FontWeight.Bold,
+                fontSize = 15.sp
+            )
+            Text(
+                text = stringResource(R.string.dash_setup_subtitle),
+                color = Muted,
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 2.dp, bottom = 10.dp)
+            )
+            SetupStepRow(
+                done = hasAccount,
+                title = stringResource(R.string.dash_setup_account_title),
+                hint = stringResource(R.string.dash_setup_account_hint),
+                actionLabel = stringResource(R.string.dash_setup_account_cta),
+                onAction = onOpenAccounts,
+                primary = !hasAccount,
+                pendingIcon = Icons.Filled.AccountBalance
+            )
+            Spacer(Modifier.height(8.dp))
+            SetupStepRow(
+                done = hasActivity,
+                title = stringResource(R.string.dash_setup_activity_title),
+                hint = stringResource(R.string.dash_setup_activity_hint),
+                actionLabel = stringResource(R.string.dash_setup_activity_cta),
+                onAction = onOpenPilotage,
+                primary = hasAccount && !hasActivity,
+                pendingIcon = Icons.Filled.BarChart
+            )
+        }
+    }
+}
+
+@Composable
+private fun SetupStepRow(
+    done: Boolean,
+    title: String,
+    hint: String,
+    actionLabel: String,
+    onAction: () -> Unit,
+    primary: Boolean,
+    pendingIcon: ImageVector
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(28.dp)
+                .clip(CircleShape)
+                .background(if (done) GreenSoft else BlueSoft),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (done) Icons.Filled.Check else pendingIcon,
+                contentDescription = null,
+                tint = if (done) Green else Blue,
+                modifier = Modifier.size(15.dp)
+            )
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 10.dp)
+        ) {
+            Text(
+                text = title,
+                color = Ink,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = if (done) stringResource(R.string.dash_setup_done) else hint,
+                color = if (done) Green else Muted,
+                fontSize = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        if (!done) {
+            if (primary) {
+                Button(
+                    onClick = onAction,
+                    shape = RoundedCornerShape(10.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Blue),
+                    contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                ) {
+                    Text(actionLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                }
+            } else {
+                TextButton(onClick = onAction) {
+                    Text(actionLabel, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Blue)
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun DashboardHeader(year: Int, onPrevious: () -> Unit, onNext: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -156,15 +299,15 @@ private fun DashboardHeader(year: Int, onPrevious: () -> Unit, onNext: () -> Uni
             Text(
                 text = stringResource(R.string.nav_home),
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
+                fontSize = 24.sp,
                 color = Ink,
-                lineHeight = 32.sp
+                lineHeight = 28.sp
             )
             Text(
                 text = stringResource(R.string.dash_home_subtitle),
                 color = Muted,
-                fontSize = 13.sp,
-                modifier = Modifier.padding(top = 2.dp)
+                fontSize = 12.sp,
+                modifier = Modifier.padding(top = 1.dp)
             )
         }
         CompactYearSwitcher(year = year, onPrevious = onPrevious, onNext = onNext)
@@ -215,14 +358,14 @@ private fun TreasuryHeroCard(
     Card(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         shape = CardShape,
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(horizontal = 16.dp, vertical = 16.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
-                        .size(28.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
                         .background(BlueSoft),
                     contentAlignment = Alignment.Center
                 ) {
@@ -230,39 +373,39 @@ private fun TreasuryHeroCard(
                         Icons.Filled.AccountBalanceWallet,
                         contentDescription = null,
                         tint = Blue,
-                        modifier = Modifier.size(15.dp)
+                        modifier = Modifier.size(13.dp)
                     )
                 }
                 Text(
                     text = stringResource(R.string.dash_treasury),
-                    modifier = Modifier.padding(start = 8.dp),
+                    modifier = Modifier.padding(start = 6.dp),
                     color = Ink,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    fontSize = 13.sp
                 )
                 Icon(
                     Icons.Filled.Info,
                     contentDescription = null,
-                    tint = Muted.copy(alpha = 0.55f),
+                    tint = Muted.copy(alpha = 0.5f),
                     modifier = Modifier
-                        .padding(start = 4.dp)
-                        .size(14.dp)
+                        .padding(start = 3.dp)
+                        .size(12.dp)
                 )
             }
 
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(top = 10.dp),
-                verticalAlignment = Alignment.Bottom
+                    .padding(top = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = amount,
                         color = Ink,
                         fontWeight = FontWeight.Bold,
-                        fontSize = 34.sp,
-                        lineHeight = 38.sp,
+                        fontSize = 24.sp,
+                        lineHeight = 28.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
@@ -270,22 +413,17 @@ private fun TreasuryHeroCard(
                         VariationBadge(
                             change = changePercent,
                             label = stringResource(R.string.dash_change_vs_year, changePercent, previousYear),
-                            modifier = Modifier.padding(top = 8.dp)
+                            modifier = Modifier.padding(top = 4.dp)
                         )
                     }
                 }
-                Box(
+                HeroSparkline(
+                    points = curve,
                     modifier = Modifier
-                        .width(132.dp)
-                        .height(78.dp)
+                        .width(108.dp)
+                        .height(44.dp)
                         .padding(start = 8.dp)
-                ) {
-                    HeroSparkline(
-                        points = curve,
-                        label = amount,
-                        modifier = Modifier.fillMaxSize()
-                    )
-                }
+                )
             }
         }
     }
@@ -319,16 +457,16 @@ private fun VariationBadge(
         modifier = modifier
             .clip(RoundedCornerShape(999.dp))
             .background(bg)
-            .padding(horizontal = 8.dp, vertical = 4.dp),
+            .padding(horizontal = 7.dp, vertical = 3.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp))
+        Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(12.dp))
         Text(
             text = label,
-            modifier = Modifier.padding(start = 4.dp),
+            modifier = Modifier.padding(start = 3.dp),
             color = tint,
             fontWeight = FontWeight.SemiBold,
-            fontSize = 12.sp,
+            fontSize = 11.sp,
             maxLines = 1
         )
     }
@@ -337,64 +475,44 @@ private fun VariationBadge(
 @Composable
 private fun HeroSparkline(
     points: List<DashboardTreasuryPoint>,
-    label: String,
     modifier: Modifier = Modifier
 ) {
-    Box(modifier = modifier) {
-        Canvas(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-                .padding(top = 18.dp, bottom = 4.dp)
-        ) {
-            if (points.size < 2) return@Canvas
-            val values = points.map { it.closing }
-            val minV = (values.minOrNull() ?: 0.0) - 1.0
-            val maxV = (values.maxOrNull() ?: 0.0) + 1.0
-            val span = (maxV - minV).coerceAtLeast(1.0)
-            val padH = 4.dp.toPx()
-            fun xAt(i: Int) = padH + (size.width - padH * 2f) * i / (points.lastIndex).toFloat()
-            fun yAt(v: Double) = size.height * (1f - ((v - minV) / span).toFloat().coerceIn(0.08f, 0.92f))
-            val path = Path().apply {
-                points.forEachIndexed { i, p ->
-                    val x = xAt(i)
-                    val y = yAt(p.closing)
-                    if (i == 0) moveTo(x, y) else lineTo(x, y)
-                }
+    Canvas(modifier = modifier) {
+        if (points.size < 2) return@Canvas
+        val values = points.map { it.closing }
+        val minV = (values.minOrNull() ?: 0.0) - 1.0
+        val maxV = (values.maxOrNull() ?: 0.0) + 1.0
+        val span = (maxV - minV).coerceAtLeast(1.0)
+        val padH = 2.dp.toPx()
+        fun xAt(i: Int) = padH + (size.width - padH * 2f) * i / (points.lastIndex).toFloat()
+        fun yAt(v: Double) = size.height * (1f - ((v - minV) / span).toFloat().coerceIn(0.1f, 0.9f))
+        val path = Path().apply {
+            points.forEachIndexed { i, p ->
+                val x = xAt(i)
+                val y = yAt(p.closing)
+                if (i == 0) moveTo(x, y) else lineTo(x, y)
             }
-            val fill = Path().apply {
-                addPath(path)
-                lineTo(xAt(points.lastIndex), size.height)
-                lineTo(xAt(0), size.height)
-                close()
-            }
-            drawPath(
-                fill,
-                brush = Brush.verticalGradient(
-                    listOf(Blue.copy(alpha = 0.22f), Blue.copy(alpha = 0.02f))
-                )
-            )
-            drawPath(
-                path,
-                color = Blue,
-                style = Stroke(width = 2.6.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
-            )
-            val end = Offset(xAt(points.lastIndex), yAt(points.last().closing))
-            drawCircle(Color.White, radius = 5.dp.toPx(), center = end)
-            drawCircle(Blue, radius = 3.6.dp.toPx(), center = end)
         }
-        Text(
-            text = label,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .clip(RoundedCornerShape(8.dp))
-                .background(BlueBubble)
-                .padding(horizontal = 6.dp, vertical = 3.dp),
-            color = Color.White,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.SemiBold,
-            maxLines = 1
+        val fill = Path().apply {
+            addPath(path)
+            lineTo(xAt(points.lastIndex), size.height)
+            lineTo(xAt(0), size.height)
+            close()
+        }
+        drawPath(
+            fill,
+            brush = Brush.verticalGradient(
+                listOf(Blue.copy(alpha = 0.2f), Blue.copy(alpha = 0.02f))
+            )
         )
+        drawPath(
+            path,
+            color = Blue,
+            style = Stroke(width = 2.2.dp.toPx(), cap = StrokeCap.Round, join = StrokeJoin.Round)
+        )
+        val end = Offset(xAt(points.lastIndex), yAt(points.last().closing))
+        drawCircle(Color.White, radius = 3.5.dp.toPx(), center = end)
+        drawCircle(Blue, radius = 2.5.dp.toPx(), center = end)
     }
 }
 
@@ -411,28 +529,28 @@ private fun PerformanceCard(
         shape = CardShape,
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(horizontal = 14.dp, vertical = 14.dp)) {
+        Column(Modifier.padding(horizontal = 12.dp, vertical = 10.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
                     modifier = Modifier
-                        .size(26.dp)
-                        .clip(RoundedCornerShape(8.dp))
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(6.dp))
                         .background(BlueSoft),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.BarChart, null, tint = Blue, modifier = Modifier.size(14.dp))
+                    Icon(Icons.Filled.BarChart, null, tint = Blue, modifier = Modifier.size(13.dp))
                 }
                 Text(
                     text = stringResource(R.string.dash_performance),
                     modifier = Modifier
-                        .padding(start = 8.dp)
+                        .padding(start = 6.dp)
                         .weight(1f),
                     color = Ink,
                     fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    fontSize = 13.sp
                 )
                 Text(
                     text = stringResource(R.string.dash_year_vs_year, year, year - 1),
@@ -445,7 +563,7 @@ private fun PerformanceCard(
                     fontWeight = FontWeight.Medium
                 )
             }
-            Spacer(Modifier.height(10.dp))
+            Spacer(Modifier.height(6.dp))
             PerformanceRow(
                 label = stringResource(R.string.dash_sales_short),
                 amount = formatAmount(sales.amount),
@@ -485,7 +603,7 @@ private fun PerformanceDivider() {
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(vertical = 8.dp)
+            .padding(vertical = 5.dp)
             .height(1.dp)
             .background(Grid)
     )

@@ -3,6 +3,7 @@ package com.abccash.app.treasury.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,9 +15,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.AccountBalanceWallet
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Computer
@@ -34,8 +35,6 @@ import androidx.compose.material.icons.filled.TrackChanges
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material.icons.outlined.CalendarMonth
 import androidx.compose.material.icons.filled.SwapHoriz
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Checkbox
@@ -44,7 +43,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -58,12 +56,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.abccash.app.R
@@ -135,7 +131,7 @@ fun PilotageHome(
             expenseSelectionMode = false
         }
     }
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         MonthCard(month = month, onPrevious = onPreviousMonth, onNext = onNextMonth, onPick = onPickMonth)
         KpiRow(figures = figures, salesCount = sales.size, expenseCount = expenses.size, formatAmount = formatAmount)
         EntrySectionCard(
@@ -143,10 +139,11 @@ fun PilotageHome(
             tint = PageBlue,
             icon = Icons.Filled.BarChart,
             total = figures.sales,
-            entries = sales.sortedBy { it.date },
+            entries = sales.sortedByDescending { it.date },
             categories = categories,
             rubriqueColors = rubriqueColors,
             formatAmount = formatAmount,
+            seeAllRes = R.string.pilot_see_all_sales,
             onEdit = onEdit,
             onDuplicate = onDuplicate,
             onDelete = onDelete
@@ -156,10 +153,11 @@ fun PilotageHome(
             tint = PageOrange,
             icon = Icons.Filled.AccountBalanceWallet,
             total = figures.charges,
-            entries = expenses.sortedBy { it.date },
+            entries = expenses.sortedByDescending { it.date },
             categories = categories,
             rubriqueColors = rubriqueColors,
             formatAmount = formatAmount,
+            seeAllRes = R.string.pilot_see_all_expenses,
             selectionMode = expenseSelectionMode,
             selectedIds = selectedExpenseIds,
             onToggleSelect = { id ->
@@ -199,66 +197,22 @@ fun PilotageHome(
                 tint = Color(0xFF0369A1),
                 icon = Icons.Filled.SwapHoriz,
                 total = null,
-                entries = movements.sortedBy { it.date },
+                entries = movements.sortedByDescending { it.date },
                 categories = categories,
                 rubriqueColors = rubriqueColors,
                 formatAmount = formatAmount,
+                seeAllRes = R.string.pilot_see_all_movements,
                 accountCaption = { entry -> movementCaption(entry, categories, accounts) },
                 onEdit = onEdit,
                 onDuplicate = onDuplicate,
                 onDelete = onDelete
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.fillMaxWidth()) {
             CoverageCard(figures = figures, modifier = Modifier.weight(1.15f))
             ZeroCard(amount = formatAmount(figures.zeroPoint), modifier = Modifier.weight(0.85f))
         }
-    }
-}
-
-@Composable
-fun PilotageActionButtons(
-    onAddSale: () -> Unit,
-    onAddExpense: () -> Unit,
-    onAddOther: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(10.dp)
-    ) {
-        Button(
-            onClick = onAddSale,
-            modifier = Modifier.weight(1f).height(52.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PageBlue)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.pilot_btn_sale), modifier = Modifier.padding(start = 6.dp), fontWeight = FontWeight.SemiBold)
-        }
-        Button(
-            onClick = onAddExpense,
-            modifier = Modifier.weight(1f).height(52.dp),
-            shape = RoundedCornerShape(16.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = PageOrange)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
-            Text(stringResource(R.string.pilot_btn_expense), modifier = Modifier.padding(start = 6.dp), fontWeight = FontWeight.SemiBold)
-        }
-    }
-        OutlinedButton(
-            onClick = onAddOther,
-            modifier = Modifier.fillMaxWidth().height(44.dp),
-            shape = RoundedCornerShape(16.dp)
-        ) {
-            Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-            Text(
-                stringResource(R.string.pilot_btn_other),
-                modifier = Modifier.padding(start = 6.dp),
-                fontWeight = FontWeight.SemiBold
-            )
-        }
+        ScrollHint()
     }
 }
 
@@ -271,46 +225,64 @@ private fun MonthCard(
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp, vertical = 6.dp),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 2.dp, vertical = 2.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onPrevious) {
-                Icon(Icons.Filled.KeyboardArrowLeft, contentDescription = stringResource(R.string.previous_month), tint = Muted)
+            IconButton(onClick = onPrevious, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Filled.KeyboardArrowLeft,
+                    contentDescription = stringResource(R.string.previous_month),
+                    tint = Muted
+                )
             }
-            Row(
-                modifier = Modifier.weight(1f),
-                horizontalArrangement = Arrangement.Center,
-                verticalAlignment = Alignment.CenterVertically
+            Column(
+                modifier = Modifier
+                    .weight(1f)
+                    .clickable(onClick = onPick),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.padding(bottom = 2.dp)
-                    ) {
-                        Icon(Icons.Outlined.CalendarMonth, contentDescription = null, tint = PageBlue, modifier = Modifier.size(18.dp))
-                        Text(
-                            text = AppLocale.monthYear(month),
-                            modifier = Modifier.padding(start = 6.dp),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp,
-                            color = Ink
-                        )
-                        IconButton(onClick = onPick, modifier = Modifier.size(28.dp)) {
-                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = stringResource(R.string.pilot_pick_month), tint = Ink)
-                        }
-                    }
-                    if (month == YearMonth.now()) {
-                        Text(stringResource(R.string.pilot_month_current), color = Muted, fontSize = 12.sp)
-                    }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Outlined.CalendarMonth,
+                        contentDescription = null,
+                        tint = PageBlue,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Text(
+                        text = AppLocale.monthYear(month),
+                        modifier = Modifier.padding(start = 6.dp),
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 15.sp,
+                        color = Ink
+                    )
+                    Icon(
+                        Icons.Filled.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.pilot_pick_month),
+                        tint = Ink,
+                        modifier = Modifier
+                            .padding(start = 2.dp)
+                            .size(18.dp)
+                    )
+                }
+                if (month == YearMonth.now()) {
+                    Text(
+                        stringResource(R.string.pilot_month_current),
+                        color = Muted,
+                        fontSize = 11.sp
+                    )
                 }
             }
-            IconButton(onClick = onNext) {
-                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = stringResource(R.string.next_month), tint = Muted)
+            IconButton(onClick = onNext, modifier = Modifier.size(36.dp)) {
+                Icon(
+                    Icons.Filled.KeyboardArrowRight,
+                    contentDescription = stringResource(R.string.next_month),
+                    tint = Muted
+                )
             }
         }
     }
@@ -372,40 +344,45 @@ private fun KpiCard(
 ) {
     Column(
         modifier = modifier
-            .clip(RoundedCornerShape(14.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(background)
-            .padding(horizontal = 8.dp, vertical = 7.dp),
-        verticalArrangement = Arrangement.spacedBy(1.dp)
+            .padding(horizontal = 8.dp, vertical = 8.dp),
+        verticalArrangement = Arrangement.spacedBy(2.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(12.dp))
             Text(
                 label,
-                modifier = Modifier.padding(start = 3.dp).weight(1f),
+                modifier = Modifier.padding(start = 4.dp).weight(1f),
                 color = tint,
-                fontSize = 10.sp,
+                fontSize = 11.sp,
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
         }
         Text(
-            text = buildAnnotatedString {
-                withStyle(SpanStyle(color = tint, fontWeight = FontWeight.Bold, fontSize = 12.sp)) {
-                    append(value)
-                }
-                withStyle(SpanStyle(color = Muted, fontWeight = FontWeight.Normal, fontSize = 8.sp)) {
-                    append("  ")
-                    append(caption)
-                }
-            },
-            lineHeight = 14.sp,
+            text = value,
+            color = tint,
+            fontWeight = FontWeight.Bold,
+            fontSize = 14.sp,
             maxLines = 1,
             softWrap = false,
             overflow = TextOverflow.Ellipsis
         )
+        if (caption.isNotBlank()) {
+            Text(
+                text = caption,
+                color = Muted,
+                fontSize = 10.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
+
+private const val PreviewLineLimit = 3
 
 @Composable
 private fun EntrySectionCard(
@@ -417,6 +394,7 @@ private fun EntrySectionCard(
     categories: List<PilotCategory>,
     rubriqueColors: Map<String, Int>,
     formatAmount: (Double) -> String,
+    @StringRes seeAllRes: Int,
     accountCaption: ((PilotEntry) -> String)? = null,
     selectionMode: Boolean = false,
     selectedIds: Set<String> = emptySet(),
@@ -432,43 +410,83 @@ private fun EntrySectionCard(
     onDelete: (PilotEntry) -> Unit
 ) {
     val selectable = onToggleSelect != null && onStartSelection != null
+    var expanded by remember(entries.map { it.id }) { mutableStateOf(false) }
+    val showAll = expanded || selectionMode
+    val visible = if (showAll) entries else entries.take(PreviewLineLimit)
+    val hasMore = entries.size > PreviewLineLimit
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(Modifier.padding(horizontal = 12.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+        Column(
+            Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .then(
+                        if (hasMore && !selectionMode) {
+                            Modifier.clickable { expanded = !expanded }
+                        } else {
+                            Modifier
+                        }
+                    ),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
-                    modifier = Modifier.size(22.dp).clip(CircleShape).background(tint.copy(alpha = 0.12f)),
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(tint.copy(alpha = 0.12f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(13.dp))
+                    Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(15.dp))
                 }
                 Text(
                     if (selectionMode) stringResource(R.string.pilot_selected_count, selectedIds.size) else title,
-                    modifier = Modifier.padding(start = 6.dp).weight(1f),
+                    modifier = Modifier.padding(start = 8.dp).weight(1f),
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = Ink,
+                    fontSize = 16.sp,
+                    color = tint,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (!selectionMode && total != null) {
-                    Text(
-                        stringResource(R.string.pilot_section_total, formatAmount(total)),
-                        color = tint,
-                        fontWeight = FontWeight.SemiBold,
-                        fontSize = 11.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                if (!selectionMode) {
+                    Column(horizontalAlignment = Alignment.End) {
+                        if (total != null) {
+                            Text(
+                                formatAmount(total),
+                                color = tint,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        if (entries.isNotEmpty()) {
+                            Text(
+                                lineCaption(entries.size),
+                                color = Muted,
+                                fontSize = 10.sp,
+                                maxLines = 1
+                            )
+                        }
+                    }
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                        contentDescription = null,
+                        tint = tint.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .padding(start = 2.dp)
+                            .size(18.dp)
                     )
-                    Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = tint, modifier = Modifier.size(16.dp))
                 }
                 if (!selectionMode && selectable && entries.isNotEmpty()) {
                     TextButton(onClick = { onEnterSelection?.invoke() }) {
-                        Text(stringResource(R.string.pilot_select), color = tint, fontSize = 12.sp)
+                        Text(stringResource(R.string.pilot_select), color = tint, fontSize = 11.sp)
                     }
                 }
             }
@@ -499,9 +517,14 @@ private fun EntrySectionCard(
                 }
             }
             if (entries.isEmpty()) {
-                Text(stringResource(R.string.pilot_empty_lines), color = Muted, fontSize = 13.sp)
+                Text(
+                    stringResource(R.string.pilot_empty_lines),
+                    color = Muted,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
             } else {
-                entries.forEach { entry ->
+                visible.forEach { entry ->
                     val category = accountCaption?.invoke(entry)
                         ?: categories.find { it.id == entry.categoryId }?.name.orEmpty()
                     EntryRow(
@@ -518,8 +541,53 @@ private fun EntrySectionCard(
                         onDelete = { onDelete(entry) }
                     )
                 }
+                if (hasMore && !selectionMode) {
+                    TextButton(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.align(Alignment.Start)
+                    ) {
+                        Text(
+                            text = if (expanded) {
+                                stringResource(R.string.pilot_see_less)
+                            } else {
+                                stringResource(seeAllRes, entries.size)
+                            },
+                            color = tint,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 13.sp
+                        )
+                        Icon(
+                            if (expanded) Icons.Filled.KeyboardArrowDown else Icons.AutoMirrored.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = tint,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+@Composable
+private fun ScrollHint() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 2.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            Icons.Filled.KeyboardArrowDown,
+            contentDescription = null,
+            tint = Muted.copy(alpha = 0.7f),
+            modifier = Modifier.size(18.dp)
+        )
+        Text(
+            text = stringResource(R.string.pilot_scroll_hint),
+            color = Muted.copy(alpha = 0.75f),
+            fontSize = 11.sp
+        )
     }
 }
 
@@ -701,9 +769,12 @@ private fun ZeroCard(amount: String, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun transactionCaption(count: Int): String =
-    if (count == 1) stringResource(R.string.pilot_one_transaction)
-    else stringResource(R.string.pilot_many_transactions, count)
+private fun transactionCaption(count: Int): String = lineCaption(count)
+
+@Composable
+private fun lineCaption(count: Int): String =
+    if (count == 1) stringResource(R.string.pilot_one_line)
+    else stringResource(R.string.pilot_many_lines, count)
 
 private fun signedAmount(amount: Double, format: (Double) -> String): String {
     val text = format(abs(amount))

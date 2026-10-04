@@ -11,4 +11,7 @@ app/build
 server/build
 .kotlin
 *.keystore
+*.jks
 keystore.properties
+credentials.local
+upload_certificate.pem
